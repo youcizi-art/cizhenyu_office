@@ -23,7 +23,7 @@ import {
 
 export function OpenView() {
   const t = useExtracted();
-  usePageTitle("私有在线 Office 工作台 | ZIZIYI");
+  usePageTitle("私有在线 Office 工作台 | CIZHENYU");
 
   const [onlineDocs, setOnlineDocs] = useState<DocumentMeta[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);

@@ -1,118 +1,93 @@
 <p align="center">
-  <img src="./public/logo.svg" width="120" height="120" alt="Office App Logo">
+  <img src="./public/logo.svg" width="100" height="100" alt="CIZHENYU Office Logo">
 </p>
 
-<h1 align="center">ZIZIYI Office</h1>
+<h1 align="center">CIZHENYU Office</h1>
 
 <p align="center">
-  <strong>一款现代化、本地优先的 Office 文档预览与编辑解决方案。</strong>
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/%E7%89%88%E6%9C%AC-0.1.0-blue.svg" alt="Version">
-  <img src="https://img.shields.io/badge/%E6%A1%86%E6%9E%B6-Next.js%2015-black.svg" alt="Framework">
-  <img src="https://img.shields.io/badge/%E8%AE%B8%E5%8F%AF%E8%AF%81-AGPL%20v3-orange.svg" alt="License">
-  <a href="https://o.ziziyi.com/">
-    <img src="https://img.shields.io/badge/%E7%BD%91%E7%AB%99-o.ziziyi.com-blue.svg" alt="Website">
-  </a>
+  <strong>现代化、高性能的私有在线 Office 套件与云端资产管理平台。</strong>
 </p>
 
 <p align="center">
-  <a href="https://o.ziziyi.com/"><strong>🚀 在线演示</strong></a> | <span>中文版</span> | <a href="README.md">English</a>
+  <img src="https://img.shields.io/badge/版本-1.0.0-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/框架-Next.js%2016-black.svg" alt="Framework">
+  <img src="https://img.shields.io/badge/存储-Cloudflare%20R2-orange.svg" alt="Storage">
+  <img src="https://img.shields.io/badge/许可证-AGPL%20v3-green.svg" alt="License">
 </p>
 
 <p align="center">
-  <strong>快速创建:</strong>
-  <a href="https://o.ziziyi.com/editor?new=docx">📄 Word 文档</a> | 
-  <a href="https://o.ziziyi.com/editor?new=xlsx">📊 Excel 表格</a> | 
-  <a href="https://o.ziziyi.com/editor?new=pptx">📽️ PowerPoint 幻灯片</a>
+  <a href="https://o.ycz.me/"><strong>🚀 在线访问 (o.ycz.me)</strong></a> | <span>简体中文</span> | <a href="README.md">English</a>
+</p>
+
+<p align="center">
+  <strong>快速新建:</strong>
+  <a href="https://o.ycz.me/editor?new=docx">📄 Word 文档</a> | 
+  <a href="https://o.ycz.me/editor?new=xlsx">📊 Excel 表格</a> | 
+  <a href="https://o.ycz.me/editor?new=pptx">📽️ PowerPoint 幻灯片</a>
 </p>
 
 ---
 
 ## 🚀 概览
 
-**ZIZIYI Office** 是一款强大的 Web 应用程序，旨在为您提供在浏览器中直接查看和编辑 Office 文档（Word、Excel、PowerPoint）的无缝体验。它基于“本地优先”的设计理念，在提供桌面级编辑体验的同时，确保您的文档隐私和安全。
+**CIZHENYU Office** 是一款基于 WebAssembly 与云原生架构构建的在线办公与文档管理系统。无需在本地安装笨重的桌面办公软件，即可在浏览器中获得桌面级的排版、编辑与计算体验。
 
-### 🌍 访问选项
-
-- **亚太地区优化访问 ([o.ziziyi.com](https://o.ziziyi.com/))**：部署于 EdgeOne 平台。域名更简短易记，且在亚太地区（如中国、日本、新加坡等）网络连接速度更快。
-- **全球通用访问 ([office.ziziyi.com](https://office.ziziyi.com/))**：部署于 Cloudflare Pages 平台。建议亚太地区以外的用户使用。
-
-## ✨ 核心特性
-
-- **📂 多格式支持**: 支持打开和编辑 `.docx`、`.xlsx` 和 `.pptx` 文件。
-- **🔒 本地优先**: 所有文件均在浏览器本地处理，确保数据隐私。
-- **⚡ 快速且响应迅速**: 基于 Next.js 15+ 构建，并针对性能进行了优化。
-- **🛠️ 丰富工具**: 集成了先进的编辑功能。
-- **📦 持久化存储**: 使用 IndexedDB 进行本地文件管理。
-- **🌐 云端集成**: 通过 Uppy 轻松选择文件（支持 Google Drive、Dropbox、OneDrive）。
-
-## 🛠️ 技术栈
-
-- **框架**: [Next.js](https://nextjs.org/)
-- **状态管理**: [Zustand](https://github.com/pmndrs/zustand)
-- **UI 组件**: [Radix UI](https://www.radix-ui.com/) & [Lucide Icons](https://lucide.dev/)
-- **数据库**: [IndexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API) (通过 `idb`)
-- **部署**: [Cloudflare Pages](https://pages.cloudflare.com/)
-
-## 🛠️ 快速开始
-
-### 前提条件
-
-- Node.js 22+
-- pnpm (推荐)
-
-### 安装步骤
-
-1. 克隆仓库:
-
-   ```bash
-   git clone <repository-url>
-   cd website
-   ```
-
-2. 安装依赖:
-
-   ```bash
-   pnpm install
-   ```
-
-3. 启动开发服务器:
-
-   ```bash
-   pnpm dev
-   ```
-
-4. 在浏览器中访问 [http://localhost:3000](http://localhost:3000)。
-
-## 🚢 部署
-
-本项目已预配置 Cloudflare Pages。
-
-- **生产环境构建**: `pnpm build`
-- **部署到生产环境**: `pnpm deploy`
-- **预览部署**: `pnpm deploy:preview`
-
-## 🤝 贡献
-
-欢迎贡献！请随时提交 Pull Request 或开启 Issue。
-
-## 📜 许可证
-
-本项目采用 **GNU Affero General Public License Version 3 (AGPL v3)** 开源协议。
-
-## 🙏 鸣谢
-
-特别感谢以下开源项目，是它们让本项目成为可能：
-
-- [ONLYOFFICE Web Apps](https://github.com/ONLYOFFICE/web-apps)
-- [OnlyOffice x2t WASM](https://github.com/cryptpad/onlyoffice-x2t-wasm) - 浏览器内高性能文档转换。
-- [ONLYOFFICE SDKJS](https://github.com/ONLYOFFICE/sdkjs)
-- [Office Converters](https://github.com/cryptpad/office-converters)
+系统深度融合 **Cloudflare R2** 对象存储，提供企业级的多级分类归档、Ctrl+S 云端静默覆盖保存，以及安全便捷的免密只读外链分享功能。
 
 ---
 
-<p align="center">
-  用心打造更好的办公体验。❤️
-</p>
+## ✨ 核心特性
+
+- **📂 全主流格式高保真编辑**: 原生支持 `.docx`、`.xlsx`、`.pptx` 及 `.pdf` 的高保真排版、公式计算、图表展示与编辑。
+- **🌲 树形多级分类管理**: 在 `/documents` 页面提供可折叠展开的树形目录侧边栏，支持无限级子分类、分类重命名、删除及所属文档计数。
+- **☁️ Cloudflare R2 云端存储**: 所有文档直接持久化至高可用的 R2 存储桶，支持快速检索、在线编辑与安全归档。
+- **📤 本地文档一键上传**: 支持在文档列表页直接选取本地 Office 文档并指定归属分类批量上传至云端。
+- **🔗 免密只读公开分享**: 支持为任意文档一键生成独立的只读下载外链，未登录访客凭链接即可安全下载。
+- **🔐 单密钥访问保护**: 服务端在边缘 Functions 层面校验访问口令，防范未授权访问。
+- **⚡ 离线与本地优先体验**: 核心排版引擎在浏览器端本地执行，响应流畅无卡顿。
+
+---
+
+## 🛠️ 技术架构
+
+- **前端框架**: [Next.js](https://nextjs.org/) (App Router, Turbopack)
+- **文档引擎**: [OnlyOffice](https://www.onlyoffice.com/) WebAssembly 内核
+- **云端存储**: [Cloudflare R2](https://www.cloudflare.com/developer-platform/r2/)
+- **边缘算力**: [Cloudflare Pages & Functions](https://pages.cloudflare.com/)
+- **状态管理**: [Zustand](https://github.com/pmndrs/zustand)
+- **UI 组件**: [Tailwind CSS](https://tailwindcss.com/) & [Lucide Icons](https://lucide.dev/)
+
+---
+
+## 💻 本地开发与构建
+
+### 1. 环境准备
+确保本地安装有 Node.js (≥ 18) 与 pnpm：
+```bash
+npm install -g pnpm
+```
+
+### 2. 安装依赖
+```bash
+pnpm install
+```
+
+### 3. 本地开发调试
+```bash
+pnpm dev
+```
+打开浏览器访问 [http://localhost:3000](http://localhost:3000)。
+
+### 4. 生产构建
+```bash
+pnpm build
+```
+
+---
+
+## 📄 开源许可证与技术声明
+
+本项目遵循 **[GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE.txt)** 开源许可证。
+
+- 本项目基于开源的 OnlyOffice 核心与社区生态成果深度定制开发。
+- 遵循 AGPL-3.0 协议规定，保留原作者的开源版权信息与许可证声明，任何基于本项目的衍生作品亦须以 AGPL-3.0 协议开源。

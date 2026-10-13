@@ -48,6 +48,7 @@ function EditorWorkspace() {
 
   // 云端文档上下文状态
   const [docId, setDocId] = useState<string | null>(null);
+  const activeDocIdRef = useRef<string | null>(null);
   const [docTitle, setDocTitle] = useState<string>("未命名文档");
   const [docType, setDocType] = useState<DocumentType>("docx");
   const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -71,7 +72,7 @@ function EditorWorkspace() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [docId, docTitle, docType]);
+  }, []);
 
   // 页面关闭前检查未保存修改
   useEffect(() => {
@@ -111,6 +112,10 @@ function EditorWorkspace() {
     const apiUrl = APP_ROOT + API_JS;
     const searchParams = new URLSearchParams(window.location.search);
     const paramDocId = searchParams.get("docId");
+    if (paramDocId) {
+      activeDocIdRef.current = paramDocId;
+      setDocId(paramDocId);
+    }
     const newDoc = searchParams.get("new");
     const paramLang = searchParams.get("lang");
     const paramTheme = searchParams.get("theme");
@@ -127,7 +132,9 @@ function EditorWorkspace() {
     server.setSaveHandler(async ({ buffer, title, fileType }) => {
       setIsSaving(true);
       try {
-        const activeDocId = docId || paramDocId;
+        const activeDocId =
+          activeDocIdRef.current ||
+          new URLSearchParams(window.location.search).get("docId");
         if (activeDocId) {
           // 已存在云端文档：静默保存覆盖 R2
           await updateDocumentContent(activeDocId, buffer.buffer as ArrayBuffer);
@@ -341,6 +348,7 @@ function EditorWorkspace() {
         categoryId: selectedCatId,
       });
 
+      activeDocIdRef.current = newDoc.id;
       setDocId(newDoc.id);
       setDocTitle(newDoc.name);
       setSaveModalOpen(false);

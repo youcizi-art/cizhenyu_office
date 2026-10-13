@@ -6,13 +6,13 @@ import { ProgressProvider } from "@/components/progress-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://office.ziziyi.com"),
+  metadataBase: new URL("https://o.ycz.me"),
   title: {
-    default: "ZIZIYI Office — Free Online Word, Excel & PowerPoint Editor",
+    default: "CIZHENYU Office — 在线 Word, Excel & PowerPoint 编辑器",
     template: "%s",
   },
   description:
-    "Free online office suite. Open, view, and edit Word, Excel, and PowerPoint documents directly in your browser. No upload, no login — your files stay private.",
+    "现代轻量在线 Office 套件。直接在浏览器中查看和编辑 Word、Excel 和 PowerPoint 文档，支持 Cloudflare R2 云端存储与安全分享。",
   keywords: [
     "web office",
     "online office suite",
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     "edit excel online",
     "serverless office",
     "privacy first",
-    "ZIZIYI",
+    "CIZHENYU",
   ],
   icons: {
     icon: [
@@ -37,13 +37,12 @@ export const metadata: Metadata = {
     apple: "/logo.png",
   },
   openGraph: {
-    siteName: "ZIZIYI Office",
+    siteName: "CIZHENYU Office",
     type: "website",
-    locale: "en_US",
+    locale: "zh_CN",
   },
   twitter: {
     card: "summary_large_image",
-    creator: "@nicezizi",
   },
   robots: {
     index: true,
@@ -52,7 +51,7 @@ export const metadata: Metadata = {
   other: {
     "mobile-web-app-capable": "yes",
     "apple-mobile-web-app-capable": "yes",
-    "apple-mobile-web-app-title": "ZIZIYI Office",
+    "apple-mobile-web-app-title": "CIZHENYU Office",
   },
 };
 
@@ -73,8 +72,8 @@ export default async function RootLayout({
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
-    name: "ZIZIYI Office",
-    url: "https://office.ziziyi.com",
+    name: "CIZHENYU Office",
+    url: "https://o.ycz.me",
     description:
       "Open, view, and edit Word, Excel, and PowerPoint documents directly in your browser. No upload, no server — your files stay private.",
     applicationCategory: "BusinessApplication",

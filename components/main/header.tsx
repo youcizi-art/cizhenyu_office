@@ -51,10 +51,10 @@ export function Header({ children }: PropsWithChildren<{ className?: string }>) 
     <header className="h-16 flex items-center justify-between px-4 z-20 w-full shrink-0">
       <div className="flex items-center gap-3">
         <div className="flex items-center justify-center">
-          <Image width={40} height={40} src="/logo.svg" className="w-10 h-10" alt="ZIZIYI Office logo" />
+          <Image width={40} height={40} src="/logo.svg" className="w-10 h-10" alt="CIZHENYU Office logo" />
         </div>
         <h1 className="text-xl font-extrabold tracking-normal text-foreground leading-5">
-          {"ZIZIYI OFFICE"}
+          {"CIZHENYU OFFICE"}
         </h1>
       </div>
 

@@ -1,118 +1,93 @@
 <p align="center">
-  <img src="./public/logo.svg" width="120" height="120" alt="Office App Logo">
+  <img src="./public/logo.svg" width="100" height="100" alt="CIZHENYU Office Logo">
 </p>
 
-<h1 align="center">ZIZIYI Office</h1>
+<h1 align="center">CIZHENYU Office</h1>
 
 <p align="center">
-  <strong>A modern, local-first Office document preview and editing solution.</strong>
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/version-0.1.0-blue.svg" alt="Version">
-  <img src="https://img.shields.io/badge/framework-Next.js%2015-black.svg" alt="Framework">
-  <img src="https://img.shields.io/badge/license-AGPL%20v3-orange.svg" alt="License">
-  <a href="https://office.ziziyi.com/">
-    <img src="https://img.shields.io/badge/website-office.ziziyi.com-blue.svg" alt="Website">
-  </a>
+  <strong>A modern, high-performance private online Office suite and cloud asset management platform.</strong>
 </p>
 
 <p align="center">
-  <a href="https://office.ziziyi.com/"><strong>🚀 Live Demo</strong></a> | <a href="README.zh-CN.md">中文版</a> | <span>English</span>
+  <img src="https://img.shields.io/badge/version-1.0.0-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/framework-Next.js%2016-black.svg" alt="Framework">
+  <img src="https://img.shields.io/badge/storage-Cloudflare%20R2-orange.svg" alt="Storage">
+  <img src="https://img.shields.io/badge/license-AGPL%20v3-green.svg" alt="License">
+</p>
+
+<p align="center">
+  <a href="https://o.ycz.me/"><strong>🚀 Live Site (o.ycz.me)</strong></a> | <a href="README.zh-CN.md">简体中文</a> | <span>English</span>
 </p>
 
 <p align="center">
   <strong>Quick Create:</strong>
-  <a href="https://office.ziziyi.com/editor?new=docx">📄 Word</a> | 
-  <a href="https://office.ziziyi.com/editor?new=xlsx">📊 Excel</a> | 
-  <a href="https://office.ziziyi.com/editor?new=pptx">📽️ PowerPoint</a>
+  <a href="https://o.ycz.me/editor?new=docx">📄 Word</a> | 
+  <a href="https://o.ycz.me/editor?new=xlsx">📊 Excel</a> | 
+  <a href="https://o.ycz.me/editor?new=pptx">📽️ PowerPoint</a>
 </p>
 
 ---
 
 ## 🚀 Overview
 
-**ZIZIYI Office** is a powerful web application designed to provide a seamless experience for viewing and editing Office documents (Word, Excel, PowerPoint) directly in your browser. Built with a "local-first" philosophy, it ensures your documents remain private and secure while providing a desktop-class editing experience.
+**CIZHENYU Office** is a powerful online office and document management system built on WebAssembly and modern cloud-native architectures. Without needing bulky desktop applications, you get desktop-class typography, editing, and calculation capabilities directly inside your browser.
 
-### 🌍 Access Options
-
-- **Global ([office.ziziyi.com](https://office.ziziyi.com/))**: Hosted on Cloudflare Pages. Recommended for users outside the Asia-Pacific region.
-- **Asia-Pacific Optimized ([o.ziziyi.com](https://o.ziziyi.com/))**: Hosted on EdgeOne. Features a shorter, easier-to-remember domain and offers faster access for users in the Asia-Pacific region (e.g., China, Japan, Singapore).
-
-## ✨ Key Features
-
-- **📂 Multi-Format Support**: Open and edit `.docx`, `.xlsx`, and `.pptx` files.
-- **🔒 Local-First**: Files are processed locally in your browser, ensuring data privacy.
-- **⚡ Fast & Responsive**: Built with Next.js 15+ and optimized for performance.
-- **🛠️ Rich Tools**: Integrated with advanced editing capabilities.
-- **📦 Persistent Storage**: Uses IndexedDB for local file management.
-- **🌐 Cloud Integration**: Easy file selection via Uppy (Google Drive, Dropbox, OneDrive).
-
-## 🛠️ Technology Stack
-
-- **Framework**: [Next.js](https://nextjs.org/)
-- **State Management**: [Zustand](https://github.com/pmndrs/zustand)
-- **UI Components**: [Radix UI](https://www.radix-ui.com/) & [Lucide Icons](https://lucide.dev/)
-- **Database**: [IndexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API) (via `idb`)
-- **Deployment**: [Cloudflare Pages](https://pages.cloudflare.com/)
-
-## 🛠️ Getting Started
-
-### Prerequisites
-
-- Node.js 22+
-- pnpm (recommended)
-
-### Installation
-
-1. Clone the repository:
-
-   ```bash
-   git clone <repository-url>
-   cd website
-   ```
-
-2. Install dependencies:
-
-   ```bash
-   pnpm install
-   ```
-
-3. Run the development server:
-
-   ```bash
-   pnpm dev
-   ```
-
-4. Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-## 🚢 Deployment
-
-The project is configured for Cloudflare Pages.
-
-- **Production Build**: `pnpm build`
-- **Deploy to Production**: `pnpm deploy`
-- **Deploy Preview**: `pnpm deploy:preview`
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request or open an issue.
-
-## 📜 License
-
-This project is licensed under the **GNU Affero General Public License Version 3 (AGPL v3)**.
-
-## 🙏 Acknowledgments
-
-Special thanks to the following projects that made this possible:
-
-- [ONLYOFFICE Web Apps](https://github.com/ONLYOFFICE/web-apps)
-- [OnlyOffice x2t WASM](https://github.com/cryptpad/onlyoffice-x2t-wasm) - High-performance document conversion in the browser.
-- [ONLYOFFICE SDKJS](https://github.com/ONLYOFFICE/sdkjs)
-- [Office Converters](https://github.com/cryptpad/office-converters)
+Deeply integrated with **Cloudflare R2** object storage, CIZHENYU Office delivers multi-level tree categorization, silent Ctrl+S cloud auto-save, and password-free read-only public sharing links.
 
 ---
 
-<p align="center">
-  Built with ❤️ for a better office experience.
-</p>
+## ✨ Key Features
+
+- **📂 Multi-Format High-Fidelity Editing**: Native support for `.docx`, `.xlsx`, `.pptx`, and `.pdf` with precise rendering, formulas, and chart manipulation.
+- **🌲 Tree-Structured Categorization**: Collapsible sidebar in `/documents` supporting nested multi-level folders, sub-category creation, renaming, deletion, and document counting.
+- **☁️ Cloudflare R2 Storage**: Persistent cloud storage directly bound to R2 buckets, enabling fast search, editing, and reliable archiving.
+- **📤 Local Document Upload**: One-click upload from your local drive with category selection in the documents dashboard.
+- **🔗 Secure Public Sharing**: Generate password-free, read-only download links for external guests.
+- **🔐 Secret-Key Access Control**: Edge-level password verification implemented via Cloudflare Pages Functions.
+- **⚡ Local-First Performance**: Core rendering engine runs in the browser, offering sub-millisecond local latency.
+
+---
+
+## 🛠️ Tech Stack
+
+- **Frontend Framework**: [Next.js](https://nextjs.org/) (App Router, Turbopack)
+- **Document Engine**: [OnlyOffice](https://www.onlyoffice.com/) WebAssembly kernel
+- **Cloud Storage**: [Cloudflare R2](https://www.cloudflare.com/developer-platform/r2/)
+- **Serverless Compute**: [Cloudflare Pages & Functions](https://pages.cloudflare.com/)
+- **State Management**: [Zustand](https://github.com/pmndrs/zustand)
+- **UI Components**: [Tailwind CSS](https://tailwindcss.com/) & [Lucide Icons](https://lucide.dev/)
+
+---
+
+## 💻 Local Development
+
+### 1. Prerequisites
+Ensure Node.js (≥ 18) and pnpm are installed:
+```bash
+npm install -g pnpm
+```
+
+### 2. Install Dependencies
+```bash
+pnpm install
+```
+
+### 3. Run Development Server
+```bash
+pnpm dev
+```
+Visit [http://localhost:3000](http://localhost:3000) in your browser.
+
+### 4. Production Build
+```bash
+pnpm build
+```
+
+---
+
+## 📄 License & Attribution
+
+This project is licensed under the **[GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE.txt)**.
+
+- Built upon the open-source OnlyOffice core and community ecosystem.
+- Compliant with AGPL-3.0 copyleft requirements: copyright notices and the full license text are preserved. Any derivative work must remain open source under the AGPL-3.0 license.

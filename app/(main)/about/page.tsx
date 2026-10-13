@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { AboutView } from "@/components/main/about-view";
 
 export const metadata: Metadata = {
-  title: "About — ZIZIYI Office",
+  title: "关于 — CIZHENYU Office",
   description:
-    "ZIZIYI Office is a serverless, privacy-first office suite powered by OnlyOffice. Edit documents entirely in your browser — no data ever leaves your device.",
+    "CIZHENYU Office 是一款现代化、高性能的在线 Office 套件，集成 Cloudflare R2 云端存储与安全外链分享。",
   robots: {
     index: false,
     follow: false,
