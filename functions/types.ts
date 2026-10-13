@@ -77,6 +77,7 @@ export interface MetadataIndex {
 
 export interface Env {
   DOCUMENTS_BUCKET?: R2Bucket;
+  DOCUMENTS?: R2Bucket;
   PASSWORD?: string;
   ACCESS_KEY?: string;
 }

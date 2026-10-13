@@ -115,6 +115,7 @@ const commonSdks = [
   "v9.3.0.24-1/sdkjs/common/spell/spell/spell.js",
   "v9.3.0.24-1/sdkjs/common/Charts/ChartStyles.js",
   "v9.3.0.24-1/sdkjs/common/libfont/engine/fonts.js",
+  "v9.3.0.24-1/sdkjs/common/libfont/engine/fonts.wasm",
   "v9.3.0.24-1/sdkjs/common/Images/cursors/svg.json",
   "v9.3.0.24-1/web-apps/apps/api/documents/api.js",
   "v9.3.0.24-1/web-apps/common/main/lib/util/fix-ie-compat.js",

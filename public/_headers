@@ -5,6 +5,10 @@
     Content-Encoding: br
     Cache-Control: public, max-age=31556952, immutable
 
+/v9.3.0.24-1/sdkjs/common/libfont/engine/fonts.wasm
+    Content-Type: application/wasm
+    Cache-Control: public, max-age=31556952, immutable
+
 /v9.3.0.24-*
     Cache-Control: public, max-age=31556952, immutable
 
