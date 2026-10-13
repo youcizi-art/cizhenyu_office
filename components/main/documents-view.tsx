@@ -30,6 +30,7 @@ import {
   PanelLeftOpen,
   FileUp,
   X,
+  Menu,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -54,6 +55,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface TreeNode {
   category: Category;
@@ -66,8 +72,11 @@ export function DocumentsView() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // 左侧栏折叠状态
+  // 桌面端左侧栏折叠状态：默认展开，收起时收缩为小图标侧边栏
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
+  // 移动端分类抽屉打开状态
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState<boolean>(false);
+
   // 记录树节点展开状态（catId -> boolean）
   const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({});
 
@@ -188,6 +197,14 @@ export function DocumentsView() {
       }
     }
     return crumbs;
+  }, [activeCategoryId, categories]);
+
+  // 当前激活分类的展示名称
+  const currentCategoryName = useMemo(() => {
+    if (!activeCategoryId) return "全部文档";
+    if (activeCategoryId === "__unclassified__") return "未分类";
+    const found = categories.find((c) => c.id === activeCategoryId);
+    return found ? found.name : "未知分类";
   }, [activeCategoryId, categories]);
 
   // 过滤后的文档列表
@@ -381,11 +398,12 @@ export function DocumentsView() {
 
   // 触发本地文件上传弹窗
   const handleTriggerUpload = (defaultCatId?: string | null) => {
-    const catId = defaultCatId !== undefined
-      ? defaultCatId
-      : activeCategoryId === "__unclassified__"
-      ? null
-      : activeCategoryId;
+    const catId =
+      defaultCatId !== undefined
+        ? defaultCatId
+        : activeCategoryId === "__unclassified__"
+        ? null
+        : activeCategoryId;
     setUploadTargetCatId(catId);
     setUploadFile(null);
     setUploadModalOpen(true);
@@ -438,8 +456,8 @@ export function DocumentsView() {
     }
   };
 
-  // 递归渲染左侧分类树节点
-  const renderTreeNode = (node: TreeNode, level = 0) => {
+  // 递归渲染展开状态下的左侧分类树节点
+  const renderTreeNode = (node: TreeNode, level = 0, onSelect?: () => void) => {
     const { category, children } = node;
     const isExpanded = expandedCats[category.id] ?? true;
     const isSelected = activeCategoryId === category.id;
@@ -449,7 +467,10 @@ export function DocumentsView() {
     return (
       <div key={category.id} className="select-none">
         <div
-          onClick={() => setActiveCategoryId(category.id)}
+          onClick={() => {
+            setActiveCategoryId(category.id);
+            if (onSelect) onSelect();
+          }}
           style={{ paddingLeft: `${Math.max(8, level * 14 + 8)}px` }}
           className={cn(
             "group flex items-center justify-between py-1.5 pr-2 rounded-lg text-xs font-medium cursor-pointer transition-all",
@@ -484,10 +505,14 @@ export function DocumentsView() {
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
-            <span className={cn(
-              "text-[10px] px-1.5 py-0.2 rounded-full",
-              isSelected ? "bg-primary text-primary-foreground font-bold" : "text-muted-foreground/80 bg-muted"
-            )}>
+            <span
+              className={cn(
+                "text-[10px] px-1.5 py-0.2 rounded-full",
+                isSelected
+                  ? "bg-primary text-primary-foreground font-bold"
+                  : "text-muted-foreground/80 bg-muted"
+              )}
+            >
               {count}
             </span>
 
@@ -516,7 +541,12 @@ export function DocumentsView() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    setCategoryModal({ open: true, mode: "rename", parentId: category.parentId, targetCat: category });
+                    setCategoryModal({
+                      open: true,
+                      mode: "rename",
+                      parentId: category.parentId,
+                      targetCat: category,
+                    });
                     setCatNameInput(category.name);
                   }}
                   className="w-full flex items-center gap-1.5 px-2 py-1.5 hover:bg-muted rounded text-left cursor-pointer"
@@ -542,7 +572,7 @@ export function DocumentsView() {
 
         {hasChildren && isExpanded && (
           <div className="space-y-0.5 mt-0.5">
-            {children.map((child) => renderTreeNode(child, level + 1))}
+            {children.map((child) => renderTreeNode(child, level + 1, onSelect))}
           </div>
         )}
       </div>
@@ -555,8 +585,121 @@ export function DocumentsView() {
     return cat ? cat.name : "未分类";
   };
 
+  // 渲染完整的分类列表内容（用于展开侧栏以及移动端抽屉）
+  const renderCategoryListContent = (onSelect?: () => void) => (
+    <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+      {/* 头部标题与新建按钮 */}
+      <div className="p-3 border-b border-border flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2">
+          <Cloud className="w-4 h-4 text-primary" />
+          <span className="text-xs font-bold uppercase tracking-wider text-foreground">
+            文档分类目录
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => {
+              setCategoryModal({
+                open: true,
+                mode: "create",
+                parentId: null,
+              });
+              setCatNameInput("");
+            }}
+            title="新建顶级分类"
+            className="p-1.5 hover:bg-primary/10 text-primary rounded-lg transition-colors cursor-pointer"
+          >
+            <FolderPlus className="w-4 h-4" />
+          </button>
+          {/* 仅在桌面端展开模式下提供侧边栏收起按钮 */}
+          <button
+            onClick={() => setSidebarOpen(false)}
+            title="收起分类目录"
+            className="hidden md:inline-flex p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition-colors cursor-pointer"
+          >
+            <PanelLeftClose className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* 树形菜单项列表 */}
+      <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
+        {/* 全部文档 */}
+        <div
+          onClick={() => {
+            setActiveCategoryId(null);
+            if (onSelect) onSelect();
+          }}
+          className={cn(
+            "flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-all",
+            activeCategoryId === null
+              ? "bg-primary/10 text-primary font-semibold"
+              : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+          )}
+        >
+          <div className="flex items-center gap-2">
+            <Files className="w-4 h-4" />
+            <span>全部文档</span>
+          </div>
+          <span
+            className={cn(
+              "text-[10px] px-1.5 py-0.2 rounded-full",
+              activeCategoryId === null
+                ? "bg-primary text-primary-foreground font-bold"
+                : "bg-muted text-muted-foreground"
+            )}
+          >
+            {documents.length}
+          </span>
+        </div>
+
+        {/* 未分类文档 */}
+        <div
+          onClick={() => {
+            setActiveCategoryId("__unclassified__");
+            if (onSelect) onSelect();
+          }}
+          className={cn(
+            "flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-all",
+            activeCategoryId === "__unclassified__"
+              ? "bg-primary/10 text-primary font-semibold"
+              : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+          )}
+        >
+          <div className="flex items-center gap-2">
+            <Folder className="w-4 h-4 text-slate-400" />
+            <span>未分类</span>
+          </div>
+          <span
+            className={cn(
+              "text-[10px] px-1.5 py-0.2 rounded-full",
+              activeCategoryId === "__unclassified__"
+                ? "bg-primary text-primary-foreground font-bold"
+                : "bg-muted text-muted-foreground"
+            )}
+          >
+            {unclassifiedCount}
+          </span>
+        </div>
+
+        <div className="my-2 border-t border-border/60" />
+
+        {/* 多级分类树节点 */}
+        <div className="space-y-0.5">
+          {categoryTree.length === 0 ? (
+            <div className="py-6 text-center text-xs text-muted-foreground/60">
+              暂无分类，点击上方新建
+            </div>
+          ) : (
+            categoryTree.map((node) => renderTreeNode(node, 0, onSelect))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="flex-1 flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
+    <div className="flex-1 flex flex-col h-full w-full overflow-hidden relative">
       {/* 隐藏的真实文件输入框 */}
       <input
         type="file"
@@ -567,109 +710,192 @@ export function DocumentsView() {
       />
 
       {/* 主界面：左右分栏布局 */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* 左侧：树形分类侧边栏 */}
+      <div className="flex-1 flex overflow-hidden w-full h-full">
+        {/* 桌面端：树形分类侧边栏（展开为宽栏，收缩为小图标侧边栏，不完全隐藏） */}
         <aside
           className={cn(
-            "border-r border-border bg-card/40 flex flex-col shrink-0 transition-all duration-200 z-10",
-            sidebarOpen ? "w-64" : "w-0 overflow-hidden border-r-0"
+            "hidden md:flex border-r border-border bg-card/30 flex-col shrink-0 transition-all duration-300 ease-in-out z-10 select-none",
+            sidebarOpen ? "w-60" : "w-14 items-center"
           )}
         >
-          {/* 侧边栏顶部 */}
-          <div className="p-3 border-b border-border flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-2">
-              <Cloud className="w-4 h-4 text-primary" />
-              <span className="text-xs font-bold uppercase tracking-wider text-foreground">
-                文档分类目录
-              </span>
-            </div>
-            <button
-              onClick={() => {
-                setCategoryModal({
-                  open: true,
-                  mode: "create",
-                  parentId: null,
-                });
-                setCatNameInput("");
-              }}
-              title="新建顶级分类"
-              className="p-1 hover:bg-primary/10 text-primary rounded-md transition-colors cursor-pointer"
-            >
-              <FolderPlus className="w-4 h-4" />
-            </button>
-          </div>
+          {sidebarOpen ? (
+            renderCategoryListContent()
+          ) : (
+            /* 收缩状态：小图标垂直工具栏 */
+            <div className="w-full flex-1 flex flex-col items-center py-2.5 justify-between">
+              <div className="w-full flex flex-col items-center space-y-1.5">
+                {/* 顶部：展开按钮 */}
+                <Tooltip delayDuration={200}>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => setSidebarOpen(true)}
+                      className="w-9 h-9 flex items-center justify-center rounded-lg text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                    >
+                      <PanelLeftOpen className="w-4.5 h-4.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">展开文档分类目录</TooltipContent>
+                </Tooltip>
 
-          {/* 树形菜单项列表 */}
-          <div className="flex-1 overflow-y-auto p-2 space-y-1">
-            {/* 全部文档 */}
-            <div
-              onClick={() => setActiveCategoryId(null)}
-              className={cn(
-                "flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-all",
-                activeCategoryId === null
-                  ? "bg-primary/10 text-primary font-semibold"
-                  : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
-              )}
-            >
-              <div className="flex items-center gap-2">
-                <Files className="w-4 h-4" />
-                <span>全部文档</span>
-              </div>
-              <span className={cn(
-                "text-[10px] px-1.5 py-0.2 rounded-full",
-                activeCategoryId === null ? "bg-primary text-primary-foreground font-bold" : "bg-muted text-muted-foreground"
-              )}>
-                {documents.length}
-              </span>
-            </div>
+                {/* 新建分类图标 */}
+                <Tooltip delayDuration={200}>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => {
+                        setCategoryModal({
+                          open: true,
+                          mode: "create",
+                          parentId: null,
+                        });
+                        setCatNameInput("");
+                      }}
+                      className="w-9 h-9 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                    >
+                      <FolderPlus className="w-4 h-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">新建分类</TooltipContent>
+                </Tooltip>
 
-            {/* 未分类文档 */}
-            <div
-              onClick={() => setActiveCategoryId("__unclassified__")}
-              className={cn(
-                "flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-all",
-                activeCategoryId === "__unclassified__"
-                  ? "bg-primary/10 text-primary font-semibold"
-                  : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
-              )}
-            >
-              <div className="flex items-center gap-2">
-                <Folder className="w-4 h-4 text-slate-400" />
-                <span>未分类</span>
-              </div>
-              <span className={cn(
-                "text-[10px] px-1.5 py-0.2 rounded-full",
-                activeCategoryId === "__unclassified__" ? "bg-primary text-primary-foreground font-bold" : "bg-muted text-muted-foreground"
-              )}>
-                {unclassifiedCount}
-              </span>
-            </div>
+                <div className="w-6 border-t border-border/60 my-1" />
 
-            <div className="my-2 border-t border-border/60" />
+                {/* 全部文档小图标 */}
+                <Tooltip delayDuration={200}>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => setActiveCategoryId(null)}
+                      className={cn(
+                        "w-9 h-9 flex items-center justify-center rounded-lg transition-all cursor-pointer relative",
+                        activeCategoryId === null
+                          ? "bg-primary/10 text-primary font-bold shadow-xs"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      <Files className="w-4 h-4" />
+                      {documents.length > 0 && (
+                        <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-primary rounded-full" />
+                      )}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    全部文档 ({documents.length})
+                  </TooltipContent>
+                </Tooltip>
 
-            {/* 多级分类树节点 */}
-            <div className="space-y-0.5">
-              {categoryTree.length === 0 ? (
-                <div className="py-6 text-center text-xs text-muted-foreground/60">
-                  暂无分类，点击上方新建
+                {/* 未分类小图标 */}
+                <Tooltip delayDuration={200}>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => setActiveCategoryId("__unclassified__")}
+                      className={cn(
+                        "w-9 h-9 flex items-center justify-center rounded-lg transition-all cursor-pointer relative",
+                        activeCategoryId === "__unclassified__"
+                          ? "bg-primary/10 text-primary font-bold shadow-xs"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      <Folder className="w-4 h-4" />
+                      {unclassifiedCount > 0 && (
+                        <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-slate-400 rounded-full" />
+                      )}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    未分类 ({unclassifiedCount})
+                  </TooltipContent>
+                </Tooltip>
+
+                <div className="w-6 border-t border-border/60 my-1" />
+
+                {/* 分类列表图标快捷切换 */}
+                <div className="w-full flex flex-col items-center space-y-1 max-h-[45vh] overflow-y-auto scrollbar-hide">
+                  {categories.map((c) => {
+                    const count = getCategoryDocCount(c.id);
+                    const isSelected = activeCategoryId === c.id;
+                    return (
+                      <Tooltip key={c.id} delayDuration={200}>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => setActiveCategoryId(c.id)}
+                            className={cn(
+                              "w-9 h-9 flex items-center justify-center rounded-lg transition-all cursor-pointer relative",
+                              isSelected
+                                ? "bg-primary/10 text-primary font-bold shadow-xs"
+                                : "text-amber-500/80 hover:bg-muted hover:text-amber-600"
+                            )}
+                          >
+                            <Folder className="w-4 h-4" />
+                            {count > 0 && (
+                              <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-primary/70 rounded-full" />
+                            )}
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">
+                          {c.name} ({count})
+                        </TooltipContent>
+                      </Tooltip>
+                    );
+                  })}
                 </div>
-              ) : (
-                categoryTree.map((node) => renderTreeNode(node, 0))
-              )}
+              </div>
+
+              {/* 底部展开按钮 */}
+              <div className="w-full flex flex-col items-center pt-2 border-t border-border/40">
+                <Tooltip delayDuration={200}>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => setSidebarOpen(true)}
+                      className="w-9 h-9 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                    >
+                      <PanelLeftOpen className="w-4 h-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">展开分类目录</TooltipContent>
+                </Tooltip>
+              </div>
             </div>
-          </div>
+          )}
         </aside>
 
+        {/* 移动端抽屉（Drawer/Overlay Sheet） */}
+        {mobileDrawerOpen && (
+          <div className="md:hidden fixed inset-0 z-50 flex">
+            {/* 遮罩背景 */}
+            <div
+              onClick={() => setMobileDrawerOpen(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs animate-in fade-in transition-opacity"
+            />
+            {/* 抽屉内容容器 */}
+            <div className="relative w-72 max-w-[85vw] h-full bg-card border-r border-border shadow-2xl flex flex-col z-10 animate-in slide-in-from-left duration-200">
+              <div className="p-3 border-b border-border flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Cloud className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-bold text-foreground">文档分类目录</span>
+                </div>
+                <button
+                  onClick={() => setMobileDrawerOpen(false)}
+                  className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-hidden">
+                {renderCategoryListContent(() => setMobileDrawerOpen(false))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 右侧：主文档展示区域 */}
-        <main className="flex-1 flex flex-col min-w-0 bg-background overflow-hidden">
-          {/* 右侧顶部栏 */}
-          <div className="p-4 border-b border-border flex items-center justify-between gap-4 shrink-0 bg-card/20">
-            <div className="flex items-center gap-3 min-w-0">
-              {/* 展开/收起左侧栏按钮 */}
+        <main className="flex-1 flex flex-col min-w-0 bg-background overflow-hidden h-full">
+          {/* 右侧顶部栏：移动端高度优化，按钮不挤出，分类切换顺手 */}
+          <div className="p-3 md:p-4 border-b border-border flex items-center justify-between gap-2 md:gap-4 shrink-0 bg-card/20">
+            <div className="flex items-center gap-2 md:gap-3 min-w-0">
+              {/* 桌面端：展开/收起左侧栏按钮 */}
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
                 title={sidebarOpen ? "收起分类栏" : "展开分类栏"}
-                className="p-1.5 border border-border hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition-colors cursor-pointer shrink-0"
+                className="hidden md:inline-flex p-1.5 border border-border hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition-colors cursor-pointer shrink-0"
               >
                 {sidebarOpen ? (
                   <PanelLeftClose className="w-4 h-4" />
@@ -678,8 +904,18 @@ export function DocumentsView() {
                 )}
               </button>
 
-              {/* 面包屑导航与当前分类指示 */}
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground truncate">
+              {/* 移动端：打开分类抽屉按钮 */}
+              <button
+                onClick={() => setMobileDrawerOpen(true)}
+                className="md:hidden flex items-center gap-1.5 px-2.5 py-1.5 border border-border bg-card/60 hover:bg-muted text-foreground rounded-lg transition-colors text-xs font-medium cursor-pointer shrink-0"
+              >
+                <Menu className="w-3.5 h-3.5 text-primary" />
+                <span className="truncate max-w-[90px]">{currentCategoryName}</span>
+                <ChevronDown className="w-3 h-3 text-muted-foreground" />
+              </button>
+
+              {/* 桌面端面包屑导航与当前分类指示 */}
+              <div className="hidden md:flex items-center gap-1.5 text-xs text-muted-foreground truncate">
                 <span
                   onClick={() => setActiveCategoryId(null)}
                   className={cn(
@@ -714,11 +950,11 @@ export function DocumentsView() {
               </div>
             </div>
 
-            {/* 右上角操作区：常驻【上传文档】按钮 */}
+            {/* 右上角操作区：常驻【上传文档】按钮与刷新按钮 */}
             <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={() => handleTriggerUpload()}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-semibold rounded-lg shadow-sm transition-all cursor-pointer"
+                className="flex items-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-1.5 bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-semibold rounded-lg shadow-sm transition-all cursor-pointer active:scale-95"
               >
                 <Upload className="w-3.5 h-3.5" />
                 <span>上传文档</span>
@@ -735,11 +971,54 @@ export function DocumentsView() {
             </div>
           </div>
 
-          {/* 筛选与搜索工具条 */}
-          <div className="p-4 pb-2 space-y-3 shrink-0">
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          {/* 筛选与搜索工具条：移动端流式排版 */}
+          <div className="p-3 md:p-4 pb-2 space-y-2.5 shrink-0">
+            {/* 移动端专属：快捷分类横向滚动药丸 */}
+            <div className="md:hidden flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide text-xs">
+              <button
+                onClick={() => setActiveCategoryId(null)}
+                className={cn(
+                  "px-2.5 py-1 rounded-full whitespace-nowrap text-xs font-medium transition-all shrink-0",
+                  activeCategoryId === null
+                    ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                    : "bg-muted text-muted-foreground hover:text-foreground"
+                )}
+              >
+                全部 ({documents.length})
+              </button>
+              <button
+                onClick={() => setActiveCategoryId("__unclassified__")}
+                className={cn(
+                  "px-2.5 py-1 rounded-full whitespace-nowrap text-xs font-medium transition-all shrink-0",
+                  activeCategoryId === "__unclassified__"
+                    ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                    : "bg-muted text-muted-foreground hover:text-foreground"
+                )}
+              >
+                未分类 ({unclassifiedCount})
+              </button>
+              {categories.map((c) => {
+                const count = getCategoryDocCount(c.id);
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => setActiveCategoryId(c.id)}
+                    className={cn(
+                      "px-2.5 py-1 rounded-full whitespace-nowrap text-xs font-medium transition-all shrink-0",
+                      activeCategoryId === c.id
+                        ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                        : "bg-muted text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {c.name} ({count})
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
               {/* 搜索框 */}
-              <div className="relative flex-1 max-w-md">
+              <div className="relative flex-1 max-w-md w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   type="text"
@@ -762,7 +1041,7 @@ export function DocumentsView() {
                       className={cn(
                         "flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all shrink-0 cursor-pointer",
                         isActive
-                          ? "bg-primary text-primary-foreground shadow-xs"
+                          ? "bg-primary text-primary-foreground shadow-xs font-semibold"
                           : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
                       )}
                     >
@@ -775,8 +1054,8 @@ export function DocumentsView() {
             </div>
           </div>
 
-          {/* 文档卡片展示区 */}
-          <div className="flex-1 overflow-y-auto p-4 pt-2">
+          {/* 文档卡片展示区：移动端底部留安全高度避免被 MobileNav 挡住 */}
+          <div className="flex-1 overflow-y-auto p-3 md:p-4 pt-1 pb-28 md:pb-8 custom-scrollbar">
             {isLoading ? (
               <div className="py-24 flex flex-col items-center justify-center text-muted-foreground gap-3">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -784,9 +1063,9 @@ export function DocumentsView() {
               </div>
             ) : filteredDocuments.length === 0 ? (
               /* 空状态：支持点击上传本地文档 */
-              <div className="py-16 px-4 border-2 border-dashed border-border rounded-2xl bg-card/30 text-center max-w-xl mx-auto flex flex-col items-center justify-center space-y-4">
-                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-                  <FileUp className="w-8 h-8" />
+              <div className="py-12 md:py-16 px-4 border-2 border-dashed border-border rounded-2xl bg-card/30 text-center max-w-xl mx-auto flex flex-col items-center justify-center space-y-4">
+                <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                  <FileUp className="w-7 h-7 md:w-8 md:h-8" />
                 </div>
                 <div className="space-y-1">
                   <h3 className="text-sm font-bold text-foreground">
@@ -808,17 +1087,17 @@ export function DocumentsView() {
               </div>
             ) : (
               /* 文档卡片网格 */
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-3.5">
                 {filteredDocuments.map((doc) => {
                   const docCfg = getDocConfig(doc.type);
                   return (
                     <div
                       key={doc.id}
-                      className="group relative rounded-xl border border-border bg-card p-3.5 hover:border-primary/40 hover:shadow-md transition-all flex flex-col justify-between"
+                      className="group relative rounded-xl border border-border bg-card p-3 md:p-3.5 hover:border-primary/40 hover:shadow-md transition-all flex flex-col justify-between"
                     >
                       <div>
                         {/* 卡片头部 */}
-                        <div className="flex items-start justify-between gap-2 mb-2.5">
+                        <div className="flex items-start justify-between gap-2 mb-2">
                           <div className="flex items-center gap-2.5 min-w-0">
                             <div
                               className={cn(
@@ -852,7 +1131,7 @@ export function DocumentsView() {
 
                             <Popover>
                               <PopoverTrigger asChild>
-                                <button className="p-1 text-muted-foreground hover:text-foreground rounded-md hover:bg-muted cursor-pointer transition-colors">
+                                <button className="p-1.5 text-muted-foreground hover:text-foreground rounded-md hover:bg-muted cursor-pointer transition-colors">
                                   <MoreVertical className="w-4 h-4" />
                                 </button>
                               </PopoverTrigger>
@@ -861,7 +1140,7 @@ export function DocumentsView() {
                                   onClick={() => router.push(`/editor?docId=${encodeURIComponent(doc.id)}`)}
                                   className="w-full flex items-center gap-2 px-2.5 py-1.5 text-foreground hover:bg-muted rounded cursor-pointer"
                                 >
-                                  <Edit3 className="w-3.5 h-3.5" />
+                                  <Edit3 className="w-3.5 h-3.5 text-primary" />
                                   在线编辑
                                 </button>
                                 <button
@@ -934,7 +1213,7 @@ export function DocumentsView() {
 
       {/* 弹窗 1：创建/重命名分类 */}
       {categoryModal.open && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
           <div className="bg-card border border-border w-full max-w-sm rounded-2xl p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
             <h3 className="text-base font-bold text-foreground">
               {categoryModal.mode === "create" ? "新建文档分类" : "重命名分类"}
@@ -948,7 +1227,7 @@ export function DocumentsView() {
                 onChange={(e) => setCatNameInput(e.target.value)}
                 className="w-full px-3.5 py-2 text-sm border border-border rounded-xl bg-background text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary"
               />
-              <div className="flex items-center justify-end gap-2 pt-2">
+              <div className="flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setCategoryModal({ open: false, mode: "create", parentId: null })}
@@ -958,10 +1237,9 @@ export function DocumentsView() {
                 </button>
                 <button
                   type="submit"
-                  disabled={!catNameInput.trim()}
-                  className="px-4 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 cursor-pointer"
+                  className="px-4 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 cursor-pointer shadow-sm"
                 >
-                  确认保存
+                  保存
                 </button>
               </div>
             </form>
@@ -970,19 +1248,20 @@ export function DocumentsView() {
       )}
 
       {/* 弹窗 2：重命名文档 */}
-      {renameDocModal.open && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+      {renameDocModal.open && renameDocModal.doc && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
           <div className="bg-card border border-border w-full max-w-sm rounded-2xl p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
             <h3 className="text-base font-bold text-foreground">重命名文档</h3>
             <form onSubmit={handleSaveDocName} className="space-y-4">
               <input
                 type="text"
                 autoFocus
+                placeholder="请输入新的文档名称..."
                 value={docNameInput}
                 onChange={(e) => setDocNameInput(e.target.value)}
                 className="w-full px-3.5 py-2 text-sm border border-border rounded-xl bg-background text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary"
               />
-              <div className="flex items-center justify-end gap-2 pt-2">
+              <div className="flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setRenameDocModal({ open: false, doc: null })}
@@ -992,10 +1271,9 @@ export function DocumentsView() {
                 </button>
                 <button
                   type="submit"
-                  disabled={!docNameInput.trim()}
-                  className="px-4 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 cursor-pointer"
+                  className="px-4 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 cursor-pointer shadow-sm"
                 >
-                  确认
+                  保存
                 </button>
               </div>
             </form>
@@ -1005,10 +1283,10 @@ export function DocumentsView() {
 
       {/* 弹窗 3：移动文档分类 */}
       {moveDocModal.open && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
           <div className="bg-card border border-border w-full max-w-sm rounded-2xl p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
             <h3 className="text-base font-bold text-foreground">移动文档到分类</h3>
-            <div className="space-y-1.5 max-h-60 overflow-y-auto">
+            <div className="space-y-1.5 max-h-60 overflow-y-auto custom-scrollbar">
               <button
                 onClick={() => handleMoveDoc(null)}
                 className={cn(
@@ -1052,7 +1330,7 @@ export function DocumentsView() {
 
       {/* 弹窗 4：公开外链分享 */}
       {shareModal.open && shareModal.doc && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
           <div className="bg-card border border-border w-full max-w-md rounded-2xl p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -1067,19 +1345,19 @@ export function DocumentsView() {
               </button>
             </div>
 
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground truncate">
               文档：<span className="text-foreground font-semibold">{shareModal.doc.name}</span>
             </p>
 
             <div className="flex items-center justify-between p-3 rounded-xl border border-border bg-muted/30">
-              <div>
+              <div className="pr-2">
                 <p className="text-xs font-semibold text-foreground">免密只读下载链接</p>
                 <p className="text-[11px] text-muted-foreground">拥有此链接的访客无需密码即可直接下载该文档</p>
               </div>
               <button
                 onClick={handleToggleShare}
                 className={cn(
-                  "px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer",
+                  "px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer shrink-0",
                   shareModal.doc.shareToken
                     ? "bg-destructive/10 text-destructive hover:bg-destructive/20"
                     : "bg-primary text-primary-foreground hover:bg-primary/90"
@@ -1108,7 +1386,7 @@ export function DocumentsView() {
                         setShareModal((prev) => ({ ...prev, copied: false }));
                       }, 2000);
                     }}
-                    className="flex items-center gap-1 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-semibold rounded-lg hover:bg-primary/90 cursor-pointer"
+                    className="flex items-center gap-1 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-semibold rounded-lg hover:bg-primary/90 cursor-pointer shrink-0"
                   >
                     {shareModal.copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                     <span>{shareModal.copied ? "已复制" : "复制"}</span>
@@ -1122,7 +1400,7 @@ export function DocumentsView() {
 
       {/* 弹窗 5：上传本地文档到列表 */}
       {uploadModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
           <div className="bg-card border border-border w-full max-w-md rounded-2xl p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">

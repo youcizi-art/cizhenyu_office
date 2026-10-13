@@ -80,11 +80,17 @@ export default function MainLayout({
               "backdrop-blur-3xl bg-white dark:bg-[#141414]/60  dark:md:border dark:md:border-white/10",
             )}
           >
-            <div className="flex-1 overflow-y-auto custom-scrollbar">
-              <div className="p-4 md:p-8 max-w-6xl mx-auto w-full pb-24 md:pb-8">
+            {pathname.startsWith("/documents") ? (
+              <div className="flex-1 w-full h-full flex flex-col overflow-hidden">
                 {children}
               </div>
-            </div>
+            ) : (
+              <div className="flex-1 overflow-y-auto custom-scrollbar">
+                <div className="p-4 md:p-8 max-w-6xl mx-auto w-full pb-24 md:pb-8">
+                  {children}
+                </div>
+              </div>
+            )}
           </main>
           <div className="hidden md:block w-3"></div>
         </div>
