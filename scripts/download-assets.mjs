@@ -60,6 +60,7 @@ const variants = ["main", "mobile", "embed"];
 for (const ed of editors) {
   for (const va of variants) {
     queue.add(`v9.3.0.24-1/web-apps/apps/${ed}/${va}/app.js`);
+    queue.add(`v9.3.0.24-1/web-apps/apps/${ed}/${va}/code.js`);
     queue.add(`v9.3.0.24-1/web-apps/apps/${ed}/${va}/resources/css/app.css`);
     queue.add(`v9.3.0.24-1/web-apps/apps/${ed}/${va}/resources/css/app-mobile.css`);
   }
