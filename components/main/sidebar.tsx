@@ -2,18 +2,15 @@
 
 import Link from "next/link";
 import {
-  Layout,
   Plus,
   FolderOpen,
   Info,
   Settings,
-  Puzzle,
+  Cloud,
 } from "lucide-react";
 import { useExtracted } from "next-intl";
-import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { getNewUrl } from "@/utils/editor/utils";
-import { isExtensionAvailable, EXTENSION_STORE_URL } from "@/utils/extension";
 import { getDocConfig } from "@/lib/document-types";
 import {
   Popover,
@@ -27,15 +24,6 @@ interface SidebarProps {
 
 export function Sidebar({ pathname }: SidebarProps) {
   const t = useExtracted();
-  const [hasExtension, setHasExtension] = useState(true); // default true to avoid flash
-
-  useEffect(() => {
-    // Check immediately and after a delay (content script may not have injected yet)
-    const check = () => setHasExtension(isExtensionAvailable());
-    check();
-    const timer = setTimeout(check, 1500);
-    return () => clearTimeout(timer);
-  }, []);
 
   const newDocTypes = [
     {
@@ -55,7 +43,7 @@ export function Sidebar({ pathname }: SidebarProps) {
 
   const sidebarItems = [
     { id: "open", label: t("Open"), icon: FolderOpen, href: "/" },
-    { id: "template", label: t("Template"), icon: Layout, href: "/template" },
+    { id: "documents", label: "在线文档", icon: Cloud, href: "/documents" },
   ];
 
   return (
@@ -87,7 +75,6 @@ export function Sidebar({ pathname }: SidebarProps) {
                     href={getNewUrl(type)}
                     className={cn(
                       "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200",
-                      // Light mode: use doc colors; Dark mode: use custom dark styles
                       doc.bgColor,
                       "dark:bg-white/5 dark:hover:bg-white/10 dark:border dark:border-white/5",
                     )}
@@ -96,7 +83,6 @@ export function Sidebar({ pathname }: SidebarProps) {
                       className={cn(
                         "w-5 h-5",
                         doc.color,
-                        // Ensure icons are vibrant in dark mode
                         "dark:text-primary dark:filter dark:brightness-125",
                       )}
                     />
@@ -138,30 +124,6 @@ export function Sidebar({ pathname }: SidebarProps) {
       </nav>
 
       <div className="p-4 space-y-1">
-        {!hasExtension && EXTENSION_STORE_URL && (
-          <a
-            href={EXTENSION_STORE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group mb-3 block rounded-xl border border-primary/20 bg-linear-to-br from-primary/10 via-background to-orange-500/10 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md hover:shadow-primary/5"
-          >
-            <div className="flex items-start gap-3">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-semibold text-foreground">
-                    {t("Get Extension")}
-                  </span>
-                  <span className="rounded-full bg-background/80 px-2 py-0.5 text-[10px] font-medium text-primary ring-1 ring-primary/10">
-                    Chrome
-                  </span>
-                </div>
-                <p className="mt-1 text-[12px] leading-relaxed text-text-secondary">
-                  {t("Make your browser an Office app")}
-                </p>
-              </div>
-            </div>
-          </a>
-        )}
         <Link
           href="/settings"
           className={cn(

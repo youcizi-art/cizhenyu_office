@@ -2,18 +2,16 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { FolderOpen, Clock, X, Loader2 } from "lucide-react";
+import { FolderOpen, Clock, Cloud, ArrowRight, Loader2, Sparkles } from "lucide-react";
 import { useExtracted } from "next-intl";
 import { cn } from "@/lib/utils";
-import { getNewUrl } from "@/utils/editor/utils";
 import { FilePickerCard } from "@/components/file-picker-card";
 import { DocumentIcon } from "@/components/document-icon";
 import { getDocConfig } from "@/lib/document-types";
-import type { Template } from "@/utils/templates";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useAppStore } from "@/store";
+import { fetchDocumentsAndCategories, DocumentMeta, Category } from "@/lib/api";
 import {
   getRecentFiles,
   openRecentFile,
@@ -23,75 +21,73 @@ import {
   type RecentFileRecord,
 } from "@/utils/recent-files";
 
-export function OpenView({
-  recommendedTemplates,
-}: {
-  recommendedTemplates: Template[];
-}) {
+export function OpenView() {
   const t = useExtracted();
-  usePageTitle(
-    t("Free Online Office Editor — Word, Excel, PowerPoint | ZIZIYI"),
-  );
+  usePageTitle("私有在线 Office 工作台 | ZIZIYI");
+
+  const [onlineDocs, setOnlineDocs] = useState<DocumentMeta[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isOnlineLoading, setIsOnlineLoading] = useState(true);
+
   const [recentFiles, setRecentFiles] = useState<RecentFileRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadingTemplate, setLoadingTemplate] = useState<string | null>(null);
+  const [isLocalLoading, setIsLocalLoading] = useState(true);
 
   const router = useRouter();
   const server = useAppStore((state) => state.server);
 
-  // Load recent files on mount
   useEffect(() => {
-    loadRecentFiles();
+    loadOnlineDocs();
+    loadLocalRecentFiles();
   }, []);
 
-  const loadRecentFiles = async () => {
+  const loadOnlineDocs = async () => {
     try {
-      setIsLoading(true);
-      const files = await getRecentFiles();
-      setRecentFiles(files);
-    } catch (error) {
-      console.error("Failed to load recent files:", error);
+      setIsOnlineLoading(true);
+      const res = await fetchDocumentsAndCategories();
+      setCategories(res.categories || []);
+      // 按最后修改时间倒序排列
+      const sorted = (res.documents || []).sort((a, b) => b.updatedAt - a.updatedAt);
+      setOnlineDocs(sorted.slice(0, 8));
+    } catch (err) {
+      console.warn("加载在线文档失败:", err);
     } finally {
-      setIsLoading(false);
+      setIsOnlineLoading(false);
     }
   };
 
-  const handleRecentFileClick = async (record: RecentFileRecord) => {
+  const loadLocalRecentFiles = async () => {
+    try {
+      setIsLocalLoading(true);
+      const files = await getRecentFiles();
+      setRecentFiles(files);
+    } catch (error) {
+      console.error("Failed to load local recent files:", error);
+    } finally {
+      setIsLocalLoading(false);
+    }
+  };
+
+  const handleRecentLocalFileClick = async (record: RecentFileRecord) => {
     try {
       const file = await openRecentFile(record);
       if (file) {
         await handleFileSelectWithHandle(file, record.handle);
       } else {
-        // File couldn't be opened, refresh the list
-        await loadRecentFiles();
+        await loadLocalRecentFiles();
       }
     } catch (error) {
-      console.error("Failed to open recent file:", error);
-      await loadRecentFiles();
+      console.error("Failed to open recent local file:", error);
+      await loadLocalRecentFiles();
     }
   };
 
-  const handleTemplateClick = async (tpl: Template) => {
-    if (loadingTemplate) return;
-    setLoadingTemplate(tpl.name);
-    try {
-      const url = `/files/${encodeURIComponent(tpl.filename)}`;
-      await server.openUrl(url, { fileType: tpl.type, fileName: tpl.filename });
-      router.push("/editor");
-    } catch (err) {
-      console.error("Failed to open template:", err);
-    } finally {
-      setLoadingTemplate(null);
-    }
-  };
-
-  const handleRemoveRecentFile = async (e: React.MouseEvent, id: string) => {
+  const handleRemoveLocalRecentFile = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     try {
       await removeRecentFile(id);
-      await loadRecentFiles();
+      await loadLocalRecentFiles();
     } catch (error) {
-      console.error("Failed to remove recent file:", error);
+      console.error("Failed to remove recent local file:", error);
     }
   };
 
@@ -99,48 +95,45 @@ export function OpenView({
     file: File,
     handle?: FileSystemFileHandle,
   ) => {
-    // Only save files with FileHandle (can be reopened)
     if (handle) {
       try {
         await addRecentFile(handle);
-        await loadRecentFiles();
+        await loadLocalRecentFiles();
       } catch (error) {
         console.error("Failed to add to recent files:", error);
       }
     }
-
-    // Open the file and navigate to editor
     await server.open(file);
     router.push("/editor");
   };
 
+  const getCategoryName = (catId: string | null) => {
+    if (!catId) return "未分类";
+    const cat = categories.find((c) => c.id === catId);
+    return cat ? cat.name : "未分类";
+  };
+
   const newDocTypes = [
-    {
-      type: "docx",
-      label: t({ id: "Document", message: "Document" }),
-    },
-    {
-      type: "xlsx",
-      label: t({ id: "Spreadsheet", message: "Spreadsheet" }),
-    },
-    {
-      type: "pptx",
-      label: t({ id: "Presentation", message: "Presentation" }),
-    },
+    { type: "docx", label: t({ id: "Document", message: "Document" }) },
+    { type: "xlsx", label: t({ id: "Spreadsheet", message: "Spreadsheet" }) },
+    { type: "pptx", label: t({ id: "Presentation", message: "Presentation" }) },
     { type: "pdf", label: t({ id: "PDF", message: "PDF" }) },
   ];
 
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* File Picker Card for uploading files */}
       <section>
-        {/* File Picker Card for uploading files */}
         <FilePickerCard onFileSelectWithHandle={handleFileSelectWithHandle} />
       </section>
 
-      {/* Quick Start Section with a more compact layout */}
+      {/* Quick Start Section */}
       <section>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold">{t("New")}</h2>
+          <h2 className="text-lg font-bold flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-primary" />
+            快速新建文档
+          </h2>
         </div>
         <div className="grid grid-cols-2 md:flex md:flex-nowrap items-stretch gap-3 mb-4">
           {newDocTypes.map(({ type, label }) => {
@@ -148,138 +141,158 @@ export function OpenView({
             return (
               <Link
                 key={type}
-                href={getNewUrl(type)}
+                href={`/editor?new=${type}`}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-2 p-4 bg-muted/40 dark:bg-white/5 border border-border rounded-2xl hover:shadow-lg hover:-translate-y-0.5 transition-all group overflow-hidden md:flex-1 md:min-w-0",
+                  "flex-1 p-4 rounded-xl border transition-all duration-300 group flex flex-col justify-between",
+                  "bg-card hover:shadow-md",
                   doc.hoverBorderColor,
                 )}
               >
-                <DocumentIcon
-                  type={type}
-                  className={cn(
-                    "transition-all duration-300",
-                    doc.hoverBgColor,
-                  )}
-                  iconClassName="group-hover:text-white"
-                />
-                <span className="text-xs font-semibold text-muted-foreground group-hover:text-foreground transition-colors">
-                  {label}
-                </span>
+                <div className="flex items-center justify-between mb-4">
+                  <div
+                    className={cn(
+                      "w-10 h-10 rounded-lg flex items-center justify-center transition-transform group-hover:scale-110 duration-300",
+                      doc.lightBgColor,
+                    )}
+                  >
+                    <doc.icon className={cn("w-6 h-6", doc.color)} />
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground group-hover:text-primary transition-colors">
+                    {type}
+                  </span>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm group-hover:text-primary transition-colors">
+                    {label}
+                  </h3>
+                  <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">
+                    创建空白 {label}
+                  </p>
+                </div>
               </Link>
             );
           })}
         </div>
       </section>
 
-      {/* Common Templates */}
+      {/* 最近编辑的在线云端文档模块 (替换原模板板块) */}
       <section>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold">{t("Recommended")}</h2>
-          <button
-            onClick={() => router.push("/template")}
-            className="text-xs text-primary font-medium hover:underline"
+          <div className="flex items-center gap-2">
+            <Cloud className="w-5 h-5 text-primary" />
+            <h2 className="text-lg font-bold">最近编辑的在线文档</h2>
+            <span className="text-xs bg-primary/10 text-primary font-medium px-2 py-0.5 rounded-full">
+              R2 云端同步
+            </span>
+          </div>
+          <Link
+            href="/documents"
+            className="text-xs text-primary font-medium hover:underline flex items-center gap-1 group"
           >
-            {t("More templates")}
-          </button>
+            查看所有在线文档
+            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+          </Link>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-          {recommendedTemplates.map((tpl, i) => (
-            <button
-              key={i}
-              className="flex flex-col gap-2 group text-left focus:outline-none"
-              onClick={() => handleTemplateClick(tpl)}
-              disabled={!!loadingTemplate}
-            >
-              <div
-                className={cn(
-                  "aspect-16/10 rounded-lg border border-border dark:border-white/5 shadow-sm group-hover:shadow-md group-hover:border-primary/30 transition-all relative overflow-hidden bg-white dark:bg-zinc-900",
-                )}
-              >
-                <Image
-                  width={480}
-                  height={270}
-                  src={`/files/${encodeURIComponent(tpl.preview)}`}
-                  alt={tpl.name}
-                  className="w-full min-h-full h-auto object-cover object-top group-hover:scale-105 transition-transform duration-500 opacity-90 group-hover:opacity-100"
-                />
 
-                {loadingTemplate === tpl.name && (
-                  <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px] flex items-center justify-center z-20">
-                    <Loader2 className="w-6 h-6 text-white animate-spin" />
-                  </div>
-                )}
-
-                <div
-                  className={cn(
-                    "absolute top-2 right-2 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase z-10",
-                    getDocConfig(tpl.type).color,
-                    "dark:text-white dark:bg-primary/80",
-                    getDocConfig(tpl.type).lightBgColor,
-                  )}
-                >
-                  {tpl.type}
-                </div>
-              </div>
-              <span className="text-xs font-semibold truncate group-hover:text-primary transition-colors">
-                {tpl.name}
-              </span>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/* Recent Files */}
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold">{t("Recent")}</h2>
-        </div>
-        {isLoading ? (
-          <div className="bg-card/50 border border-border rounded-xl overflow-hidden shadow-sm p-12 flex items-center justify-center">
-            <div className="text-center text-text-secondary">
-              <Clock className="w-8 h-8 mx-auto mb-2 animate-pulse" />
-              <p className="text-sm">{t("Loading recent files...")}</p>
+        {isOnlineLoading ? (
+          <div className="bg-card/50 border border-border rounded-xl p-8 flex items-center justify-center">
+            <div className="flex flex-col items-center gap-2 text-muted-foreground">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              <p className="text-xs">正在连接 R2 存储同步文档...</p>
             </div>
           </div>
-        ) : recentFiles.length === 0 ? (
-          <div className="bg-card/50 border border-border rounded-xl overflow-hidden shadow-sm p-12 flex items-center justify-center">
-            <div className="text-center text-text-secondary">
-              <FolderOpen className="w-12 h-12 mx-auto mb-3 opacity-40" />
-              <p className="text-sm font-medium mb-1">{t("No recent files")}</p>
-              <p className="text-xs">
-                {t("Files you open will appear here for quick access")}
-              </p>
-            </div>
+        ) : onlineDocs.length === 0 ? (
+          <div className="bg-card/50 border border-dashed border-border rounded-xl p-8 text-center">
+            <Cloud className="w-10 h-10 mx-auto mb-2 text-muted-foreground/40" />
+            <p className="text-sm font-medium text-foreground mb-1">云端暂无在线文档</p>
+            <p className="text-xs text-muted-foreground mb-4">
+              新建文档编辑并按 Ctrl+S，将自动保存到 Cloudflare R2 存储桶中
+            </p>
+            <Link
+              href="/editor?new=docx"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-medium rounded-lg shadow-sm hover:bg-primary/90 transition-all"
+            >
+              新建 Word 文档
+            </Link>
           </div>
         ) : (
-          <div className="">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            {onlineDocs.map((doc) => {
+              const docCfg = getDocConfig(doc.type);
+              return (
+                <div
+                  key={doc.id}
+                  onClick={() => router.push(`/editor?docId=${encodeURIComponent(doc.id)}`)}
+                  className="group relative flex flex-col justify-between p-4 rounded-xl border border-border bg-card hover:border-primary/40 hover:shadow-md transition-all duration-200 cursor-pointer text-left"
+                >
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <div
+                      className={cn(
+                        "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
+                        docCfg.lightBgColor,
+                      )}
+                    >
+                      <docCfg.icon className={cn("w-5 h-5", docCfg.color)} />
+                    </div>
+                    <span className="text-[10px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full truncate max-w-[100px]">
+                      {getCategoryName(doc.categoryId)}
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-sm truncate text-foreground group-hover:text-primary transition-colors">
+                      {doc.name}
+                    </h3>
+                    <div className="flex items-center justify-between text-[11px] text-muted-foreground mt-2">
+                      <span>{formatRelativeTime(doc.updatedAt)}</span>
+                      <span>{(doc.size / 1024).toFixed(1)} KB</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* 本地历史打开文件记录 */}
+      {recentFiles.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold flex items-center gap-2">
+              <Clock className="w-5 h-5 text-muted-foreground" />
+              本地临时打开记录
+            </h2>
+          </div>
+          <div className="rounded-xl border border-border bg-card/60 overflow-hidden divide-y divide-border">
             {recentFiles.map((file) => (
               <div
                 key={file.path}
-                onClick={() => handleRecentFileClick(file)}
-                className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-sidebar-hover border-b border-border last:border-0 transition-colors group"
-                title={t("Click to reopen this file")}
+                onClick={() => handleRecentLocalFileClick(file)}
+                className="w-full flex items-center justify-between px-4 py-3 hover:bg-sidebar-hover transition-colors group cursor-pointer"
+                title="重新打开此本地文件"
               >
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                   <DocumentIcon type={file.type} size="sm" />
                   <div className="text-left">
-                    <p className="font-semibold text-sm">{file.name}</p>
-                    <p className="text-[10px] text-text-secondary">
+                    <p className="font-medium text-sm text-foreground">{file.name}</p>
+                    <p className="text-[10px] text-muted-foreground">
                       {formatRelativeTime(file.updatedAt)}
                     </p>
                   </div>
                 </div>
                 <button
-                  onClick={(e) => handleRemoveRecentFile(e, file.path)}
+                  onClick={(e) => handleRemoveLocalRecentFile(e, file.path)}
                   className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-border/50 rounded"
-                  title={t("Remove from recent")}
+                  title="移除记录"
                 >
-                  <X className="w-4 h-4 text-text-secondary" />
+                  <span className="text-xs text-muted-foreground hover:text-foreground">×</span>
                 </button>
               </div>
             ))}
           </div>
-        )}
-      </section>
+        </section>
+      )}
     </div>
   );
 }

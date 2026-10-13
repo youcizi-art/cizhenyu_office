@@ -1,43 +1,12 @@
 import type { Metadata } from "next";
 import { OpenView } from "@/components/main/open-view";
-import { getRecommendedTemplates } from "@/utils/templates";
 
 export const metadata: Metadata = {
-  title:
-    "Free Online Office Editor — Open & Edit Word, Excel, PowerPoint | ZIZIYI",
+  title: "私有在线 Office 编辑器 — Word, Excel, PowerPoint | ZIZIYI",
   description:
-    "Open, view, and edit DOCX, XLSX, PPTX files directly in your browser for free. No upload, no login — your documents stay private. Drag & drop with the browser extension.",
-  keywords: [
-    "online office editor",
-    "free Word editor online",
-    "free Excel editor online",
-    "free PowerPoint editor online",
-    "open docx online",
-    "edit xlsx in browser",
-    "edit pptx in browser",
-    "no upload document editor",
-    "privacy first office",
-    "ZIZIYI Office",
-  ],
-  alternates: {
-    canonical: "https://office.ziziyi.com",
-  },
-  openGraph: {
-    title: "Free Online Office Editor — Word, Excel, PowerPoint | ZIZIYI",
-    description:
-      "Edit Office documents in your browser for free. No upload, no login — fully private.",
-    url: "https://office.ziziyi.com",
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Free Online Office Editor — Word, Excel, PowerPoint | ZIZIYI",
-    description:
-      "Edit Office documents in your browser for free. No upload, no login — fully private.",
-  },
+    "直接在浏览器中安全高效地打开、查看与编辑 DOCX、XLSX、PPTX 文件，连接 Cloudflare R2 云端存储，支持在线文档管理与分享。",
 };
 
 export default function HomePage() {
-  const templates = getRecommendedTemplates();
-  return <OpenView recommendedTemplates={templates} />;
+  return <OpenView />;
 }

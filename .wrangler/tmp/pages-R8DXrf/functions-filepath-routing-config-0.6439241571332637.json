@@ -1,0 +1,133 @@
+{
+  "routes": [
+    {
+      "routePath": "/api/documents/:id/content",
+      "mountPath": "/api/documents/:id",
+      "method": "GET",
+      "module": [
+        "api/documents/[id]/content.ts:onRequestGet"
+      ]
+    },
+    {
+      "routePath": "/api/documents/:id/meta",
+      "mountPath": "/api/documents/:id",
+      "method": "PATCH",
+      "module": [
+        "api/documents/[id]/meta.ts:onRequestPatch"
+      ]
+    },
+    {
+      "routePath": "/api/documents/:id/share",
+      "mountPath": "/api/documents/:id",
+      "method": "DELETE",
+      "module": [
+        "api/documents/[id]/share.ts:onRequestDelete"
+      ]
+    },
+    {
+      "routePath": "/api/documents/:id/share",
+      "mountPath": "/api/documents/:id",
+      "method": "POST",
+      "module": [
+        "api/documents/[id]/share.ts:onRequestPost"
+      ]
+    },
+    {
+      "routePath": "/api/share/:token/download",
+      "mountPath": "/api/share/:token",
+      "method": "GET",
+      "module": [
+        "api/share/[token]/download.ts:onRequestGet"
+      ]
+    },
+    {
+      "routePath": "/api/share/:token/info",
+      "mountPath": "/api/share/:token",
+      "method": "GET",
+      "module": [
+        "api/share/[token]/info.ts:onRequestGet"
+      ]
+    },
+    {
+      "routePath": "/api/auth/check",
+      "mountPath": "/api/auth",
+      "method": "GET",
+      "module": [
+        "api/auth/check.ts:onRequestGet"
+      ]
+    },
+    {
+      "routePath": "/api/auth/login",
+      "mountPath": "/api/auth",
+      "method": "POST",
+      "module": [
+        "api/auth/login.ts:onRequestPost"
+      ]
+    },
+    {
+      "routePath": "/api/auth/logout",
+      "mountPath": "/api/auth",
+      "method": "POST",
+      "module": [
+        "api/auth/logout.ts:onRequestPost"
+      ]
+    },
+    {
+      "routePath": "/api/categories/:id",
+      "mountPath": "/api/categories",
+      "method": "DELETE",
+      "module": [
+        "api/categories/[id].ts:onRequestDelete"
+      ]
+    },
+    {
+      "routePath": "/api/categories/:id",
+      "mountPath": "/api/categories",
+      "method": "PATCH",
+      "module": [
+        "api/categories/[id].ts:onRequestPatch"
+      ]
+    },
+    {
+      "routePath": "/api/documents/:id",
+      "mountPath": "/api/documents",
+      "method": "DELETE",
+      "module": [
+        "api/documents/[id].ts:onRequestDelete"
+      ]
+    },
+    {
+      "routePath": "/api/documents/:id",
+      "mountPath": "/api/documents",
+      "method": "PUT",
+      "module": [
+        "api/documents/[id].ts:onRequestPut"
+      ]
+    },
+    {
+      "routePath": "/api/categories",
+      "mountPath": "/api/categories",
+      "method": "POST",
+      "module": [
+        "api/categories/index.ts:onRequestPost"
+      ]
+    },
+    {
+      "routePath": "/api/documents",
+      "mountPath": "/api/documents",
+      "method": "GET",
+      "module": [
+        "api/documents/index.ts:onRequestGet"
+      ]
+    },
+    {
+      "routePath": "/api/documents",
+      "mountPath": "/api/documents",
+      "method": "POST",
+      "module": [
+        "api/documents/index.ts:onRequestPost"
+      ]
+    }
+  ],
+  "baseURL": "/"
+}

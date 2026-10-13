@@ -53,12 +53,45 @@ export class EditorServer {
   private downloadParts: Uint8Array[] = [];
 
   private options: ServerOptions = {};
+  private saveHandler:
+    | ((data: { buffer: Uint8Array; title: string; fileType: string }) => Promise<boolean | void>)
+    | null = null;
+  private forceDownloadNext: boolean = false;
 
   constructor(options: ServerOptions = {}) {
     this.options = options;
     this.send = this.send.bind(this);
     this.handleConnect = this.handleConnect.bind(this);
     this.handleMessage = this.handleMessage.bind(this);
+  }
+
+  setSaveHandler(
+    handler:
+      | ((data: { buffer: Uint8Array; title: string; fileType: string }) => Promise<boolean | void>)
+      | null
+  ) {
+    this.saveHandler = handler;
+  }
+
+  setForceDownloadNext(force: boolean) {
+    this.forceDownloadNext = force;
+  }
+
+  async openBuffer(
+    buffer: ArrayBuffer,
+    fileName: string,
+    fileType?: string
+  ) {
+    this.title = fileName;
+    this.fileType = fileType || getFileExt(fileName) || "docx";
+    const documentType = getDocumentType(this.fileType);
+    this.id = randomId();
+    this.loadPromise = this.loadDocument(buffer, this.fileType);
+
+    return {
+      id: this.id,
+      documentType,
+    };
   }
 
   async open(
@@ -423,11 +456,28 @@ export class EditorServer {
           // TODO: error message
           return { status: "error" };
         }
-        const blob = new Blob([new Uint8Array(output)]);
+        const outputBuffer = new Uint8Array(output);
+
+        // 如果配置了云端保存处理器且不是强制下载，则优先走云端保存
+        if (!this.forceDownloadNext && this.saveHandler) {
+          const handled = await this.saveHandler({
+            buffer: outputBuffer,
+            title: cmd.title || this.title || "document." + this.fileType,
+            fileType: this.fileType,
+          });
+          if (handled !== false) {
+            return { status: "ok" };
+          }
+        }
+
+        // 恢复重置强制下载标记
+        this.forceDownloadNext = false;
+
+        const blob = new Blob([outputBuffer]);
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = cmd.title || "test.docx";
+        a.download = cmd.title || "document." + this.fileType;
         a.click();
         URL.revokeObjectURL(url);
 
@@ -486,6 +536,15 @@ export class EditorServer {
       const pathname = "media/" + filename;
       const url = this.addMedia(filename, data);
       return Response.json({ [pathname]: url });
+    }
+
+    if (u.pathname.includes("/downloadfile/")) {
+      const data = this.fsMap.get("Editor.bin") || new Uint8Array();
+      return new Response(data.buffer as ArrayBuffer, {
+        headers: {
+          "Content-Type": "application/octet-stream",
+        },
+      });
     }
 
     if (u.pathname == "/plugins.json") {

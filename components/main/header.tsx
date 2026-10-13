@@ -13,9 +13,13 @@ import { useRouter } from "next/navigation";
 import { useExtracted } from "next-intl";
 import { cn } from "@/lib/utils";
 
+import { useAuth } from "@/components/auth-guard";
+import { LogOut } from "lucide-react";
+
 export function Header({ children }: PropsWithChildren<{ className?: string }>) {
   const router = useRouter();
   const t = useExtracted();
+  const { requiresPassword, isAuthenticated, handleLogout } = useAuth();
   const quickActions = [
     {
       type: "docx",
@@ -70,6 +74,16 @@ export function Header({ children }: PropsWithChildren<{ className?: string }>) 
             <action.icon className="w-5 h-5" />
           </button>
         ))}
+
+        {requiresPassword && isAuthenticated && (
+          <button
+            onClick={handleLogout}
+            className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all flex items-center justify-center cursor-pointer ml-2"
+            title="退出登录"
+          >
+            <LogOut className="w-5 h-5" />
+          </button>
+        )}
       </div>
     </header>
   );
