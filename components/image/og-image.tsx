@@ -97,7 +97,7 @@ export const OgImage = async ({
             tw="ml-4 text-3xl font-bold text-white"
             style={{ letterSpacing: "-0.02em" }}
           >
-            ZIZIYI Office
+            CIZHENYU Office
           </span>
         </div>
 
@@ -135,7 +135,7 @@ export const OgImage = async ({
         {/* Bottom: url */}
         <div tw="flex">
           <span tw="text-xl" style={{ color: "rgba(255,255,255,0.3)", fontWeight: 400 }}>
-            office.ziziyi.com
+            o.ycz.me
           </span>
         </div>
       </div>

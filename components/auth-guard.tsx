@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { useExtracted } from "next-intl";
 import { checkAuth, login, logout } from "@/lib/api";
 import { Lock, KeyRound, Loader2, ShieldCheck } from "lucide-react";
 
@@ -59,6 +60,7 @@ async function verifyClientSecret(input: string, secret: string): Promise<boolea
 }
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
+  const t = useExtracted();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [requiresPassword, setRequiresPassword] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -122,7 +124,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       if (CLIENT_SECRET) {
         const isMatch = await verifyClientSecret(trimmedInput, CLIENT_SECRET);
         if (!isMatch) {
-          setErrorMessage("访问密钥不正确，请重新输入");
+          setErrorMessage(t({ id: "InvalidAccessKey", message: "Invalid access key, please try again" }));
           return;
         }
 
@@ -148,10 +150,10 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         setIsAuthenticated(true);
         setPassword("");
       } else {
-        setErrorMessage(res.error || "访问密钥错误");
+        setErrorMessage(res.error || t({ id: "InvalidAccessKey", message: "Invalid access key, please try again" }));
       }
     } catch (err) {
-      setErrorMessage("登录失败: " + String(err));
+      setErrorMessage(String(err));
     } finally {
       setIsSubmitting(false);
     }
@@ -169,7 +171,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       <div className="flex h-screen w-screen items-center justify-center bg-background text-foreground">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">正在验证访问权限...</p>
+          <p className="text-sm text-muted-foreground">{t({ id: "Verifying", message: "Verifying..." })}</p>
         </div>
       </div>
     );
@@ -188,10 +190,10 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
               <Lock className="h-7 w-7" />
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              私有文档工作台
+              {t({ id: "PrivateWorkspace", message: "Private Workspace" })}
             </h1>
             <p className="mt-1.5 text-xs text-muted-foreground">
-              请输入访问密钥以继续使用在线 Office 与文档库
+              {t({ id: "EnterAccessKeyDesc", message: "Please enter your access key to continue" })}
             </p>
           </div>
 
@@ -201,7 +203,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
                 htmlFor="access-key"
                 className="mb-1.5 block text-xs font-medium text-muted-foreground"
               >
-                访问密钥
+                {t({ id: "AccessKey", message: "Access Key" })}
               </label>
               <div className="relative">
                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
@@ -212,7 +214,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="输入访问密钥..."
+                  placeholder={t({ id: "EnterAccessKeyPlaceholder", message: "Enter access key..." })}
                   autoFocus
                   required
                   className="w-full rounded-xl border border-border bg-background py-2.5 pl-10 pr-4 text-sm text-foreground shadow-xs transition-colors placeholder:text-muted-foreground focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20"
@@ -234,12 +236,12 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
               {isSubmitting ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>正在验证...</span>
+                  <span>{t({ id: "Verifying", message: "Verifying..." })}</span>
                 </>
               ) : (
                 <>
                   <ShieldCheck className="h-4 w-4" />
-                  <span>解锁进入系统</span>
+                  <span>{t({ id: "UnlockSystem", message: "Unlock & Enter" })}</span>
                 </>
               )}
             </button>
@@ -247,7 +249,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
           <div className="mt-6 border-t border-border/50 pt-4 text-center">
             <p className="text-[11px] text-muted-foreground">
-              已启用私有访问密钥安全保护机制
+              {t({ id: "AccessKeyProtected", message: "Protected by Access Key" })}
             </p>
           </div>
         </div>

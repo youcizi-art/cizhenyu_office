@@ -42,7 +42,7 @@ export default function InstallExtensionDialog({
         <div className="px-8 pt-8 pb-4 flex flex-col items-center">
           <Image
             src="/logo.svg"
-            alt="ZIZIYI Office"
+            alt="CIZHENYU Office"
             width={56}
             height={56}
             className="mb-4"

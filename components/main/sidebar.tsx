@@ -71,7 +71,12 @@ export function Sidebar({ pathname }: SidebarProps) {
 
   const sidebarItems = [
     { id: "open", label: t("Open"), icon: FolderOpen, href: "/" },
-    { id: "documents", label: "在线文档", icon: Cloud, href: "/documents" },
+    {
+      id: "documents",
+      label: t({ id: "OnlineDocuments", message: "Online Documents" }),
+      icon: Cloud,
+      href: "/documents",
+    },
   ];
 
   const isCollapsed = mounted ? collapsed : false;
@@ -264,13 +269,13 @@ export function Sidebar({ pathname }: SidebarProps) {
                 <button
                   onClick={toggleCollapsed}
                   className="w-10 h-10 mx-auto flex items-center justify-center rounded-xl text-text-secondary hover:text-foreground hover:bg-sidebar-hover transition-colors cursor-pointer"
-                  title="展开侧边栏"
+                  title={t({ id: "ExpandSidebar", message: "Expand Sidebar" })}
                 >
                   <PanelLeftOpen className="w-5 h-5" />
                 </button>
               </TooltipTrigger>
               <TooltipContent side="right">
-                展开侧边栏
+                {t({ id: "ExpandSidebar", message: "Expand Sidebar" })}
               </TooltipContent>
             </Tooltip>
           </>
@@ -315,10 +320,10 @@ export function Sidebar({ pathname }: SidebarProps) {
             <button
               onClick={toggleCollapsed}
               className="w-full flex items-center gap-3 px-3 py-2 text-sm text-text-secondary hover:text-foreground hover:bg-sidebar-hover rounded-lg transition-colors cursor-pointer"
-              title="收起侧边栏"
+              title={t({ id: "CollapseSidebar", message: "Collapse Sidebar" })}
             >
               <PanelLeftClose className="w-5 h-5 shrink-0" />
-              <span className="truncate">收起侧栏</span>
+              <span className="truncate">{t({ id: "CollapseSidebar", message: "Collapse Sidebar" })}</span>
             </button>
           </>
         )}

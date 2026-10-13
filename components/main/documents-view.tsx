@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useExtracted } from "next-intl";
 import {
   Search,
   Files,
@@ -60,6 +61,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { usePageTitle } from "@/hooks/use-page-title";
 
 interface TreeNode {
   category: Category;
@@ -68,6 +70,8 @@ interface TreeNode {
 
 export function DocumentsView() {
   const router = useRouter();
+  const t = useExtracted();
+  usePageTitle(t({ id: "DocumentsPageTitle", message: "Documents — CIZHENYU Office" }));
   const [documents, setDocuments] = useState<DocumentMeta[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -131,7 +135,7 @@ export function DocumentsView() {
       setDocuments(res.documents || []);
       setCategories(res.categories || []);
     } catch (err) {
-      toast.error("加载文档库失败: " + String(err));
+      toast.error(String(err));
     } finally {
       setIsLoading(false);
     }
@@ -143,7 +147,7 @@ export function DocumentsView() {
 
   // 类型选项定义
   const types = [
-    { name: "全部", icon: Files, key: "All" },
+    { name: t({ id: "All", message: "All" }), icon: Files, key: "All" },
     { name: "Word", icon: FileText, key: "Word" },
     { name: "Excel", icon: Table, key: "Excel" },
     { name: "PowerPoint", icon: Presentation, key: "PowerPoint" },
@@ -199,13 +203,16 @@ export function DocumentsView() {
     return crumbs;
   }, [activeCategoryId, categories]);
 
+  const defaultUncategorizedText = t({ id: "Uncategorized", message: "Uncategorized" });
+  const defaultAllDocsText = t({ id: "AllDocuments", message: "All Documents" });
+
   // 当前激活分类的展示名称
   const currentCategoryName = useMemo(() => {
-    if (!activeCategoryId) return "全部文档";
-    if (activeCategoryId === "__unclassified__") return "未分类";
+    if (!activeCategoryId) return defaultAllDocsText;
+    if (activeCategoryId === "__unclassified__") return defaultUncategorizedText;
     const found = categories.find((c) => c.id === activeCategoryId);
-    return found ? found.name : "未知分类";
-  }, [activeCategoryId, categories]);
+    return found ? found.name : defaultUncategorizedText;
+  }, [activeCategoryId, categories, defaultAllDocsText, defaultUncategorizedText]);
 
   // 过滤后的文档列表
   const filteredDocuments = useMemo(() => {
@@ -253,24 +260,24 @@ export function DocumentsView() {
         if (categoryModal.parentId) {
           setExpandedCats((prev) => ({ ...prev, [categoryModal.parentId!]: true }));
         }
-        toast.success("分类创建成功");
+        toast.success(name);
       } else if (categoryModal.mode === "rename" && categoryModal.targetCat) {
         const updated = await updateCategory(categoryModal.targetCat.id, name);
         setCategories((prev) =>
           prev.map((c) => (c.id === updated.id ? updated : c))
         );
-        toast.success("分类已重命名");
+        toast.success(name);
       }
       setCategoryModal({ open: false, mode: "create", parentId: null });
       setCatNameInput("");
     } catch (err) {
-      toast.error("操作失败: " + String(err));
+      toast.error(String(err));
     }
   };
 
   // 删除分类
   const handleDeleteCategory = async (cat: Category) => {
-    if (!confirm(`确定要删除分类「${cat.name}」吗？其子分类将被一同删除，所属文档将变为未分类。`)) {
+    if (!confirm(`${cat.name}?`)) {
       return;
     }
     try {
@@ -286,9 +293,8 @@ export function DocumentsView() {
       if (activeCategoryId && deletedIds.includes(activeCategoryId)) {
         setActiveCategoryId(null);
       }
-      toast.success("分类已删除");
     } catch (err) {
-      toast.error("删除失败: " + String(err));
+      toast.error(String(err));
     }
   };
 
@@ -304,10 +310,9 @@ export function DocumentsView() {
       setDocuments((prev) =>
         prev.map((d) => (d.id === updated.id ? updated : d))
       );
-      toast.success("文档重命名成功");
       setRenameDocModal({ open: false, doc: null });
     } catch (err) {
-      toast.error("重命名失败: " + String(err));
+      toast.error(String(err));
     }
   };
 
@@ -321,22 +326,20 @@ export function DocumentsView() {
       setDocuments((prev) =>
         prev.map((d) => (d.id === updated.id ? updated : d))
       );
-      toast.success("文档移动成功");
       setMoveDocModal({ open: false, doc: null });
     } catch (err) {
-      toast.error("移动分类失败: " + String(err));
+      toast.error(String(err));
     }
   };
 
   // 删除文档
   const handleDeleteDoc = async (doc: DocumentMeta) => {
-    if (!confirm(`确定要彻底删除文档「${doc.name}」吗？此操作不可逆。`)) return;
+    if (!confirm(`${doc.name}?`)) return;
     try {
       await deleteDocument(doc.id);
       setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
-      toast.success("文档已从云端永久删除");
     } catch (err) {
-      toast.error("删除文档失败: " + String(err));
+      toast.error(String(err));
     }
   };
 
@@ -376,7 +379,6 @@ export function DocumentsView() {
           prev.map((d) => (d.id === updatedDoc.id ? updatedDoc : d))
         );
         setShareModal((prev) => ({ ...prev, doc: updatedDoc, shareUrl: "" }));
-        toast.success("已关闭外链分享");
       } else {
         const token = await enableShare(shareModal.doc.id);
         const updatedDoc = { ...shareModal.doc, shareToken: token };
@@ -389,10 +391,9 @@ export function DocumentsView() {
           doc: updatedDoc,
           shareUrl: `${origin}/share?token=${token}`,
         }));
-        toast.success("已开启公开免密外链分享");
       }
     } catch (err) {
-      toast.error("修改分享状态失败: " + String(err));
+      toast.error(String(err));
     }
   };
 
@@ -420,10 +421,7 @@ export function DocumentsView() {
   // 确认上传文档
   const handleConfirmUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!uploadFile) {
-      toast.error("请先选择要上传的文件");
-      return;
-    }
+    if (!uploadFile) return;
 
     const ext = uploadFile.name.split(".").pop()?.toLowerCase();
     let type: DocumentType = "docx";
@@ -431,10 +429,7 @@ export function DocumentsView() {
     else if (ext === "pptx" || ext === "ppt") type = "pptx";
     else if (ext === "pdf") type = "pdf";
     else if (ext === "docx" || ext === "doc") type = "docx";
-    else {
-      toast.error("暂不支持的文件格式，请上传 docx、xlsx、pptx 或 pdf");
-      return;
-    }
+    else return;
 
     try {
       setIsUploading(true);
@@ -448,9 +443,9 @@ export function DocumentsView() {
       setDocuments((prev) => [newDoc, ...prev]);
       setUploadModalOpen(false);
       setUploadFile(null);
-      toast.success(`文档「${newDoc.name}」上传成功！`);
+      toast.success(newDoc.name);
     } catch (err) {
-      toast.error("上传文档失败: " + String(err));
+      toast.error(String(err));
     } finally {
       setIsUploading(false);
     }
@@ -536,7 +531,7 @@ export function DocumentsView() {
                   className="w-full flex items-center gap-1.5 px-2 py-1.5 hover:bg-muted rounded text-left cursor-pointer"
                 >
                   <Plus className="w-3 h-3 text-primary" />
-                  新建子分类
+                  {t({ id: "NewSubcategory", message: "New Subcategory" })}
                 </button>
                 <button
                   onClick={(e) => {
@@ -552,7 +547,7 @@ export function DocumentsView() {
                   className="w-full flex items-center gap-1.5 px-2 py-1.5 hover:bg-muted rounded text-left cursor-pointer"
                 >
                   <Edit3 className="w-3 h-3" />
-                  重命名
+                  {t({ id: "Rename", message: "Rename" })}
                 </button>
                 <div className="my-1 border-t border-border" />
                 <button
@@ -563,7 +558,7 @@ export function DocumentsView() {
                   className="w-full flex items-center gap-1.5 px-2 py-1.5 hover:bg-destructive/10 text-destructive rounded text-left cursor-pointer"
                 >
                   <Trash2 className="w-3 h-3" />
-                  删除分类
+                  {t({ id: "DeleteCategory", message: "Delete Category" })}
                 </button>
               </PopoverContent>
             </Popover>
@@ -580,9 +575,9 @@ export function DocumentsView() {
   };
 
   const getCategoryName = (id: string | null) => {
-    if (!id) return "未分类";
+    if (!id) return defaultUncategorizedText;
     const cat = categories.find((c) => c.id === id);
-    return cat ? cat.name : "未分类";
+    return cat ? cat.name : defaultUncategorizedText;
   };
 
   // 渲染完整的分类列表内容（用于展开侧栏以及移动端抽屉）
@@ -593,7 +588,7 @@ export function DocumentsView() {
         <div className="flex items-center gap-2">
           <Cloud className="w-4 h-4 text-primary" />
           <span className="text-xs font-bold uppercase tracking-wider text-foreground">
-            文档分类目录
+            {t({ id: "DocumentCategories", message: "Categories" })}
           </span>
         </div>
         <div className="flex items-center gap-1">
@@ -606,7 +601,7 @@ export function DocumentsView() {
               });
               setCatNameInput("");
             }}
-            title="新建顶级分类"
+            title={t({ id: "NewTopCategory", message: "New Top-level Category" })}
             className="p-1.5 hover:bg-primary/10 text-primary rounded-lg transition-colors cursor-pointer"
           >
             <FolderPlus className="w-4 h-4" />
@@ -614,7 +609,7 @@ export function DocumentsView() {
           {/* 仅在桌面端展开模式下提供侧边栏收起按钮 */}
           <button
             onClick={() => setSidebarOpen(false)}
-            title="收起分类目录"
+            title={t({ id: "CollapseCategories", message: "Collapse Categories" })}
             className="hidden md:inline-flex p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition-colors cursor-pointer"
           >
             <PanelLeftClose className="w-4 h-4" />
@@ -639,7 +634,7 @@ export function DocumentsView() {
         >
           <div className="flex items-center gap-2">
             <Files className="w-4 h-4" />
-            <span>全部文档</span>
+            <span>{defaultAllDocsText}</span>
           </div>
           <span
             className={cn(
@@ -668,7 +663,7 @@ export function DocumentsView() {
         >
           <div className="flex items-center gap-2">
             <Folder className="w-4 h-4 text-slate-400" />
-            <span>未分类</span>
+            <span>{defaultUncategorizedText}</span>
           </div>
           <span
             className={cn(
@@ -688,7 +683,7 @@ export function DocumentsView() {
         <div className="space-y-0.5">
           {categoryTree.length === 0 ? (
             <div className="py-6 text-center text-xs text-muted-foreground/60">
-              暂无分类，点击上方新建
+              {t({ id: "NoCategories", message: "No categories yet, click above to create" })}
             </div>
           ) : (
             categoryTree.map((node) => renderTreeNode(node, 0, onSelect))
@@ -711,7 +706,7 @@ export function DocumentsView() {
 
       {/* 主界面：左右分栏布局 */}
       <div className="flex-1 flex overflow-hidden w-full h-full">
-        {/* 桌面端：树形分类侧边栏（展开为宽栏，收缩为小图标侧边栏，不完全隐藏） */}
+        {/* 桌面端：树形分类侧边栏 */}
         <aside
           className={cn(
             "hidden md:flex border-r border-border bg-card/30 flex-col shrink-0 transition-all duration-300 ease-in-out z-10 select-none",
@@ -734,7 +729,9 @@ export function DocumentsView() {
                       <PanelLeftOpen className="w-4.5 h-4.5" />
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent side="right">展开文档分类目录</TooltipContent>
+                  <TooltipContent side="right">
+                    {t({ id: "ExpandCategories", message: "Expand Categories" })}
+                  </TooltipContent>
                 </Tooltip>
 
                 {/* 新建分类图标 */}
@@ -754,7 +751,9 @@ export function DocumentsView() {
                       <FolderPlus className="w-4 h-4" />
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent side="right">新建分类</TooltipContent>
+                  <TooltipContent side="right">
+                    {t({ id: "NewCategory", message: "New Category" })}
+                  </TooltipContent>
                 </Tooltip>
 
                 <div className="w-6 border-t border-border/60 my-1" />
@@ -778,7 +777,7 @@ export function DocumentsView() {
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="right">
-                    全部文档 ({documents.length})
+                    {defaultAllDocsText} ({documents.length})
                   </TooltipContent>
                 </Tooltip>
 
@@ -801,7 +800,7 @@ export function DocumentsView() {
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="right">
-                    未分类 ({unclassifiedCount})
+                    {defaultUncategorizedText} ({unclassifiedCount})
                   </TooltipContent>
                 </Tooltip>
 
@@ -850,7 +849,9 @@ export function DocumentsView() {
                       <PanelLeftOpen className="w-4 h-4" />
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent side="right">展开分类目录</TooltipContent>
+                  <TooltipContent side="right">
+                    {t({ id: "ExpandCategories", message: "Expand Categories" })}
+                  </TooltipContent>
                 </Tooltip>
               </div>
             </div>
@@ -870,7 +871,9 @@ export function DocumentsView() {
               <div className="p-3 border-b border-border flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Cloud className="w-4 h-4 text-primary" />
-                  <span className="text-sm font-bold text-foreground">文档分类目录</span>
+                  <span className="text-sm font-bold text-foreground">
+                    {t({ id: "DocumentCategories", message: "Categories" })}
+                  </span>
                 </div>
                 <button
                   onClick={() => setMobileDrawerOpen(false)}
@@ -888,13 +891,13 @@ export function DocumentsView() {
 
         {/* 右侧：主文档展示区域 */}
         <main className="flex-1 flex flex-col min-w-0 bg-background overflow-hidden h-full">
-          {/* 右侧顶部栏：移动端高度优化，按钮不挤出，分类切换顺手 */}
+          {/* 右侧顶部栏 */}
           <div className="p-3 md:p-4 border-b border-border flex items-center justify-between gap-2 md:gap-4 shrink-0 bg-card/20">
             <div className="flex items-center gap-2 md:gap-3 min-w-0">
               {/* 桌面端：展开/收起左侧栏按钮 */}
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                title={sidebarOpen ? "收起分类栏" : "展开分类栏"}
+                title={sidebarOpen ? t({ id: "CollapseCategories", message: "Collapse Categories" }) : t({ id: "ExpandCategories", message: "Expand Categories" })}
                 className="hidden md:inline-flex p-1.5 border border-border hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition-colors cursor-pointer shrink-0"
               >
                 {sidebarOpen ? (
@@ -923,13 +926,13 @@ export function DocumentsView() {
                     activeCategoryId === null && "text-foreground font-bold"
                   )}
                 >
-                  全部文档
+                  {defaultAllDocsText}
                 </span>
 
                 {activeCategoryId === "__unclassified__" && (
                   <>
                     <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0" />
-                    <span className="text-foreground font-semibold">未分类</span>
+                    <span className="text-foreground font-semibold">{defaultUncategorizedText}</span>
                   </>
                 )}
 
@@ -957,13 +960,13 @@ export function DocumentsView() {
                 className="flex items-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-1.5 bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-semibold rounded-lg shadow-sm transition-all cursor-pointer active:scale-95"
               >
                 <Upload className="w-3.5 h-3.5" />
-                <span>上传文档</span>
+                <span>{t({ id: "UploadDocument", message: "Upload Document" })}</span>
               </button>
 
               <button
                 onClick={loadData}
                 disabled={isLoading}
-                title="刷新文档"
+                title={t({ id: "RefreshDocuments", message: "Refresh Documents" })}
                 className="p-1.5 border border-border rounded-lg text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
               >
                 <Loader2 className={cn("w-4 h-4", isLoading && "animate-spin")} />
@@ -971,7 +974,7 @@ export function DocumentsView() {
             </div>
           </div>
 
-          {/* 筛选与搜索工具条：移动端流式排版 */}
+          {/* 筛选与搜索工具条 */}
           <div className="p-3 md:p-4 pb-2 space-y-2.5 shrink-0">
             {/* 移动端专属：快捷分类横向滚动药丸 */}
             <div className="md:hidden flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide text-xs">
@@ -984,7 +987,7 @@ export function DocumentsView() {
                     : "bg-muted text-muted-foreground hover:text-foreground"
                 )}
               >
-                全部 ({documents.length})
+                {t({ id: "All", message: "All" })} ({documents.length})
               </button>
               <button
                 onClick={() => setActiveCategoryId("__unclassified__")}
@@ -995,7 +998,7 @@ export function DocumentsView() {
                     : "bg-muted text-muted-foreground hover:text-foreground"
                 )}
               >
-                未分类 ({unclassifiedCount})
+                {defaultUncategorizedText} ({unclassifiedCount})
               </button>
               {categories.map((c) => {
                 const count = getCategoryDocCount(c.id);
@@ -1022,7 +1025,7 @@ export function DocumentsView() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   type="text"
-                  placeholder="搜索文档名称..."
+                  placeholder={t({ id: "SearchPlaceholder", message: "Search documents..." })}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-9 pr-4 py-1.5 rounded-lg border border-border bg-card text-foreground text-xs placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-2xs"
@@ -1054,12 +1057,12 @@ export function DocumentsView() {
             </div>
           </div>
 
-          {/* 文档卡片展示区：移动端底部留安全高度避免被 MobileNav 挡住 */}
+          {/* 文档卡片展示区 */}
           <div className="flex-1 overflow-y-auto p-3 md:p-4 pt-1 pb-28 md:pb-8 custom-scrollbar">
             {isLoading ? (
               <div className="py-24 flex flex-col items-center justify-center text-muted-foreground gap-3">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                <p className="text-xs">正在连接 R2 加载云端文档...</p>
+                <p className="text-xs">{t({ id: "LoadingR2Docs", message: "Loading documents from R2 cloud storage..." })}</p>
               </div>
             ) : filteredDocuments.length === 0 ? (
               /* 空状态：支持点击上传本地文档 */
@@ -1069,12 +1072,14 @@ export function DocumentsView() {
                 </div>
                 <div className="space-y-1">
                   <h3 className="text-sm font-bold text-foreground">
-                    {searchQuery ? "未找到匹配的在线文档" : "当前分类下暂无文档"}
+                    {searchQuery
+                      ? t({ id: "NoMatchingDocs", message: "No matching online documents found" })
+                      : t({ id: "NoDocsInCategory", message: "No documents in this category" })}
                   </h3>
                   <p className="text-xs text-muted-foreground max-w-sm">
                     {searchQuery
-                      ? "请尝试更换搜索词，或上传新的文档至云端。"
-                      : "您可以直接将本地 Word、Excel、PPT 或 PDF 上传至当前分类。"}
+                      ? t({ id: "TryAnotherSearch", message: "Please try different keywords or upload a new document to the cloud." })
+                      : t({ id: "UploadToCategoryHint", message: "You can upload local Word, Excel, PowerPoint, or PDF documents directly to this category." })}
                   </p>
                 </div>
                 <button
@@ -1082,7 +1087,7 @@ export function DocumentsView() {
                   className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-semibold rounded-lg shadow-sm transition-all cursor-pointer"
                 >
                   <Upload className="w-4 h-4" />
-                  上传本地文档到列表
+                  {t({ id: "UploadLocalDoc", message: "Upload Local Document" })}
                 </button>
               </div>
             ) : (
@@ -1122,10 +1127,10 @@ export function DocumentsView() {
                               <span
                                 onClick={() => handleOpenShare(doc)}
                                 className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 cursor-pointer hover:bg-emerald-500/20"
-                                title="已开启公开下载分享"
+                                title={t({ id: "PublicShareEnabled", message: "Public download sharing is enabled" })}
                               >
                                 <Globe className="w-3 h-3" />
-                                公开
+                                {t({ id: "Public", message: "Public" })}
                               </span>
                             )}
 
@@ -1141,21 +1146,21 @@ export function DocumentsView() {
                                   className="w-full flex items-center gap-2 px-2.5 py-1.5 text-foreground hover:bg-muted rounded cursor-pointer"
                                 >
                                   <Edit3 className="w-3.5 h-3.5 text-primary" />
-                                  在线编辑
+                                  {t({ id: "EditOnline", message: "Edit Online" })}
                                 </button>
                                 <button
                                   onClick={() => handleDownloadDoc(doc)}
                                   className="w-full flex items-center gap-2 px-2.5 py-1.5 text-foreground hover:bg-muted rounded cursor-pointer"
                                 >
                                   <Download className="w-3.5 h-3.5" />
-                                  下载文件
+                                  {t({ id: "DownloadFile", message: "Download File" })}
                                 </button>
                                 <button
                                   onClick={() => handleOpenShare(doc)}
                                   className="w-full flex items-center gap-2 px-2.5 py-1.5 text-foreground hover:bg-muted rounded cursor-pointer"
                                 >
                                   <Share2 className="w-3.5 h-3.5" />
-                                  分享链接
+                                  {t({ id: "ShareLink", message: "Share Link" })}
                                 </button>
                                 <button
                                   onClick={() => {
@@ -1165,14 +1170,14 @@ export function DocumentsView() {
                                   className="w-full flex items-center gap-2 px-2.5 py-1.5 text-foreground hover:bg-muted rounded cursor-pointer"
                                 >
                                   <Edit3 className="w-3.5 h-3.5" />
-                                  重命名
+                                  {t({ id: "Rename", message: "Rename" })}
                                 </button>
                                 <button
                                   onClick={() => setMoveDocModal({ open: true, doc })}
                                   className="w-full flex items-center gap-2 px-2.5 py-1.5 text-foreground hover:bg-muted rounded cursor-pointer"
                                 >
                                   <FolderInput className="w-3.5 h-3.5" />
-                                  移动分类
+                                  {t({ id: "MoveCategory", message: "Move Category" })}
                                 </button>
                                 <div className="my-1 border-t border-border" />
                                 <button
@@ -1180,7 +1185,7 @@ export function DocumentsView() {
                                   className="w-full flex items-center gap-2 px-2.5 py-1.5 text-destructive hover:bg-destructive/10 rounded cursor-pointer"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
-                                  彻底删除
+                                  {t({ id: "DeletePermanently", message: "Delete Permanently" })}
                                 </button>
                               </PopoverContent>
                             </Popover>
@@ -1216,13 +1221,15 @@ export function DocumentsView() {
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
           <div className="bg-card border border-border w-full max-w-sm rounded-2xl p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
             <h3 className="text-base font-bold text-foreground">
-              {categoryModal.mode === "create" ? "新建文档分类" : "重命名分类"}
+              {categoryModal.mode === "create"
+                ? t({ id: "CreateCategoryTitle", message: "New Category" })
+                : t({ id: "RenameCategoryTitle", message: "Rename Category" })}
             </h3>
             <form onSubmit={handleSaveCategory} className="space-y-4">
               <input
                 type="text"
                 autoFocus
-                placeholder="请输入分类名称..."
+                placeholder={t({ id: "CategoryNamePlaceholder", message: "Enter category name..." })}
                 value={catNameInput}
                 onChange={(e) => setCatNameInput(e.target.value)}
                 className="w-full px-3.5 py-2 text-sm border border-border rounded-xl bg-background text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary"
@@ -1233,13 +1240,13 @@ export function DocumentsView() {
                   onClick={() => setCategoryModal({ open: false, mode: "create", parentId: null })}
                   className="px-3.5 py-1.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
                 >
-                  取消
+                  {t({ id: "Cancel", message: "Cancel" })}
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 cursor-pointer shadow-sm"
                 >
-                  保存
+                  {t({ id: "Save", message: "Save" })}
                 </button>
               </div>
             </form>
@@ -1251,12 +1258,14 @@ export function DocumentsView() {
       {renameDocModal.open && renameDocModal.doc && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
           <div className="bg-card border border-border w-full max-w-sm rounded-2xl p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
-            <h3 className="text-base font-bold text-foreground">重命名文档</h3>
+            <h3 className="text-base font-bold text-foreground">
+              {t({ id: "RenameDocTitle", message: "Rename Document" })}
+            </h3>
             <form onSubmit={handleSaveDocName} className="space-y-4">
               <input
                 type="text"
                 autoFocus
-                placeholder="请输入新的文档名称..."
+                placeholder={t({ id: "DocNamePlaceholder", message: "Enter new document name..." })}
                 value={docNameInput}
                 onChange={(e) => setDocNameInput(e.target.value)}
                 className="w-full px-3.5 py-2 text-sm border border-border rounded-xl bg-background text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary"
@@ -1267,13 +1276,13 @@ export function DocumentsView() {
                   onClick={() => setRenameDocModal({ open: false, doc: null })}
                   className="px-3.5 py-1.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
                 >
-                  取消
+                  {t({ id: "Cancel", message: "Cancel" })}
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 cursor-pointer shadow-sm"
                 >
-                  保存
+                  {t({ id: "Save", message: "Save" })}
                 </button>
               </div>
             </form>
@@ -1285,7 +1294,9 @@ export function DocumentsView() {
       {moveDocModal.open && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
           <div className="bg-card border border-border w-full max-w-sm rounded-2xl p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
-            <h3 className="text-base font-bold text-foreground">移动文档到分类</h3>
+            <h3 className="text-base font-bold text-foreground">
+              {t({ id: "MoveDocTitle", message: "Move Document to Category" })}
+            </h3>
             <div className="space-y-1.5 max-h-60 overflow-y-auto custom-scrollbar">
               <button
                 onClick={() => handleMoveDoc(null)}
@@ -1296,7 +1307,7 @@ export function DocumentsView() {
                     : "hover:bg-muted text-foreground"
                 )}
               >
-                <span>未分类 (根目录)</span>
+                <span>{t({ id: "RootDirectory", message: "Uncategorized (Root)" })}</span>
                 {moveDocModal.doc?.categoryId === null && <Check className="w-3.5 h-3.5" />}
               </button>
               {categories.map((c) => (
@@ -1321,7 +1332,7 @@ export function DocumentsView() {
                 onClick={() => setMoveDocModal({ open: false, doc: null })}
                 className="px-3.5 py-1.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
               >
-                取消
+                {t({ id: "Cancel", message: "Cancel" })}
               </button>
             </div>
           </div>
@@ -1335,24 +1346,31 @@ export function DocumentsView() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Globe className="w-5 h-5 text-primary" />
-                <h3 className="text-base font-bold text-foreground">公开外链分享</h3>
+                <h3 className="text-base font-bold text-foreground">
+                  {t({ id: "PublicShareTitle", message: "Public Link Sharing" })}
+                </h3>
               </div>
               <button
                 onClick={() => setShareModal({ open: false, doc: null, shareUrl: "", copied: false })}
-                className="text-muted-foreground hover:text-foreground p-1 rounded-md"
+                className="text-muted-foreground hover:text-foreground p-1 rounded-md cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <p className="text-xs text-muted-foreground truncate">
-              文档：<span className="text-foreground font-semibold">{shareModal.doc.name}</span>
+              {t({ id: "DocumentLabel", message: "Document: " })}
+              <span className="text-foreground font-semibold">{shareModal.doc.name}</span>
             </p>
 
             <div className="flex items-center justify-between p-3 rounded-xl border border-border bg-muted/30">
               <div className="pr-2">
-                <p className="text-xs font-semibold text-foreground">免密只读下载链接</p>
-                <p className="text-[11px] text-muted-foreground">拥有此链接的访客无需密码即可直接下载该文档</p>
+                <p className="text-xs font-semibold text-foreground">
+                  {t({ id: "DirectDownloadLink", message: "Password-free Download Link" })}
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  {t({ id: "DirectDownloadDesc", message: "Anyone with this link can download the document without a password" })}
+                </p>
               </div>
               <button
                 onClick={handleToggleShare}
@@ -1363,13 +1381,17 @@ export function DocumentsView() {
                     : "bg-primary text-primary-foreground hover:bg-primary/90"
                 )}
               >
-                {shareModal.doc.shareToken ? "关闭外链" : "开启外链"}
+                {shareModal.doc.shareToken
+                  ? t({ id: "DisableShare", message: "Disable Sharing" })
+                  : t({ id: "EnableShare", message: "Enable Sharing" })}
               </button>
             </div>
 
             {shareModal.doc.shareToken && shareModal.shareUrl && (
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold text-muted-foreground">专属分享链接</label>
+                <label className="text-[11px] font-semibold text-muted-foreground">
+                  {t({ id: "ExclusiveShareUrl", message: "Exclusive Sharing Link" })}
+                </label>
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
@@ -1381,7 +1403,7 @@ export function DocumentsView() {
                     onClick={() => {
                       navigator.clipboard.writeText(shareModal.shareUrl);
                       setShareModal((prev) => ({ ...prev, copied: true }));
-                      toast.success("链接已成功复制到剪贴板");
+                      toast.success(t({ id: "Copied", message: "Copied" }));
                       setTimeout(() => {
                         setShareModal((prev) => ({ ...prev, copied: false }));
                       }, 2000);
@@ -1389,7 +1411,7 @@ export function DocumentsView() {
                     className="flex items-center gap-1 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-semibold rounded-lg hover:bg-primary/90 cursor-pointer shrink-0"
                   >
                     {shareModal.copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{shareModal.copied ? "已复制" : "复制"}</span>
+                    <span>{shareModal.copied ? t({ id: "Copied", message: "Copied" }) : t({ id: "Copy", message: "Copy" })}</span>
                   </button>
                 </div>
               </div>
@@ -1405,11 +1427,13 @@ export function DocumentsView() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Upload className="w-5 h-5 text-primary" />
-                <h3 className="text-base font-bold text-foreground">上传本地文档到云端</h3>
+                <h3 className="text-base font-bold text-foreground">
+                  {t({ id: "UploadModalTitle", message: "Upload Document to Cloud" })}
+                </h3>
               </div>
               <button
                 onClick={() => setUploadModalOpen(false)}
-                className="text-muted-foreground hover:text-foreground p-1 rounded-md"
+                className="text-muted-foreground hover:text-foreground p-1 rounded-md cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1428,25 +1452,33 @@ export function DocumentsView() {
                 {uploadFile ? (
                   <div className="space-y-0.5">
                     <p className="text-xs font-bold text-foreground truncate max-w-xs">{uploadFile.name}</p>
-                    <p className="text-[11px] text-muted-foreground">{(uploadFile.size / 1024).toFixed(1)} KB (点击可重新选择)</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {(uploadFile.size / 1024).toFixed(1)} KB ({t({ id: "ClickToReselect", message: "Click to re-select" })})
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-0.5">
-                    <p className="text-xs font-semibold text-foreground">点击选择本地文档</p>
-                    <p className="text-[11px] text-muted-foreground">支持 .docx、.xlsx、.pptx、.pdf 格式</p>
+                    <p className="text-xs font-semibold text-foreground">
+                      {t({ id: "ClickToSelectDoc", message: "Click to select a local document" })}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {t({ id: "SupportedFormatsHint", message: "Supports .docx, .xlsx, .pptx, .pdf formats" })}
+                    </p>
                   </div>
                 )}
               </div>
 
               {/* 归属分类选择 */}
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground">保存到分类：</label>
+                <label className="text-xs font-medium text-foreground">
+                  {t({ id: "SaveToCategoryLabel", message: "Save to Category:" })}
+                </label>
                 <select
                   value={uploadTargetCatId || ""}
                   onChange={(e) => setUploadTargetCatId(e.target.value || null)}
                   className="w-full px-3 py-2 text-xs border border-border rounded-xl bg-background text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 >
-                  <option value="">未分类 (根目录)</option>
+                  <option value="">{t({ id: "RootDirectory", message: "Uncategorized (Root)" })}</option>
                   {categories.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -1461,7 +1493,7 @@ export function DocumentsView() {
                   onClick={() => setUploadModalOpen(false)}
                   className="px-3.5 py-1.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
                 >
-                  取消
+                  {t({ id: "Cancel", message: "Cancel" })}
                 </button>
                 <button
                   type="submit"
@@ -1469,7 +1501,7 @@ export function DocumentsView() {
                   className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 cursor-pointer shadow-sm"
                 >
                   {isUploading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  <span>{isUploading ? "正在上传..." : "确认上传"}</span>
+                  <span>{isUploading ? t({ id: "Uploading", message: "Uploading..." }) : t({ id: "ConfirmUpload", message: "Confirm Upload" })}</span>
                 </button>
               </div>
             </form>

@@ -17,7 +17,7 @@ export function MobileNav({ pathname, className }: MobileNavProps) {
     { id: "open", label: t("Open"), icon: FolderOpen, href: "/" },
     {
       id: "documents",
-      label: "在线文档",
+      label: t({ id: "OnlineDocuments", message: "Online Documents" }),
       icon: Cloud,
       href: "/documents",
     },
