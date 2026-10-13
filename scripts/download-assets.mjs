@@ -111,6 +111,11 @@ for (const eng of sdkEngines) {
   queue.add(`v9.3.0.24-1/sdkjs/${eng}/css/main-mobile.css`);
 }
 
+// PDF 引擎必要依赖文件 (Wasm & drawingfile)
+queue.add("v9.3.0.24-1/sdkjs/pdf/src/engine/drawingfile.js");
+queue.add("v9.3.0.24-1/sdkjs/pdf/src/engine/drawingfile.wasm");
+queue.add("v9.3.0.24-1/sdkjs/pdf/src/engine/drawingfile_ie.js");
+
 const commonSdks = [
   "v9.3.0.24-1/sdkjs/common/AllFonts.js",
   "v9.3.0.24-1/sdkjs/common/spell/spell/spell.js",

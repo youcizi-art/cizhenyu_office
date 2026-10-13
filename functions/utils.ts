@@ -1,4 +1,4 @@
-import { Env, MetadataIndex } from "./types";
+import { Env, MetadataIndex, R2Bucket } from "./types";
 
 const METADATA_KEY = "_app/metadata.json";
 const TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 天有效期
@@ -105,10 +105,17 @@ export async function verifyAuth(request: Request, env: Env): Promise<boolean> {
 }
 
 /**
+ * 获取绑定的 R2 存储桶（兼容 DOCUMENTS_BUCKET 和 DOCUMENTS 命名）
+ */
+export function getR2Bucket(env: Env): R2Bucket | undefined {
+  return env.DOCUMENTS_BUCKET || env.DOCUMENTS;
+}
+
+/**
  * 从 R2 读取元数据索引
  */
 export async function loadMetadata(env: Env): Promise<MetadataIndex> {
-  const bucket = env.DOCUMENTS_BUCKET;
+  const bucket = getR2Bucket(env);
   if (!bucket) {
     throw new Error("DOCUMENTS_BUCKET is not bound in Cloudflare environment");
   }
@@ -134,7 +141,7 @@ export async function loadMetadata(env: Env): Promise<MetadataIndex> {
  * 保存元数据索引到 R2
  */
 export async function saveMetadata(env: Env, metadata: MetadataIndex): Promise<void> {
-  const bucket = env.DOCUMENTS_BUCKET;
+  const bucket = getR2Bucket(env);
   if (!bucket) {
     throw new Error("DOCUMENTS_BUCKET is not bound in Cloudflare environment");
   }

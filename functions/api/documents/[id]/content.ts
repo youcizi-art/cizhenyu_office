@@ -1,5 +1,5 @@
 import { PagesContext } from "../../../types";
-import { errorResponse, verifyAuth, loadMetadata } from "../../../utils";
+import { errorResponse, verifyAuth, loadMetadata, getR2Bucket } from "../../../utils";
 
 /**
  * 获取文档内容二进制流 (用于在线编辑器加载)
@@ -11,7 +11,7 @@ export async function onRequestGet(context: PagesContext<"id">): Promise<Respons
     return errorResponse("未授权访问，请先登录", 401);
   }
 
-  const bucket = env.DOCUMENTS_BUCKET;
+  const bucket = getR2Bucket(env);
   if (!bucket) {
     return errorResponse("Cloudflare R2 Bucket 未绑定", 500);
   }

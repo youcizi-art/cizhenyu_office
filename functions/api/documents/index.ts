@@ -6,6 +6,7 @@ import {
   loadMetadata,
   saveMetadata,
   generateId,
+  getR2Bucket,
 } from "../../utils";
 
 /**
@@ -18,7 +19,8 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
     return errorResponse("未授权访问，请先登录", 401);
   }
 
-  if (!env.DOCUMENTS_BUCKET) {
+  const bucket = getR2Bucket(env);
+  if (!bucket) {
     return errorResponse("Cloudflare R2 Bucket 未绑定 (DOCUMENTS_BUCKET)", 500);
   }
 
@@ -33,7 +35,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     return errorResponse("未授权访问，请先登录", 401);
   }
 
-  const bucket = env.DOCUMENTS_BUCKET;
+  const bucket = getR2Bucket(env);
   if (!bucket) {
     return errorResponse("Cloudflare R2 Bucket 未绑定 (DOCUMENTS_BUCKET)", 500);
   }

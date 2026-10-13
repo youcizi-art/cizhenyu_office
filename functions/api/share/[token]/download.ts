@@ -1,5 +1,5 @@
 import { PagesContext } from "../../../types";
-import { errorResponse, loadMetadata } from "../../../utils";
+import { errorResponse, loadMetadata, getR2Bucket } from "../../../utils";
 
 /**
  * 公开接口：根据分享凭证直接下载文档二进制 (无需登录)
@@ -12,7 +12,7 @@ export async function onRequestGet(context: PagesContext<"token">): Promise<Resp
     return errorResponse("缺少分享凭证", 400);
   }
 
-  const bucket = env.DOCUMENTS_BUCKET;
+  const bucket = getR2Bucket(env);
   if (!bucket) {
     return errorResponse("存储服务未就绪", 500);
   }

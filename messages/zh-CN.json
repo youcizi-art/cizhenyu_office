@@ -138,5 +138,7 @@
   "UnlockSystem": "解锁进入系统",
   "Verifying": "正在验证...",
   "AccessKeyProtected": "已启用私有访问密钥安全保护机制",
-  "DocumentsPageTitle": "在线文档库 — CIZHENYU Office"
+  "DocumentsPageTitle": "在线文档库 — CIZHENYU Office",
+  "InvalidAccessKey": "访问密钥无效，请重试",
+  "All": "全部"
 }
