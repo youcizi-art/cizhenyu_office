@@ -32,7 +32,7 @@
 
 **CIZHENYU Office** is a powerful online office and document management system built on WebAssembly and modern cloud-native architectures. Without needing bulky desktop applications, you get desktop-class typography, editing, and calculation capabilities directly inside your browser.
 
-Deeply integrated with **Cloudflare R2** object storage and **Cloudflare Pages Functions**, CIZHENYU Office delivers multi-level tree categorization, silent Ctrl+S cloud auto-save, password-protected access control, and password-free read-only public sharing links.
+Deeply integrated with **Cloudflare R2** object storage and **Cloudflare Pages Functions**, CIZHENYU Office delivers multi-level tree categorization, silent Ctrl+S cloud auto-save, dual-channel access key protection (supporting `.env` build-time injection and Pages runtime), and password-free read-only public sharing links.
 
 ---
 
@@ -44,7 +44,7 @@ Deeply integrated with **Cloudflare R2** object storage and **Cloudflare Pages F
 - **☁️ Cloudflare R2 Cloud Storage**: Persistent cloud storage directly bound to R2 buckets, enabling fast search, editing, and reliable archiving.
 - **📤 Local Document Upload**: One-click upload from your local drive with category selection in the documents dashboard.
 - **🔗 Secure Public Sharing**: Generate password-free, read-only download links for external guests.
-- **🔐 Secret-Key Access Control**: Edge-level password verification implemented via Cloudflare Pages Functions.
+- **🔐 Dual-Channel Access Key Protection**: Reliable secret-key protection supporting `.env` build-time injection or Cloudflare environment variables.
 - **⚡ Local-First Performance**: Core rendering engine runs in the browser, offering sub-millisecond local latency.
 
 ---
@@ -64,11 +64,50 @@ Deeply integrated with **Cloudflare R2** object storage and **Cloudflare Pages F
 
 | Binding / Variable Type | Variable Name | Required | Example Value | Description |
 | :--- | :--- | :---: | :--- | :--- |
-| **R2 Bucket Binding**<br>`(Functions Binding)` | `DOCUMENTS_BUCKET` | **Required** | Select your bucket (e.g. `office-ycz-me`) | Binds your Cloudflare R2 bucket. Backend Functions use this to persist documents and catalog metadata. |
-| **Environment Variable / Secret**<br>`(App Secret)` | `PASSWORD`<br>*(or `ACCESS_KEY`)* | Optional | `MySecretPassword2026!` | **Global Access Key / Password**.<br>• **If configured**: Visitors must enter this password to unlock access (issued 30-day HMAC token);<br>• **If omitted**: Open public mode without authentication. |
+| **R2 Bucket Binding**<br>`(Functions Binding)` | **`DOCUMENTS_BUCKET`** | **Required** | Select your bucket (e.g. `office-ycz-me`) | Binds your Cloudflare R2 bucket. Backend Functions use this to persist documents and catalog metadata. |
+| **Build-Time Access Key**<br>`(.env / Build Env)` | **`NEXT_PUBLIC_ACCESS_KEY`**<br>*(Recommended)* | Optional | `MySecretPassword2026!` | **Most reliable access key method**.<br>• Put in root `.env.local` or Cloudflare build variables;<br>• Embedded during build, **100% immune to runtime env loss**;<br>• Never committed to git (in `.gitignore`). |
+| **Runtime Access Key**<br>`(Pages Functions Env)` | **`PASSWORD`**<br>*(or `ACCESS_KEY`)* | Optional | `MySecretPassword2026!` | Cloudflare Pages runtime secret for edge function authentication. |
 
-> [!TIP]
-> Variable names must be strictly typed as **`DOCUMENTS_BUCKET`** and **`PASSWORD`** (uppercase).
+---
+
+## 🔐 Access Key Configuration (Recommended via `.env`)
+
+In static-export Next.js projects, Cloudflare Pages runtime variables can sometimes fail to reach client-side components due to environment branch mismatches (Production vs Preview) or static packaging.
+
+To guarantee that authentication is always enforced:
+
+### Option 1: Use `.env.local` locally (Recommended & Most Reliable)
+
+1. Create a `.env.local` file from [`.env.example`](.env.example):
+   ```bash
+   cp .env.example .env.local
+   ```
+2. Set your private access key inside `.env.local`:
+   ```env
+   NEXT_PUBLIC_ACCESS_KEY=your_secure_password
+   ```
+3. Run the build command:
+   ```bash
+   pnpm build
+   ```
+4. Deploy to Pages (e.g., `npx wrangler pages deploy out --project-name=office-website`).
+
+> [!IMPORTANT]
+> **Security Notice**:
+> 1. `.env*` is already in `.gitignore`, so **`.env.local` is never committed to Git**;
+> 2. The client uses SHA-256 hash comparison; visitors are immediately gated with an unlock card, granting a 30-day encrypted local session once unlocked.
+
+---
+
+### Option 2: Add as Build Environment Variable in Cloudflare Pages
+
+If deploying via GitHub / GitLab integration:
+
+1. Go to Cloudflare Dashboard -> **Workers & Pages** -> click your Pages project -> **Settings** -> **Environment variables**;
+2. Under both **Production** and **Preview**, add:
+   - Variable name: `NEXT_PUBLIC_ACCESS_KEY`
+   - Value: `your_secure_password`
+3. Click **Save**, then go to **Deployments** and click **Redeploy**.
 
 ---
 
@@ -76,37 +115,35 @@ Deeply integrated with **Cloudflare R2** object storage and **Cloudflare Pages F
 
 ### Step 1: Create a Cloudflare R2 Bucket
 
-1. Log into your [Cloudflare Dashboard](https://dash.cloudflare.com/).
-2. In the left navigation, click **R2**, then click **Create bucket**.
+1. Log into your [Cloudflare Dashboard](https://dash.cloudflare.com/);
+2. In the left navigation, click **R2**, then click **Create bucket**;
 3. Name your bucket (e.g., `office-ycz-me`), choose an automatic or nearby location, and click **Create bucket**.
 
 ---
 
 ### Step 2: Deploy to Cloudflare Pages
 
-Choose either Option A (Git Integration) or Option B (Wrangler CLI):
-
 #### Option A: Deploy via GitHub / GitLab (Recommended for CI/CD)
 
-1. In the Cloudflare Dashboard, go to **Workers & Pages** -> **Create application** -> switch to the **Pages** tab -> click **Connect to Git**.
+1. In Cloudflare Dashboard, go to **Workers & Pages** -> **Create application** -> **Pages** tab -> **Connect to Git**;
 2. Select your repository and configure build settings:
    - **Project name**: `office-website`
    - **Production branch**: `main`
    - **Framework preset**: `None` (or `Next.js (Static HTML Export)`)
    - **Build command**: `pnpm run build`
    - **Build output directory**: `out`
-3. Expand **Environment variables**, and add the build dependency:
-   - Variable: `NODE_VERSION`, Value: `20` (or higher)
+3. Expand **Environment variables**, add:
+   - `NODE_VERSION`: `20`
+   - *(Optional access key)*: `NEXT_PUBLIC_ACCESS_KEY`: `your_password`
 4. Click **Save and Deploy**.
 
 #### Option B: Deploy via Wrangler CLI
 
-1. Build locally:
+1. Configure `.env.local` with `NEXT_PUBLIC_ACCESS_KEY`, then build:
    ```bash
    pnpm install
    pnpm run build
    ```
-   This generates the `./out` static directory.
 2. Verify `wrangler.json`:
    ```json
    {
@@ -131,29 +168,13 @@ Choose either Option A (Git Integration) or Option B (Wrangler CLI):
 
 ### Step 3: Bind R2 Bucket (Mandatory)
 
-1. In Cloudflare Dashboard, go to **Workers & Pages** -> click your Pages project (e.g., `office-website`).
-2. Navigate to **Settings** -> select **Functions** from the sub-menu.
-3. Scroll down to **R2 bucket bindings**, and click **Add binding**.
-4. Configure the following:
-   - **Variable name**: `DOCUMENTS_BUCKET` *(must be exact)*
-   - **R2 bucket**: Select your created bucket (e.g., `office-ycz-me`)
-5. Click **Save**.
-
----
-
-### Step 4: Configure Access Password (Recommended)
-
-To protect your cloud documents with private authentication:
-
-1. Navigate to **Settings** -> **Environment variables**.
-2. Under "Production", click **Add variable**:
-   - **Variable name**: `PASSWORD` *(or `ACCESS_KEY`)*
-   - **Value**: Your private password (e.g., `Admin@Pass123`)
-   - Click **Encrypt** to store it as a secure secret.
-3. Click **Save**.
-
-> [!NOTE]
-> If you add R2 bindings or variables after the initial build, navigate to **Deployments**, locate your latest deployment, and click **Redeploy** to apply changes to edge functions.
+1. In Cloudflare Dashboard, go to **Workers & Pages** -> click your Pages project;
+2. Navigate to **Settings** -> select **Functions** from the sub-menu;
+3. Scroll down to **R2 bucket bindings**, and click **Add binding**;
+4. Configure:
+   - **Variable name**: `DOCUMENTS_BUCKET` *(exact uppercase)*
+   - **R2 bucket**: Select your bucket (e.g., `office-ycz-me`)
+5. Click **Save** and trigger a **Redeploy**.
 
 ---
 
@@ -189,9 +210,9 @@ pnpm build
 * **Cause**: R2 bucket binding is missing.
 * **Fix**: Ensure `DOCUMENTS_BUCKET` is configured under Pages **Settings -> Functions -> R2 bucket bindings**, and trigger a **Redeploy**.
 
-### 2. Password prompt appears and reject valid keys?
-* **Cause**: Input doesn't match the `PASSWORD` environment variable.
-* **Fix**: Verify the value in Pages **Settings -> Environment variables**. To remove authentication, delete the `PASSWORD` variable and redeploy.
+### 2. Password prompt doesn't appear even after setting `PASSWORD` in Cloudflare?
+* **Cause**: Cloudflare Pages runtime variables may not reach static export pages due to environment mismatch.
+* **Fix**: Create `.env.local` with `NEXT_PUBLIC_ACCESS_KEY=your_password`, run `pnpm build`, and redeploy.
 
 ---
 

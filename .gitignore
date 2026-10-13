@@ -48,3 +48,4 @@ next-env.d.ts
 .edgeone/*
 .tef_dist/*
   
+.wrangler

@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { checkAuth, login, logout } from "@/lib/api";
-import { Lock, KeyRound, Loader2, LogOut, ShieldCheck } from "lucide-react";
+import { Lock, KeyRound, Loader2, ShieldCheck } from "lucide-react";
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -24,6 +24,40 @@ export function useAuth() {
   return useContext(AuthContext);
 }
 
+// 客户端支持通过 .env / .env.local 注入静态访问密钥
+const CLIENT_SECRET = (
+  process.env.NEXT_PUBLIC_ACCESS_KEY ||
+  process.env.NEXT_PUBLIC_PASSWORD ||
+  ""
+).trim();
+
+const AUTH_STORAGE_KEY = "office_client_auth_v1";
+const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 天有效期
+
+/**
+ * 计算字符串的 SHA-256 十六进制哈希
+ */
+async function sha256Hex(text: string): Promise<string> {
+  const enc = new TextEncoder();
+  const hash = await crypto.subtle.digest("SHA-256", enc.encode(text));
+  return Array.from(new Uint8Array(hash))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/**
+ * 校验输入密码是否与客户端配置的密钥或哈希匹配
+ */
+async function verifyClientSecret(input: string, secret: string): Promise<boolean> {
+  if (!input || !secret) return false;
+  // 直接明文匹配
+  if (input === secret) return true;
+  // 计算输入哈希进行比对（支持 secret 为 64 位 SHA-256 哈希值）
+  const inputHash = await sha256Hex(input);
+  if (inputHash.toLowerCase() === secret.toLowerCase()) return true;
+  return false;
+}
+
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [requiresPassword, setRequiresPassword] = useState<boolean>(false);
@@ -34,6 +68,32 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   const refreshAuth = async () => {
     try {
+      // 方案 1：优先采用前端构建期 .env 注入的访问密钥（100% 免疫静态部署环境丢失变量的问题）
+      if (CLIENT_SECRET) {
+        setRequiresPassword(true);
+        const savedSessionStr = localStorage.getItem(AUTH_STORAGE_KEY);
+        if (savedSessionStr) {
+          try {
+            const session = JSON.parse(savedSessionStr);
+            if (session?.expiresAt && session.expiresAt > Date.now()) {
+              const targetHash =
+                CLIENT_SECRET.length === 64
+                  ? CLIENT_SECRET.toLowerCase()
+                  : await sha256Hex(CLIENT_SECRET);
+              if (session.hash === targetHash) {
+                setIsAuthenticated(true);
+                return;
+              }
+            }
+          } catch {
+            localStorage.removeItem(AUTH_STORAGE_KEY);
+          }
+        }
+        setIsAuthenticated(false);
+        return;
+      }
+
+      // 方案 2：未配置前端 .env 密钥时，回退到服务端 Cloudflare Pages Functions 运行时校验
       const res = await checkAuth();
       setIsAuthenticated(res.authenticated);
       setRequiresPassword(res.requiresPassword);
@@ -51,13 +111,39 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!password.trim()) return;
+    const trimmedInput = password.trim();
+    if (!trimmedInput) return;
 
     setIsSubmitting(true);
     setErrorMessage("");
 
     try {
-      const res = await login(password.trim());
+      // 若存在前端配置的 CLIENT_SECRET
+      if (CLIENT_SECRET) {
+        const isMatch = await verifyClientSecret(trimmedInput, CLIENT_SECRET);
+        if (!isMatch) {
+          setErrorMessage("访问密钥不正确，请重新输入");
+          return;
+        }
+
+        const inputHash = await sha256Hex(trimmedInput);
+        localStorage.setItem(
+          AUTH_STORAGE_KEY,
+          JSON.stringify({
+            hash: inputHash,
+            expiresAt: Date.now() + SESSION_DURATION_MS,
+          })
+        );
+        setIsAuthenticated(true);
+        setPassword("");
+
+        // 异步尝试同步至服务端 Functions（如果配置了 R2 后端），不阻碍前端直接进入
+        login(trimmedInput).catch(() => {});
+        return;
+      }
+
+      // 服务端 Functions 登录逻辑
+      const res = await login(trimmedInput);
       if (res.success) {
         setIsAuthenticated(true);
         setPassword("");
@@ -72,7 +158,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   };
 
   const handleLogout = async () => {
-    await logout();
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    await logout().catch(() => {});
     setIsAuthenticated(false);
     setPassword("");
   };
@@ -104,7 +191,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
               私有文档工作台
             </h1>
             <p className="mt-1.5 text-xs text-muted-foreground">
-              请输入在 Cloudflare Pages 中配置的访问密钥以继续
+              请输入访问密钥以继续使用在线 Office 与文档库
             </p>
           </div>
 
@@ -125,7 +212,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="输入系统密码..."
+                  placeholder="输入访问密钥..."
                   autoFocus
                   required
                   className="w-full rounded-xl border border-border bg-background py-2.5 pl-10 pr-4 text-sm text-foreground shadow-xs transition-colors placeholder:text-muted-foreground focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20"
@@ -142,7 +229,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-medium text-primary-foreground shadow-md transition-all hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-medium text-primary-foreground shadow-md transition-all hover:bg-primary/90 active:scale-[0.99] disabled:opacity-50 cursor-pointer"
             >
               {isSubmitting ? (
                 <>
@@ -160,7 +247,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
           <div className="mt-6 border-t border-border/50 pt-4 text-center">
             <p className="text-[11px] text-muted-foreground">
-              由 Cloudflare Pages Functions &amp; R2 云端强力驱动
+              已启用私有访问密钥安全保护机制
             </p>
           </div>
         </div>
