@@ -150,9 +150,21 @@ const commonImages = [
   "placeholders/chart.png",
   "placeholders/chart_active.png",
 ];
-for (const img of commonImages) {
-  queue.add(`v9.3.0.24-1/sdkjs/common/Images/${img}`);
+// 鼠标指针 PNG
+const cursorNames = [
+  "eyedropper", "grab", "grabbing", "marker-format",
+  "move-border-horizontally", "move-border-vertically",
+  "plus-copy", "plus", "select-table-cell",
+  "select-table-column", "select-table-content", "select-table-row",
+  "shape-copy", "table-eraser", "table-pen", "text-copy"
+];
+for (const c of cursorNames) {
+  queue.add(`v9.3.0.24-1/sdkjs/common/Images/cursors/${c}.png`);
 }
+
+// 幻灯片主题列表
+queue.add("v9.3.0.24-1/sdkjs/slide/themes/themes.js");
+
 
 // 3. 从已下载的 CSS/JS 中提取额外子资源（例如 url(...) 中的图片与字体）
 function extractSubResources(relPath, buffer) {
