@@ -23,6 +23,7 @@ import {
   Category,
   DocumentType,
 } from "@/lib/api";
+import { convertPdfToDocx } from "@/utils/editor/pdf-converter";
 import { toast } from "sonner";
 import { AuthGuard } from "@/components/auth-guard";
 import { Toaster } from "@/components/ui/sonner";
@@ -35,6 +36,7 @@ import {
   FolderPlus,
   Loader2,
   FileText,
+  FileEdit,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -52,6 +54,7 @@ function EditorWorkspace() {
   const [docTitle, setDocTitle] = useState<string>("未命名文档");
   const [docType, setDocType] = useState<DocumentType>("docx");
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [isConverting, setIsConverting] = useState<boolean>(false);
   const [categories, setCategories] = useState<Category[]>([]);
 
   // 首次保存归类弹窗状态
@@ -61,6 +64,59 @@ function EditorWorkspace() {
   const [newCatName, setNewCatName] = useState<string>("");
   const [showNewCatInput, setShowNewCatInput] = useState<boolean>(false);
   const pendingBufferRef = useRef<Uint8Array | null>(null);
+
+  // PDF 转为 Word (docx) 并打开深度编辑
+  const handleConvertToWord = async () => {
+    if (isConverting) return;
+    const currentDocId = activeDocIdRef.current || docId;
+    setIsConverting(true);
+    const toastId = toast.loading("正在转换 PDF 为 Word 可编辑文档，请稍候...");
+    try {
+      let arrayBuffer: ArrayBuffer;
+      let targetCategoryId: string | null = null;
+      if (currentDocId) {
+        const blob = await getDocumentContentBlob(currentDocId);
+        arrayBuffer = await blob.arrayBuffer();
+        try {
+          const metaRes = await fetchDocumentsAndCategories();
+          const currentDoc = metaRes.documents.find((d) => d.id === currentDocId);
+          if (currentDoc) {
+            targetCategoryId = currentDoc.categoryId;
+          }
+        } catch {}
+      } else {
+        const doc = server.getDocument();
+        const res = await fetch(doc.url);
+        arrayBuffer = await res.arrayBuffer();
+      }
+
+      const docxBuffer = await convertPdfToDocx(arrayBuffer);
+      const baseName = docTitle.replace(/\.pdf$/i, "");
+      const newDocName = `${baseName} (Word).docx`;
+      const docxBlob = new Blob([docxBuffer.buffer as ArrayBuffer], {
+        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      });
+
+      const newDoc = await saveNewDocument({
+        file: docxBlob,
+        name: newDocName,
+        type: "docx",
+        categoryId: targetCategoryId,
+      });
+
+      toast.success("转换成功，正在打开 Word 编辑器...", { id: toastId });
+      // 替换当前页面地址进入新创建的 docx 编辑器
+      router.push(`/editor?docId=${encodeURIComponent(newDoc.id)}`);
+      // 稍后刷新页面以加载全新文档
+      setTimeout(() => {
+        window.location.href = `/editor?docId=${encodeURIComponent(newDoc.id)}`;
+      }, 100);
+    } catch (err) {
+      toast.error("转换失败: " + (err instanceof Error ? err.message : String(err)), { id: toastId });
+    } finally {
+      setIsConverting(false);
+    }
+  };
 
   // 快捷键拦截 (Ctrl+S / Cmd+S)
   useEffect(() => {
@@ -409,6 +465,22 @@ function EditorWorkspace() {
           </div>
 
           <div className="flex items-center gap-2">
+            {(docType === "pdf" || docTitle.toLowerCase().endsWith(".pdf")) && (
+              <button
+                onClick={handleConvertToWord}
+                disabled={isConverting}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold rounded-lg shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                title="将此 PDF 转换为 Word 文档进行像 Word 一样的文字编辑与排版"
+              >
+                {isConverting ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <FileEdit className="w-3.5 h-3.5" />
+                )}
+                <span>{isConverting ? "转换中..." : "转为 Word 深度编辑"}</span>
+              </button>
+            )}
+
             <button
               onClick={handleTriggerSave}
               disabled={isSaving}

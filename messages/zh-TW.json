@@ -1,4 +1,4 @@
-﻿{
+{
     "s+IiJN":  "關於 CIZHENYU Office",
     "rMPZlP":  "專為未來生產力打造的現代化、高性能 CIZHENYU Office 套件。",
     "Xd0J7Y":  "開源",
@@ -139,6 +139,11 @@
     "Verifying":  "正在驗證...",
     "AccessKeyProtected":  "已啟用私有存取金鑰安全保護機制",
     "DocumentsPageTitle":  "線上文件庫 — CIZHENYU Office",
-    "InvalidAccessKey":  "Invalid access key, please try again",
-    "All":  "All"
+    "InvalidAccessKey":  "存取金鑰無效，請重試",
+    "All":  "全部",
+    "ConvertToWordEdit":  "轉為 Word 編輯",
+    "ConvertingPdfToWord":  "正在將 PDF 轉換為可編輯 Word 文件...",
+    "ConvertSuccess":  "PDF 已成功轉為 Word，正在進入編輯模式...",
+    "ConvertFailed":  "轉換失敗，請重試",
+    "PreviewAndAnnotate":  "預覽與批註"
 }

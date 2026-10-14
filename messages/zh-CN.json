@@ -140,5 +140,10 @@
   "AccessKeyProtected": "已启用私有访问密钥安全保护机制",
   "DocumentsPageTitle": "在线文档库 — CIZHENYU Office",
   "InvalidAccessKey": "访问密钥无效，请重试",
-  "All": "全部"
+  "All": "全部",
+  "ConvertToWordEdit": "转为 Word 编辑",
+  "ConvertingPdfToWord": "正在将 PDF 转换为可编辑 Word 文档...",
+  "ConvertSuccess": "PDF 已成功转为 Word，正在进入编辑模式...",
+  "ConvertFailed": "转换失败，请重试",
+  "PreviewAndAnnotate": "预览与批注"
 }

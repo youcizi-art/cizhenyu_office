@@ -32,6 +32,8 @@ import {
   FileUp,
   X,
   Menu,
+  Eye,
+  FileEdit,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -47,10 +49,12 @@ import {
   enableShare,
   disableShare,
   saveNewDocument,
+  getDocumentContentBlob,
   DocumentMeta,
   Category,
   DocumentType,
 } from "@/lib/api";
+import { convertPdfToDocx } from "@/utils/editor/pdf-converter";
 import {
   Popover,
   PopoverContent,
@@ -125,6 +129,7 @@ export function DocumentsView() {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadTargetCatId, setUploadTargetCatId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [convertingDocId, setConvertingDocId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 加载数据
@@ -396,6 +401,56 @@ export function DocumentsView() {
       toast.error(String(err));
     }
   };
+
+  // 将 PDF 转换为 Word (docx) 并打开深度编辑
+  const handleConvertToWord = async (doc: DocumentMeta) => {
+    if (convertingDocId) return;
+    setConvertingDocId(doc.id);
+    const toastId = toast.loading(
+      t({
+        id: "ConvertingPdfToWord",
+        message: "Converting PDF to editable Word document...",
+      })
+    );
+    try {
+      const blob = await getDocumentContentBlob(doc.id);
+      const arrayBuffer = await blob.arrayBuffer();
+      const docxBuffer = await convertPdfToDocx(arrayBuffer);
+      const baseName = doc.name.replace(/\.pdf$/i, "");
+      const newDocName = `${baseName} (Word).docx`;
+      const docxBlob = new Blob([docxBuffer.buffer as ArrayBuffer], {
+        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      });
+      const newDoc = await saveNewDocument({
+        file: docxBlob,
+        name: newDocName,
+        type: "docx",
+        categoryId: doc.categoryId,
+      });
+      setDocuments((prev) => [newDoc, ...prev]);
+      toast.success(
+        t({
+          id: "ConvertSuccess",
+          message: "PDF successfully converted to Word! Opening editor...",
+        }),
+        { id: toastId }
+      );
+      router.push(`/editor?docId=${encodeURIComponent(newDoc.id)}`);
+    } catch (err) {
+      toast.error(
+        t({
+          id: "ConvertFailed",
+          message: "Conversion failed, please try again",
+        }) +
+          ": " +
+          (err instanceof Error ? err.message : String(err)),
+        { id: toastId }
+      );
+    } finally {
+      setConvertingDocId(null);
+    }
+  };
+
 
   // 触发本地文件上传弹窗
   const handleTriggerUpload = (defaultCatId?: string | null) => {
@@ -1123,6 +1178,25 @@ export function DocumentsView() {
                           </div>
 
                           <div className="flex items-center gap-1 shrink-0">
+                            {doc.type === "pdf" && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleConvertToWord(doc);
+                                }}
+                                disabled={convertingDocId === doc.id}
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors cursor-pointer disabled:opacity-50"
+                                title={t({ id: "ConvertToWordEdit", message: "Convert to Word & Edit" })}
+                              >
+                                {convertingDocId === doc.id ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <FileEdit className="w-3 h-3" />
+                                )}
+                                <span>Word</span>
+                              </button>
+                            )}
+
                             {doc.shareToken && (
                               <span
                                 onClick={() => handleOpenShare(doc)}
@@ -1140,14 +1214,38 @@ export function DocumentsView() {
                                   <MoreVertical className="w-4 h-4" />
                                 </button>
                               </PopoverTrigger>
-                              <PopoverContent side="bottom" align="end" className="w-36 p-1 text-xs">
-                                <button
-                                  onClick={() => router.push(`/editor?docId=${encodeURIComponent(doc.id)}`)}
-                                  className="w-full flex items-center gap-2 px-2.5 py-1.5 text-foreground hover:bg-muted rounded cursor-pointer"
-                                >
-                                  <Edit3 className="w-3.5 h-3.5 text-primary" />
-                                  {t({ id: "EditOnline", message: "Edit Online" })}
-                                </button>
+                              <PopoverContent side="bottom" align="end" className="w-40 p-1 text-xs">
+                                {doc.type === "pdf" ? (
+                                  <>
+                                    <button
+                                      onClick={() => router.push(`/editor?docId=${encodeURIComponent(doc.id)}`)}
+                                      className="w-full flex items-center gap-2 px-2.5 py-1.5 text-foreground hover:bg-muted rounded cursor-pointer"
+                                    >
+                                      <Eye className="w-3.5 h-3.5 text-primary" />
+                                      {t({ id: "PreviewAndAnnotate", message: "Preview & Annotate" })}
+                                    </button>
+                                    <button
+                                      onClick={() => handleConvertToWord(doc)}
+                                      disabled={convertingDocId === doc.id}
+                                      className="w-full flex items-center gap-2 px-2.5 py-1.5 text-foreground hover:bg-primary/10 hover:text-primary rounded cursor-pointer disabled:opacity-50"
+                                    >
+                                      {convertingDocId === doc.id ? (
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+                                      ) : (
+                                        <FileEdit className="w-3.5 h-3.5 text-primary" />
+                                      )}
+                                      {t({ id: "ConvertToWordEdit", message: "Convert to Word & Edit" })}
+                                    </button>
+                                  </>
+                                ) : (
+                                  <button
+                                    onClick={() => router.push(`/editor?docId=${encodeURIComponent(doc.id)}`)}
+                                    className="w-full flex items-center gap-2 px-2.5 py-1.5 text-foreground hover:bg-muted rounded cursor-pointer"
+                                  >
+                                    <Edit3 className="w-3.5 h-3.5 text-primary" />
+                                    {t({ id: "EditOnline", message: "Edit Online" })}
+                                  </button>
+                                )}
                                 <button
                                   onClick={() => handleDownloadDoc(doc)}
                                   className="w-full flex items-center gap-2 px-2.5 py-1.5 text-foreground hover:bg-muted rounded cursor-pointer"

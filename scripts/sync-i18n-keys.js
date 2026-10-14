@@ -43,7 +43,9 @@ const keysToSync = [
   'PrivateWorkspace', 'EnterAccessKeyDesc', 'AccessKey',
   'EnterAccessKeyPlaceholder', 'UnlockSystem', 'Verifying',
   'AccessKeyProtected', 'InvalidAccessKey', 'DocumentsPageTitle',
-  'All'
+  'All',
+  'ConvertToWordEdit', 'ConvertingPdfToWord', 'ConvertSuccess',
+  'ConvertFailed', 'PreviewAndAnnotate'
 ];
 
 // 为 zh-CN 单独维护的中文翻译（需要正确的值）
@@ -51,8 +53,11 @@ const zhCNOverrides = {
   All: '全部',
   InvalidAccessKey: '访问密钥无效，请重试',
   DocumentsPageTitle: '在线文档库 — CIZHENYU Office',
-  // 以下是 zh-CN 已有正确翻译的键，不需要用英文覆盖
-  // 但如果 PowerShell 破坏了它们，需要恢复
+  ConvertToWordEdit: '转为 Word 编辑',
+  ConvertingPdfToWord: '正在将 PDF 转换为可编辑 Word 文档...',
+  ConvertSuccess: 'PDF 已成功转为 Word，正在进入编辑模式...',
+  ConvertFailed: '转换失败，请重试',
+  PreviewAndAnnotate: '预览与批注',
 };
 
 const files = fs.readdirSync(dir).filter(f => f.endsWith('.json'));
