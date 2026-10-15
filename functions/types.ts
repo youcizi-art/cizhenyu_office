@@ -56,7 +56,7 @@ export interface Category {
   createdAt: number;
 }
 
-export type DocumentType = "docx" | "xlsx" | "pptx" | "pdf";
+export type DocumentType = "docx" | "xlsx" | "pptx" | "pdf" | "md";
 
 export interface DocumentMeta {
   id: string;
@@ -68,6 +68,12 @@ export interface DocumentMeta {
   createdAt: number;
   updatedAt: number;
   shareToken?: string;
+  sharePassword?: string;
+  shareMode?: "download" | "preview";
+  pinned?: boolean;
+  pinnedAt?: number;
+  tags?: string[];
+  order?: number;
 }
 
 export interface MetadataIndex {

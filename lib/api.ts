@@ -21,6 +21,12 @@ export interface DocumentMeta {
   createdAt: number;
   updatedAt: number;
   shareToken?: string;
+  sharePassword?: string;
+  shareMode?: "download" | "preview";
+  pinned?: boolean;
+  pinnedAt?: number;
+  tags?: string[];
+  order?: number;
 }
 
 export interface MetadataResponse {
@@ -199,11 +205,18 @@ export async function deleteDocument(docId: string): Promise<void> {
 }
 
 /**
- * 修改文档元数据 (重命名 / 移动分类)
+ * 修改文档元数据 (重命名 / 移动分类 / 标签 / 置顶 / 排序权重)
  */
 export async function updateDocumentMeta(
   docId: string,
-  updates: { name?: string; categoryId?: string | null }
+  updates: {
+    name?: string;
+    categoryId?: string | null;
+    tags?: string[];
+    pinned?: boolean;
+    pinnedAt?: number;
+    order?: number;
+  }
 ): Promise<DocumentMeta> {
   const res = await fetchWithAuth(`/api/documents/${encodeURIComponent(docId)}/meta`, {
     method: "PATCH",
@@ -218,6 +231,22 @@ export async function updateDocumentMeta(
 
   const data = await res.json();
   return data.document;
+}
+
+/**
+ * 批量保存文档排序
+ */
+export async function reorderDocuments(orderedDocIds: string[]): Promise<void> {
+  const res = await fetchWithAuth("/api/documents/reorder", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ orderedDocIds }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "保存文档排序失败");
+  }
 }
 
 /**
@@ -279,11 +308,17 @@ export async function deleteCategory(id: string): Promise<string[]> {
 }
 
 /**
- * 开启或刷新分享
+ * 开启或刷新分享链接 (支持设置可选提取密钥与展示/下载模式)
  */
-export async function enableShare(docId: string): Promise<string> {
+export async function enableShare(
+  docId: string,
+  sharePassword?: string,
+  shareMode?: "download" | "preview"
+): Promise<{ shareToken: string; sharePassword?: string; shareMode?: "download" | "preview" }> {
   const res = await fetchWithAuth(`/api/documents/${encodeURIComponent(docId)}/share`, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sharePassword, shareMode }),
   });
 
   if (!res.ok) {
@@ -292,14 +327,18 @@ export async function enableShare(docId: string): Promise<string> {
   }
 
   const data = await res.json();
-  return data.shareToken;
+  return {
+    shareToken: data.shareToken,
+    sharePassword: data.document?.sharePassword,
+    shareMode: data.document?.shareMode,
+  };
 }
 
 /**
  * 关闭分享
  */
 export async function disableShare(docId: string): Promise<void> {
-  const res = await fetch(`/api/documents/${encodeURIComponent(docId)}/share`, {
+  const res = await fetchWithAuth(`/api/documents/${encodeURIComponent(docId)}/share`, {
     method: "DELETE",
   });
 
@@ -310,13 +349,15 @@ export async function disableShare(docId: string): Promise<void> {
 }
 
 /**
- * 公开获取分享文档信息
+ * 公开获取分享文档信息 (无需登录，受保护时返回 requiresPassword: true)
  */
 export async function getShareInfo(token: string): Promise<{
   name: string;
   type: DocumentType;
   size: number;
   updatedAt: number;
+  requiresPassword?: boolean;
+  shareMode?: "download" | "preview";
 }> {
   const res = await fetch(`/api/share/${encodeURIComponent(token)}/info`, {
     cache: "no-store",
@@ -331,8 +372,24 @@ export async function getShareInfo(token: string): Promise<{
 }
 
 /**
- * 获取公开分享下载地址
+ * 获取公开分享下载地址 (支持提取密钥)
  */
-export function getShareDownloadUrl(token: string): string {
-  return `/api/share/${encodeURIComponent(token)}/download`;
+export function getShareDownloadUrl(token: string, passcode?: string): string {
+  const base = `/api/share/${encodeURIComponent(token)}/download`;
+  return passcode ? `${base}?key=${encodeURIComponent(passcode)}` : base;
 }
+
+/**
+ * 获取 Markdown 纯文本公开分享内容 (支持提取密钥)
+ */
+export async function getShareContent(token: string, passcode?: string): Promise<string> {
+  const base = `/api/share/${encodeURIComponent(token)}/content`;
+  const url = passcode ? `${base}?key=${encodeURIComponent(passcode)}` : base;
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "获取分享文档内容失败");
+  }
+  return res.text();
+}
+

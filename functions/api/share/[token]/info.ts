@@ -24,11 +24,13 @@ export async function onRequestGet(context: PagesContext<"token">): Promise<Resp
     return errorResponse("分享链接不存在或已失效", 404);
   }
 
-  // 仅对外暴露非敏感展示信息，不支持在线查看具体内容
+  // 仅对外暴露非敏感展示信息，不支持在线查看具体内容，不泄露真实密码
   return jsonResponse({
     name: doc.name,
     type: doc.type,
     size: doc.size,
     updatedAt: doc.updatedAt,
+    requiresPassword: Boolean(doc.sharePassword),
+    shareMode: doc.shareMode || "download",
   });
 }

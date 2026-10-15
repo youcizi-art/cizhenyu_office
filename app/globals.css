@@ -250,6 +250,47 @@ body {
   background-color: var(--background) !important;
 }
 
+/* 恢复并美化 Markdown 预览模式与各编辑器面板滚动条 */
+.vditor-host-wrapper .vditor-preview {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  height: 100% !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: var(--border) transparent !important;
+}
+
+.vditor-host-wrapper .vditor-preview::-webkit-scrollbar,
+.vditor-host-wrapper .vditor-reset::-webkit-scrollbar,
+.vditor-host-wrapper .vditor-sv::-webkit-scrollbar,
+.vditor-host-wrapper .vditor-ir::-webkit-scrollbar,
+.vditor-host-wrapper .vditor-wysiwyg::-webkit-scrollbar {
+  display: block !important;
+  width: 7px !important;
+  height: 7px !important;
+}
+
+.vditor-host-wrapper .vditor-preview::-webkit-scrollbar-track,
+.vditor-host-wrapper .vditor-reset::-webkit-scrollbar-track,
+.vditor-host-wrapper .vditor-sv::-webkit-scrollbar-track,
+.vditor-host-wrapper .vditor-ir::-webkit-scrollbar-track,
+.vditor-host-wrapper .vditor-wysiwyg::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.vditor-host-wrapper .vditor-preview::-webkit-scrollbar-thumb,
+.vditor-host-wrapper .vditor-reset::-webkit-scrollbar-thumb,
+.vditor-host-wrapper .vditor-sv::-webkit-scrollbar-thumb,
+.vditor-host-wrapper .vditor-ir::-webkit-scrollbar-thumb,
+.vditor-host-wrapper .vditor-wysiwyg::-webkit-scrollbar-thumb {
+  background-color: var(--border) !important;
+  border-radius: 9999px !important;
+}
+
+.vditor-host-wrapper .vditor-preview::-webkit-scrollbar-thumb:hover,
+.vditor-host-wrapper .vditor-reset::-webkit-scrollbar-thumb:hover {
+  background-color: var(--muted-foreground) !important;
+}
+
 .dark .vditor-host-wrapper .vditor {
   --border-color: var(--border);
 }
@@ -259,6 +300,7 @@ body {
   border-bottom: 1px solid var(--border) !important;
 }
 
+
 .dark .vditor-host-wrapper .vditor-toolbar__item {
   color: var(--muted-foreground) !important;
 }
@@ -267,5 +309,59 @@ body {
   color: var(--foreground) !important;
   background-color: var(--muted) !important;
 }
+
+/* 拖拽排序动画与样式 (参考 tudolist 规范) */
+body.drag-scroll-lock {
+  overflow: hidden !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+.drag-hold-pending {
+  transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1) !important;
+}
+
+.drag-hold-ready {
+  transform: scale(1.02) !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+  cursor: grabbing !important;
+  opacity: 0.9 !important;
+}
+
+.drag-source {
+  opacity: 0.25 !important;
+  filter: grayscale(0.5) !important;
+}
+
+.sort-ghost {
+  position: fixed !important;
+  left: 0 !important;
+  top: 0 !important;
+  margin: 0 !important;
+  pointer-events: none !important;
+  z-index: 9999 !important;
+  opacity: 0.95 !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+  border-radius: 1rem !important;
+  transition: none !important;
+  transform-origin: center center !important;
+  will-change: transform !important;
+  box-sizing: border-box !important;
+}
+
+.sort-placeholder {
+  border: 2px dashed var(--primary) !important;
+  background-color: color-mix(in srgb, var(--primary) 8%, transparent) !important;
+  border-radius: 1rem !important;
+  box-sizing: border-box !important;
+  transition: all 0.15s ease-out !important;
+}
+
+[data-drag-doc-id] {
+  -webkit-user-drag: none !important;
+  user-select: none !important;
+}
+
+
 
 

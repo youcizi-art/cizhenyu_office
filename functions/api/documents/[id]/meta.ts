@@ -22,6 +22,10 @@ export async function onRequestPatch(context: PagesContext<"id">): Promise<Respo
     const body = (await request.json()) as {
       name?: string;
       categoryId?: string | null;
+      tags?: string[];
+      pinned?: boolean;
+      pinnedAt?: number;
+      order?: number;
     };
 
     const metadata = await loadMetadata(env);
@@ -36,6 +40,21 @@ export async function onRequestPatch(context: PagesContext<"id">): Promise<Respo
 
     if ("categoryId" in body) {
       doc.categoryId = body.categoryId || null;
+    }
+
+    if ("tags" in body && Array.isArray(body.tags)) {
+      doc.tags = body.tags
+        .map((t) => (typeof t === "string" ? t.trim() : ""))
+        .filter(Boolean);
+    }
+
+    if ("pinned" in body) {
+      doc.pinned = Boolean(body.pinned);
+      doc.pinnedAt = doc.pinned ? (body.pinnedAt || Date.now()) : undefined;
+    }
+
+    if ("order" in body && typeof body.order === "number") {
+      doc.order = body.order;
     }
 
     doc.updatedAt = Date.now();

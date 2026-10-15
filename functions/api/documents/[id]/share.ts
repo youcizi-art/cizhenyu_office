@@ -26,9 +26,22 @@ export async function onRequestPost(context: PagesContext<"id">): Promise<Respon
       return errorResponse("文档不存在", 404);
     }
 
+    const body = (await request.json().catch(() => ({}))) as {
+      sharePassword?: string;
+      shareMode?: "download" | "preview";
+    };
+    const sharePassword = typeof body.sharePassword === "string" ? body.sharePassword.trim() : undefined;
+    const shareMode = body.shareMode === "preview" && doc.type === "md" ? "preview" : "download";
+
     // 生成或更新 16 位分享 Token
     const shareToken = generateId().replace(/-/g, "").substring(0, 16);
     doc.shareToken = shareToken;
+    doc.shareMode = shareMode;
+    if (sharePassword) {
+      doc.sharePassword = sharePassword;
+    } else {
+      delete doc.sharePassword;
+    }
     doc.updatedAt = Date.now();
 
     await saveMetadata(env, metadata);
@@ -59,6 +72,8 @@ export async function onRequestDelete(context: PagesContext<"id">): Promise<Resp
     }
 
     delete doc.shareToken;
+    delete doc.sharePassword;
+    delete doc.shareMode;
     doc.updatedAt = Date.now();
 
     await saveMetadata(env, metadata);

@@ -24,13 +24,24 @@ export async function onRequestGet(context: PagesContext<"token">): Promise<Resp
     return errorResponse("分享链接不存在或已失效", 404);
   }
 
+  // 校验提取密钥 (如果该文档设置了密码)
+  if (doc.sharePassword) {
+    const url = new URL(context.request.url);
+    const providedKey = (url.searchParams.get("key") || url.searchParams.get("pwd") || context.request.headers.get("X-Share-Key") || "").trim();
+    if (!providedKey || providedKey !== doc.sharePassword) {
+      return errorResponse("提取密钥错误或缺失", 403);
+    }
+  }
+
   const object = await bucket.get(doc.r2Key);
   if (!object) {
     return errorResponse("存储桶中未找到该文档实体", 404);
   }
 
   const encodedFileName = encodeURIComponent(doc.name);
-  return new Response(object.body, {
+  const isHead = context.request.method === "HEAD";
+
+  return new Response(isHead ? null : object.body, {
     status: 200,
     headers: {
       "Content-Type": "application/octet-stream",
@@ -39,3 +50,6 @@ export async function onRequestGet(context: PagesContext<"token">): Promise<Resp
     },
   });
 }
+
+export const onRequestHead = onRequestGet;
+
