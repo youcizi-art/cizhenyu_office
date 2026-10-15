@@ -41,6 +41,20 @@ export async function onRequestPut(context: PagesContext<"id">): Promise<Respons
       return errorResponse("上传的内容为空", 400);
     }
 
+    // 允许通过请求头或 query 参数将旧的 .doc 格式升级为 .docx
+    const url = new URL(request.url);
+    const newNameParam = url.searchParams.get("name");
+    if (newNameParam && newNameParam.trim()) {
+      const cleanName = newNameParam.trim();
+      doc.name = cleanName;
+      if (cleanName.toLowerCase().endsWith(".docx")) {
+        doc.type = "docx";
+      }
+    } else if (doc.name.toLowerCase().endsWith(".doc")) {
+      doc.name = doc.name + "x";
+      doc.type = "docx";
+    }
+
     // 1. 覆盖 R2 对象
     await bucket.put(doc.r2Key, arrayBuffer, {
       httpMetadata: {

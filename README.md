@@ -23,7 +23,8 @@
   <strong>Quick Create:</strong>
   <a href="https://o.ycz.me/editor?new=docx">📄 Word</a> | 
   <a href="https://o.ycz.me/editor?new=xlsx">📊 Excel</a> | 
-  <a href="https://o.ycz.me/editor?new=pptx">📽️ PowerPoint</a>
+  <a href="https://o.ycz.me/editor?new=pptx">📽️ PowerPoint</a> | 
+  <a href="https://o.ycz.me/editor?new=md">📝 Markdown</a>
 </p>
 
 ---
@@ -39,6 +40,7 @@ Deeply integrated with **Cloudflare R2** object storage and **Cloudflare Pages F
 ## ✨ Key Features
 
 - **📂 Multi-Format High-Fidelity Editing**: Native support for `.docx`, `.xlsx`, `.pptx`, and `.pdf` with precise rendering, formulas, and chart manipulation.
+- **📝 High-Performance Markdown Studio**: Built-in lightweight Markdown editor featuring real-time synchronized split-pane preview, undo/redo history, formatting toolbar (headings, code blocks, tables, task lists), and live word/character statistics.
 - **🌲 Tree-Structured Categorization**: Collapsible sidebar in `/documents` supporting nested multi-level folders, compact icon navigation mode, sub-category creation, renaming, deletion, and document counting.
 - **📱 Mobile-First Responsive UX**: Dedicated mobile slide-out drawer (Sheet) for category trees, horizontal scroll quick-pills, and touch-optimized action cards.
 - **☁️ Cloudflare R2 Cloud Storage**: Persistent cloud storage directly bound to R2 buckets, enabling fast search, editing, and reliable archiving.

@@ -206,6 +206,8 @@ async function convert({
       data: null as never,
     });
     x2t.ccall("main1", ["number"], ["string"], [xmlPath]);
+
+    // 将中间生成的 .docx 继续转换为目标文件 (如 Editor.bin)
     writeInputs({
       fileFrom: viaPath,
       fileTo: toPath,
@@ -230,9 +232,14 @@ async function convert({
   // Read output file
   let output: Uint8Array<ArrayBuffer> | null = null;
   try {
-    output = x2t.FS.readFile(toPath);
+    const checkPath = x2t.FS.analyzePath(toPath);
+    if (checkPath.exists) {
+      output = x2t.FS.readFile(toPath);
+    } else {
+      console.error("[x2t.worker] Output path does not exist:", toPath);
+    }
   } catch (e) {
-    console.error(e);
+    console.error("[x2t.worker] readFile error:", e);
   }
 
   // Read media files

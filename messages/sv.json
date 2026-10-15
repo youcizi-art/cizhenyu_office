@@ -144,5 +144,15 @@
   "ConvertingPdfToWord": "Converting PDF to editable Word document...",
   "ConvertSuccess": "Successfully converted to Word! Opening editor...",
   "ConvertFailed": "Conversion failed, please try again",
-  "PreviewAndAnnotate": "Preview & Annotate"
+  "PreviewAndAnnotate": "Preview & Annotate",
+  "DeleteCategoryTitle": "Delete Category",
+  "DeleteDocumentTitle": "Delete Document",
+  "Delete": "Delete",
+  "Confirm": "Confirm",
+  "StatsCounter": "{lines} lines · {words} words · {chars} chars",
+  "StatsFooter": "{lines} lines, {chars} characters",
+  "h0Mh0e": "{lines} lines, {chars} characters",
+  "ACHeuW": "{lines} lines · {words} words · {chars} chars",
+  "DocConvertedToDocxNotice": "Legacy .doc format is automatically upgraded to modern .docx for editing and saving.",
+  "DocSavedAsDocxSuccess": "Document upgraded and saved as .docx to Cloudflare R2"
 }

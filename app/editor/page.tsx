@@ -207,15 +207,46 @@ function EditorWorkspace() {
           activeDocIdRef.current ||
           new URLSearchParams(window.location.search).get("docId");
         if (activeDocId) {
+          // 如果当前是旧版 .doc 格式，保存时升级转换为现代 .docx
+          const isLegacyDoc =
+            fileType === "doc" ||
+            docTitle.toLowerCase().endsWith(".doc") ||
+            docType === "doc";
+
+          let newName: string | undefined = undefined;
+          if (isLegacyDoc) {
+            newName = docTitle.replace(/\.doc$/i, ".docx");
+            if (!newName.endsWith(".docx")) {
+              newName = `${newName}.docx`;
+            }
+          }
+
           // 已存在云端文档：静默保存覆盖 R2
-          await updateDocumentContent(activeDocId, buffer.buffer as ArrayBuffer);
+          await updateDocumentContent(activeDocId, buffer.buffer as ArrayBuffer, newName);
           isDirty.current = false;
-          toast.success("已成功保存到 Cloudflare R2 云端");
+
+          if (isLegacyDoc && newName) {
+            setDocTitle(newName);
+            setDocType("docx");
+            toast.success(
+              t({
+                id: "DocSavedAsDocxSuccess",
+                message: "Document upgraded and saved as .docx to Cloudflare R2",
+              })
+            );
+          } else {
+            toast.success(
+              t({
+                id: "SavedToR2Success",
+                message: "Successfully saved to Cloudflare R2",
+              })
+            );
+          }
           return true;
         } else {
           // 新建文档首次保存：弹出归档对话框
           pendingBufferRef.current = buffer;
-          setInputName(title.replace(/\.[^/.]+$/, "") || "新建文档");
+          setInputName(title.replace(/\.[^/.]+$/, "") || t({ id: "UntitledDocument", message: "Untitled Document" }));
           // 加载分类列表
           try {
             const meta = await fetchDocumentsAndCategories();
@@ -225,7 +256,7 @@ function EditorWorkspace() {
           return true;
         }
       } catch (err) {
-        toast.error("保存到云端失败: " + String(err));
+        toast.error(t({ id: "FirstSaveFailed", message: "Save failed: " }) + String(err));
         return false;
       } finally {
         setIsSaving(false);
@@ -352,7 +383,7 @@ function EditorWorkspace() {
       };
       script.onerror = (e) => {
         console.error("Failed to load DocsAPI script", e);
-        toast.error("加载文档内核失败，请刷新重试");
+        toast.error(t({ id: "LoadDocFailed", message: "Failed to load document: " }) + "DocsAPI");
       };
     };
 
@@ -368,6 +399,18 @@ function EditorWorkspace() {
           const type = (currentMeta ? currentMeta.type : "docx") as DocumentType;
           setDocTitle(name);
           setDocType(type);
+
+          // 如果是旧版 .doc 文档，提醒用户将自动升级为现代 .docx 格式
+          if (type === "doc" || name.toLowerCase().endsWith(".doc")) {
+            toast.info(
+              t({
+                id: "DocConvertedToDocxNotice",
+                message:
+                  "Legacy .doc format is automatically upgraded to modern .docx for editing and saving.",
+              }),
+              { duration: 5000 }
+            );
+          }
 
           // 如果是 Markdown 文档：直接以 UTF-8 文本载入 Markdown 工作台，无需加载庞大的 OnlyOffice
           if (type === "md") {

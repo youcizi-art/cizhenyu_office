@@ -9,7 +9,7 @@ export interface Category {
   createdAt: number;
 }
 
-export type DocumentType = "docx" | "xlsx" | "pptx" | "pdf" | "md";
+export type DocumentType = "docx" | "doc" | "xlsx" | "pptx" | "pdf" | "md";
 
 export interface DocumentMeta {
   id: string;
@@ -151,9 +151,11 @@ export async function saveNewDocument(params: {
  */
 export async function updateDocumentContent(
   docId: string,
-  buffer: ArrayBuffer
+  buffer: ArrayBuffer,
+  newName?: string
 ): Promise<DocumentMeta> {
-  const res = await fetchWithAuth(`/api/documents/${encodeURIComponent(docId)}`, {
+  const query = newName ? `?name=${encodeURIComponent(newName)}` : "";
+  const res = await fetchWithAuth(`/api/documents/${encodeURIComponent(docId)}${query}`, {
     method: "PUT",
     body: buffer,
     headers: {

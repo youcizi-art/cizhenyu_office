@@ -90,6 +90,10 @@
   "NewSubcategory": "新建子分类",
   "RenameCategory": "重命名分类",
   "DeleteCategory": "删除分类",
+  "DeleteCategoryTitle": "删除分类",
+  "DeleteDocumentTitle": "删除文档",
+  "Delete": "删除",
+  "Confirm": "确认",
   "UploadDocument": "上传文档",
   "RefreshDocuments": "刷新文档",
   "SearchPlaceholder": "搜索文档名称...",
@@ -187,5 +191,9 @@
   "ViewAllOnlineDocs": "查看所有在线文档",
   "NoCloudDocs": "云端暂无在线文档",
   "NoCloudDocsHint": "新建文档编辑并按 Ctrl+S，将自动保存到 Cloudflare R2 存储桶中",
-  "NewWordDoc": "新建 Word 文档"
+  "NewWordDoc": "新建 Word 文档",
+  "h0Mh0e": "{lines} 行, {chars} 字符",
+  "ACHeuW": "{lines} 行 · {words} 词 · {chars} 字符",
+  "DocConvertedToDocxNotice": "旧版 .doc 格式已自动升级为现代 .docx 格式进行编辑与保存。",
+  "DocSavedAsDocxSuccess": "文档已自动升级为 .docx 并成功保存到 Cloudflare R2"
 }

@@ -23,7 +23,8 @@
   <strong>快速新建:</strong>
   <a href="https://o.ycz.me/editor?new=docx">📄 Word 文档</a> | 
   <a href="https://o.ycz.me/editor?new=xlsx">📊 Excel 表格</a> | 
-  <a href="https://o.ycz.me/editor?new=pptx">📽️ PowerPoint 幻灯片</a>
+  <a href="https://o.ycz.me/editor?new=pptx">📽️ PowerPoint 幻灯片</a> | 
+  <a href="https://o.ycz.me/editor?new=md">📝 Markdown 文档</a>
 </p>
 
 ---
@@ -39,6 +40,7 @@
 ## ✨ 核心特性
 
 - **📂 全主流格式高保真编辑**: 原生支持 `.docx`、`.xlsx`、`.pptx` 及 `.pdf` 的高保真排版、公式计算、图表展示与编辑。
+- **📝 轻量高效 Markdown 工作台**: 内置全功能 Markdown 编辑器，支持实时双栏联动同步滚动预览、撤销/重做历史、快捷排版工具栏（标题、代码块、数学公式、表格、任务清单）以及实时字数/词数统计。
 - **🌲 树形多级分类管理**: 在 `/documents` 页面提供可折叠展开的树形目录侧边栏（收缩时自动展示精简小图标导航），支持无限级子分类、分类重命名、删除及所属文档计数。
 - **📱 移动端深度优化**: 移动端支持优雅的滑出式分类抽屉（Drawer）、横向滚动快捷分类胶囊条，单手触控操作流畅自如。
 - **☁️ Cloudflare R2 云端存储**: 所有文档直接持久化至高可用的 R2 存储桶，支持快速检索、在线编辑与安全归档。
