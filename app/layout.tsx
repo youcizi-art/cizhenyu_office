@@ -5,8 +5,10 @@ import { I18nProvider } from "@/components/i18n-provider";
 import { ProgressProvider } from "@/components/progress-provider";
 import "./globals.css";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://office.example.com";
+
 export const metadata: Metadata = {
-  metadataBase: new URL("https://o.ycz.me"),
+  metadataBase: new URL(siteUrl),
   title: {
     default: "CIZHENYU Office — 在线 Word, Excel & PowerPoint 编辑器",
     template: "%s",
@@ -73,7 +75,7 @@ export default async function RootLayout({
     "@context": "https://schema.org",
     "@type": "WebApplication",
     name: "CIZHENYU Office",
-    url: "https://o.ycz.me",
+    url: siteUrl,
     description:
       "Open, view, and edit Word, Excel, and PowerPoint documents directly in your browser. No upload, no server — your files stay private.",
     applicationCategory: "BusinessApplication",

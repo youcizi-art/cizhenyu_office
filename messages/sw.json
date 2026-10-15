@@ -155,5 +155,9 @@
   "ACHeuW": "{lines} lines · {words} words · {chars} chars",
   "DocConvertedToDocxNotice": "Legacy .doc format is automatically upgraded to modern .docx for editing and saving.",
   "DocSavedAsDocxSuccess": "Document upgraded and saved as .docx to Cloudflare R2",
-  "HtmlConvertedToMarkdownToast": "Rich HTML & interactive form converted to Markdown format"
+  "HtmlConvertedToMarkdownToast": "Rich HTML & interactive form converted to Markdown format",
+  "WysiwygMode": "Visual Edit (WYSIWYG)",
+  "PreviewMode": "Preview Only",
+  "ThemeSelectorTitle": "Document Theme",
+  "DualEditHint": "Dual Edit: Live sync between Source & WYSIWYG"
 }

@@ -58,15 +58,24 @@ export function sanitizeAndEnhanceHtml(rawHtml: string): string {
     } else if (tag === "input") {
       const type = (el.getAttribute("type") || "text").toLowerCase();
       if (type === "checkbox" || type === "radio") {
+        // 确保勾选框/单选框具有正确尺寸与可见外观，不受 prose 重置影响
         el.classList.add(
           "w-4",
           "h-4",
-          "rounded",
+          "inline-block",
+          "align-middle",
+          "rounded-sm",
+          "border",
           "border-border",
-          "text-primary",
-          "focus:ring-primary/20",
-          "cursor-pointer"
+          "accent-primary",
+          "cursor-pointer",
+          "m-0"
         );
+        const htmlEl = el as HTMLElement;
+        htmlEl.style.width = "1rem";
+        htmlEl.style.height = "1rem";
+        htmlEl.style.cursor = "pointer";
+        htmlEl.style.accentColor = "var(--primary)";
       } else if (type === "submit" || type === "button") {
         el.classList.add(
           "px-3.5",

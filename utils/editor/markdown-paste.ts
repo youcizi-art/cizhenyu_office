@@ -48,6 +48,23 @@ export function htmlToMarkdown(html: string): string {
           el.removeAttribute(attr.name);
         }
       });
+
+      // 如果是 input 标签，确保自闭合或标准输出
+      if (tag === "input") {
+        const type = (el.getAttribute("type") || "text").toLowerCase();
+        const checked = el.hasAttribute("checked") || (el as HTMLInputElement).checked ? " checked" : "";
+        const name = el.getAttribute("name") ? ` name="${el.getAttribute("name")}"` : "";
+        const value = el.getAttribute("value") ? ` value="${el.getAttribute("value")}"` : "";
+        const placeholder = el.getAttribute("placeholder") ? ` placeholder="${el.getAttribute("placeholder")}"` : "";
+        return `<input type="${type}"${name}${value}${placeholder}${checked} />`;
+      }
+
+      // 如果是 label 标签，保留其内部结构
+      if (tag === "label") {
+        const inner = Array.from(el.childNodes).map(traverse).join("");
+        return `<label class="inline-flex items-center gap-1.5 cursor-pointer">${inner}</label>`;
+      }
+
       return el.outerHTML;
     }
 

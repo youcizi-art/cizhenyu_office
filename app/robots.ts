@@ -3,6 +3,8 @@ import { MetadataRoute } from "next";
 export const dynamic = "force-static";
 
 export default function robots(): MetadataRoute.Robots {
+  const base = process.env.NEXT_PUBLIC_SITE_URL || "https://office.example.com";
+
   return {
     rules: [
       {
@@ -11,6 +13,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/settings", "/api/"],
       },
     ],
-    sitemap: "https://o.ycz.me/sitemap.xml",
+    sitemap: `${base}/sitemap.xml`,
   };
 }

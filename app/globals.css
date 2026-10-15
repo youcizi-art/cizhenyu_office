@@ -141,3 +141,131 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Markdown 预览区表单与输入框深度样式保护，防止 Tailwind Typography (prose) 抹杀交互元素 */
+.markdown-body input[type="checkbox"],
+.markdown-body input[type="radio"] {
+  display: inline-block !important;
+  vertical-align: middle !important;
+  width: 1.05rem !important;
+  height: 1.05rem !important;
+  cursor: pointer !important;
+  accent-color: var(--primary) !important;
+  margin: 0 0.35rem 0 0 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.markdown-body label {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.35rem !important;
+  cursor: pointer !important;
+  font-size: 0.825rem !important;
+}
+
+.markdown-body input[type="text"],
+.markdown-body input[type="password"],
+.markdown-body input[type="email"],
+.markdown-body input[type="number"],
+.markdown-body input[type="search"] {
+  display: block !important;
+  width: 100% !important;
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 0.5rem !important;
+  padding: 0.4rem 0.75rem !important;
+  font-size: 0.825rem !important;
+  outline: none !important;
+  transition: all 0.2s ease !important;
+}
+
+.markdown-body input[type="text"]:focus,
+.markdown-body input[type="password"]:focus,
+.markdown-body input[type="email"]:focus,
+.markdown-body input[type="number"]:focus,
+.markdown-body input[type="search"]:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 20%, transparent) !important;
+}
+
+.markdown-body select {
+  display: block !important;
+  width: 100% !important;
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 0.5rem !important;
+  padding: 0.4rem 0.75rem !important;
+  font-size: 0.825rem !important;
+  cursor: pointer !important;
+}
+
+.markdown-body button,
+.markdown-body input[type="submit"],
+.markdown-body input[type="button"] {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+  border-radius: 0.5rem !important;
+  padding: 0.4rem 0.9rem !important;
+  font-size: 0.8rem !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  border: none !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+  transition: all 0.15s ease !important;
+}
+
+.markdown-body button:hover,
+.markdown-body input[type="submit"]:hover,
+.markdown-body input[type="button"]:hover {
+  opacity: 0.92 !important;
+  transform: translateY(-0.5px);
+}
+
+/* ByteMD 深度集成与暗色模式适配 */
+.bytemd {
+  height: 100% !important;
+  border: none !important;
+  background-color: transparent !important;
+}
+
+.vditor-host-wrapper .vditor {
+  border: none !important;
+  border-radius: 0 !important;
+  background-color: var(--background) !important;
+}
+
+.vditor-host-wrapper .vditor-toolbar {
+  background-color: var(--card) !important;
+  border-bottom: 1px solid var(--border) !important;
+  padding: 0.25rem 0.5rem !important;
+}
+
+.vditor-host-wrapper .vditor-content {
+  background-color: var(--background) !important;
+}
+
+.dark .vditor-host-wrapper .vditor {
+  --border-color: var(--border);
+}
+
+.dark .vditor-host-wrapper .vditor-toolbar {
+  background-color: var(--card) !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+.dark .vditor-host-wrapper .vditor-toolbar__item {
+  color: var(--muted-foreground) !important;
+}
+
+.dark .vditor-host-wrapper .vditor-toolbar__item:hover {
+  color: var(--foreground) !important;
+  background-color: var(--muted) !important;
+}
+
+

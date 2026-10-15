@@ -132,10 +132,10 @@ export const OgImage = async ({
           </div>
         </div>
 
-        {/* Bottom: url */}
+        {/* Bottom: url or tagline */}
         <div tw="flex">
           <span tw="text-xl" style={{ color: "rgba(255,255,255,0.3)", fontWeight: 400 }}>
-            o.ycz.me
+            {process.env.NEXT_PUBLIC_SITE_DOMAIN || "Office Suite"}
           </span>
         </div>
       </div>
