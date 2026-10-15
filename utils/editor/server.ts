@@ -77,6 +77,10 @@ export class EditorServer {
     this.forceDownloadNext = force;
   }
 
+  getBuffer(): Uint8Array | null {
+    return this.fsMap.get("Editor.bin") || null;
+  }
+
   async openBuffer(
     buffer: ArrayBuffer,
     fileName: string,

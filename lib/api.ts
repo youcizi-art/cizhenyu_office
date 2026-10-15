@@ -9,7 +9,7 @@ export interface Category {
   createdAt: number;
 }
 
-export type DocumentType = "docx" | "xlsx" | "pptx" | "pdf";
+export type DocumentType = "docx" | "xlsx" | "pptx" | "pdf" | "md";
 
 export interface DocumentMeta {
   id: string;
@@ -29,6 +29,15 @@ export interface MetadataResponse {
 }
 
 /**
+ * 处理未授权响应 (401)，触发全局重新登录弹窗
+ */
+function handleUnauthorized(): void {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("auth:unauthorized"));
+  }
+}
+
+/**
  * 校验登录状态
  */
 export async function checkAuth(): Promise<{
@@ -38,9 +47,13 @@ export async function checkAuth(): Promise<{
   try {
     const res = await fetch("/api/auth/check", { cache: "no-store" });
     if (!res.ok) {
+      if (res.status === 401) {
+        handleUnauthorized();
+      }
       return { authenticated: false, requiresPassword: true };
     }
-    return await res.json();
+    const data = await res.json();
+    return data;
   } catch {
     return { authenticated: false, requiresPassword: true };
   }
@@ -78,10 +91,23 @@ export async function logout(): Promise<void> {
 }
 
 /**
+ * 内部 API 请求辅助函数，自动拦截 401 触发未登录弹窗
+ */
+async function fetchWithAuth(url: string, init?: RequestInit): Promise<Response> {
+  const res = await fetch(url, init);
+  if (res.status === 401) {
+    handleUnauthorized();
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "未授权访问或登录已失效，请重新登录");
+  }
+  return res;
+}
+
+/**
  * 获取所有文档与分类
  */
 export async function fetchDocumentsAndCategories(): Promise<MetadataResponse> {
-  const res = await fetch("/api/documents", { cache: "no-store" });
+  const res = await fetchWithAuth("/api/documents", { cache: "no-store" });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || "获取文档列表失败");
@@ -106,7 +132,7 @@ export async function saveNewDocument(params: {
     formData.append("categoryId", params.categoryId);
   }
 
-  const res = await fetch("/api/documents", {
+  const res = await fetchWithAuth("/api/documents", {
     method: "POST",
     body: formData,
   });
@@ -127,7 +153,7 @@ export async function updateDocumentContent(
   docId: string,
   buffer: ArrayBuffer
 ): Promise<DocumentMeta> {
-  const res = await fetch(`/api/documents/${encodeURIComponent(docId)}`, {
+  const res = await fetchWithAuth(`/api/documents/${encodeURIComponent(docId)}`, {
     method: "PUT",
     body: buffer,
     headers: {
@@ -148,7 +174,7 @@ export async function updateDocumentContent(
  * 获取在线文档二进制内容 (用于编辑器加载)
  */
 export async function getDocumentContentBlob(docId: string): Promise<Blob> {
-  const res = await fetch(`/api/documents/${encodeURIComponent(docId)}/content`, {
+  const res = await fetchWithAuth(`/api/documents/${encodeURIComponent(docId)}/content`, {
     cache: "no-store",
   });
   if (!res.ok) {
@@ -161,7 +187,7 @@ export async function getDocumentContentBlob(docId: string): Promise<Blob> {
  * 删除文档
  */
 export async function deleteDocument(docId: string): Promise<void> {
-  const res = await fetch(`/api/documents/${encodeURIComponent(docId)}`, {
+  const res = await fetchWithAuth(`/api/documents/${encodeURIComponent(docId)}`, {
     method: "DELETE",
   });
   if (!res.ok) {
@@ -177,7 +203,7 @@ export async function updateDocumentMeta(
   docId: string,
   updates: { name?: string; categoryId?: string | null }
 ): Promise<DocumentMeta> {
-  const res = await fetch(`/api/documents/${encodeURIComponent(docId)}/meta`, {
+  const res = await fetchWithAuth(`/api/documents/${encodeURIComponent(docId)}/meta`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(updates),
@@ -199,7 +225,7 @@ export async function createCategory(
   name: string,
   parentId?: string | null
 ): Promise<Category> {
-  const res = await fetch("/api/categories", {
+  const res = await fetchWithAuth("/api/categories", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, parentId: parentId || null }),
@@ -218,7 +244,7 @@ export async function createCategory(
  * 重命名分类
  */
 export async function updateCategory(id: string, name: string): Promise<Category> {
-  const res = await fetch(`/api/categories/${encodeURIComponent(id)}`, {
+  const res = await fetchWithAuth(`/api/categories/${encodeURIComponent(id)}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name }),
@@ -237,7 +263,7 @@ export async function updateCategory(id: string, name: string): Promise<Category
  * 删除分类
  */
 export async function deleteCategory(id: string): Promise<string[]> {
-  const res = await fetch(`/api/categories/${encodeURIComponent(id)}`, {
+  const res = await fetchWithAuth(`/api/categories/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
 
@@ -254,7 +280,7 @@ export async function deleteCategory(id: string): Promise<string[]> {
  * 开启或刷新分享
  */
 export async function enableShare(docId: string): Promise<string> {
-  const res = await fetch(`/api/documents/${encodeURIComponent(docId)}/share`, {
+  const res = await fetchWithAuth(`/api/documents/${encodeURIComponent(docId)}/share`, {
     method: "POST",
   });
 

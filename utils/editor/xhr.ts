@@ -81,6 +81,15 @@ export function createXHRProxy(BaseXHR = globalThis.XMLHttpRequest) {
     }
 
     private async _tryMiddlewares(): Promise<boolean> {
+      // 拦截无意义的第三方测速上报请求（如上游嵌入的 Cloudflare RUM 探针），避免跨域 CORS 报错
+      if (this._requestUrl && this._requestUrl.includes("cdn-cgi/rum")) {
+        this._isMocked = true;
+        await this._handleMockResponse(
+          new Response(null, { status: 204, statusText: "No Content" })
+        );
+        return true;
+      }
+
       // Create Request object
       let request: Request;
       try {

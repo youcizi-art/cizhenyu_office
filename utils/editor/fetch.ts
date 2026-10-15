@@ -19,6 +19,12 @@ export function createFetchProxy(
 
   const proxy = (async (input: RequestInfo | URL, init?: RequestInit) => {
     let request: Request;
+    // 拦截无意义的第三方测速上报请求（如上游嵌入的 Cloudflare RUM 探针），避免跨域 CORS 报错
+    const urlStr = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    if (urlStr && urlStr.includes("cdn-cgi/rum")) {
+      return new Response(null, { status: 204, statusText: "No Content" });
+    }
+
     try {
       request = new Request(input, init);
     } catch (e) {

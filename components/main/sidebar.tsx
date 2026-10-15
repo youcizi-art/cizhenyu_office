@@ -67,6 +67,7 @@ export function Sidebar({ pathname }: SidebarProps) {
       label: t({ id: "Presentation", message: "Presentation" }),
     },
     { type: "pdf", label: t({ id: "PDF", message: "PDF" }) },
+    { type: "md", label: "Markdown" },
   ];
 
   const sidebarItems = [

@@ -3,6 +3,7 @@ import {
   Sheet,
   Presentation,
   FileType2,
+  FileCode2,
   LucideIcon,
 } from "lucide-react";
 
@@ -79,6 +80,24 @@ export const DOCUMENT_TYPES: Record<string, DocumentTypeConfig> = {
     hoverBgColor: "group-hover:bg-red-600",
     hoverBorderColor: "hover:border-red-300 dark:hover:border-red-700",
     lightBgColor: "bg-red-100",
+  },
+  md: {
+    type: "md",
+    icon: FileCode2,
+    color: "text-purple-600 dark:text-purple-400",
+    bgColor: "bg-purple-50 dark:bg-purple-950/50",
+    hoverBgColor: "group-hover:bg-purple-600",
+    hoverBorderColor: "hover:border-purple-300 dark:hover:border-purple-700",
+    lightBgColor: "bg-purple-100",
+  },
+  markdown: {
+    type: "markdown",
+    icon: FileCode2,
+    color: "text-purple-600 dark:text-purple-400",
+    bgColor: "bg-purple-50 dark:bg-purple-950/50",
+    hoverBgColor: "group-hover:bg-purple-600",
+    hoverBorderColor: "hover:border-purple-300 dark:hover:border-purple-700",
+    lightBgColor: "bg-purple-100",
   },
 };
 

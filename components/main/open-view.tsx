@@ -108,9 +108,9 @@ export function OpenView() {
   };
 
   const getCategoryName = (catId: string | null) => {
-    if (!catId) return "未分类";
+    if (!catId) return t({ id: "Uncategorized", message: "Uncategorized" });
     const cat = categories.find((c) => c.id === catId);
-    return cat ? cat.name : "未分类";
+    return cat ? cat.name : t({ id: "Uncategorized", message: "Uncategorized" });
   };
 
   const newDocTypes = [
@@ -118,6 +118,7 @@ export function OpenView() {
     { type: "xlsx", label: t({ id: "Spreadsheet", message: "Spreadsheet" }) },
     { type: "pptx", label: t({ id: "Presentation", message: "Presentation" }) },
     { type: "pdf", label: t({ id: "PDF", message: "PDF" }) },
+    { type: "md", label: "Markdown" },
   ];
 
   return (
@@ -132,7 +133,7 @@ export function OpenView() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary" />
-            快速新建文档
+            {t({ id: "QuickNewDoc", message: "Quick New Document" })}
           </h2>
         </div>
         <div className="grid grid-cols-2 md:flex md:flex-nowrap items-stretch gap-3 mb-4">
@@ -189,7 +190,7 @@ export function OpenView() {
             href="/documents"
             className="text-xs text-primary font-medium hover:underline flex items-center gap-1 group"
           >
-            查看所有在线文档
+            {t({ id: "ViewAllOnlineDocs", message: "View all online documents" })}
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
           </Link>
         </div>
@@ -198,21 +199,23 @@ export function OpenView() {
           <div className="bg-card/50 border border-border rounded-xl p-8 flex items-center justify-center">
             <div className="flex flex-col items-center gap-2 text-muted-foreground">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              <p className="text-xs">正在连接 R2 存储同步文档...</p>
+              <p className="text-xs">{t({ id: "LoadingR2Docs", message: "Loading documents from R2 cloud storage..." })}</p>
             </div>
           </div>
         ) : onlineDocs.length === 0 ? (
           <div className="bg-card/50 border border-dashed border-border rounded-xl p-8 text-center">
             <Cloud className="w-10 h-10 mx-auto mb-2 text-muted-foreground/40" />
-            <p className="text-sm font-medium text-foreground mb-1">云端暂无在线文档</p>
+            <p className="text-sm font-medium text-foreground mb-1">
+              {t({ id: "NoCloudDocs", message: "No documents in cloud storage" })}
+            </p>
             <p className="text-xs text-muted-foreground mb-4">
-              新建文档编辑并按 Ctrl+S，将自动保存到 Cloudflare R2 存储桶中
+              {t({ id: "NoCloudDocsHint", message: "Edit documents and press Ctrl+S to save directly to Cloudflare R2" })}
             </p>
             <Link
               href="/editor?new=docx"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-medium rounded-lg shadow-sm hover:bg-primary/90 transition-all"
             >
-              新建 Word 文档
+              {t({ id: "NewWordDoc", message: "New Word Document" })}
             </Link>
           </div>
         ) : (

@@ -5,6 +5,7 @@ import {
   Sheet,
   Presentation,
   FileType2,
+  FileCode2,
   Files,
 } from "lucide-react";
 import Image from "next/image";
@@ -44,6 +45,12 @@ export function Header({ children }: PropsWithChildren<{ className?: string }>) 
       icon: FileType2,
       color:
         "text-red-600 bg-red-50 dark:bg-red-900/40 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/60",
+    },
+    {
+      type: "md",
+      icon: FileCode2,
+      color:
+        "text-purple-600 bg-purple-50 dark:bg-purple-900/40 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/60",
     },
   ];
 

@@ -34,6 +34,8 @@ import {
   Menu,
   Eye,
   FileEdit,
+  FileType2,
+  FileCode2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -54,7 +56,6 @@ import {
   Category,
   DocumentType,
 } from "@/lib/api";
-import { convertPdfToDocx } from "@/utils/editor/pdf-converter";
 import {
   Popover,
   PopoverContent,
@@ -132,6 +133,20 @@ export function DocumentsView() {
   const [convertingDocId, setConvertingDocId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // 通用操作确认弹窗 (替代浏览器原生 confirm)
+  const [confirmModal, setConfirmModal] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    confirmText?: string;
+    onConfirm: () => void | Promise<void>;
+  }>({
+    open: false,
+    title: "",
+    description: "",
+    onConfirm: () => {},
+  });
+
   // 加载数据
   const loadData = async () => {
     try {
@@ -156,6 +171,8 @@ export function DocumentsView() {
     { name: "Word", icon: FileText, key: "Word" },
     { name: "Excel", icon: Table, key: "Excel" },
     { name: "PowerPoint", icon: Presentation, key: "PowerPoint" },
+    { name: "PDF", icon: FileType2, key: "PDF" },
+    { name: "Markdown", icon: FileCode2, key: "Markdown" },
   ];
 
   // 构建分类树形结构
@@ -232,6 +249,8 @@ export function DocumentsView() {
       if (activeType === "Word") matchesType = doc.type === "docx";
       if (activeType === "Excel") matchesType = doc.type === "xlsx";
       if (activeType === "PowerPoint") matchesType = doc.type === "pptx";
+      if (activeType === "PDF") matchesType = doc.type === "pdf";
+      if (activeType === "Markdown") matchesType = doc.type === "md";
 
       // 3. 分类匹配
       let matchesCategory = true;
@@ -281,26 +300,33 @@ export function DocumentsView() {
   };
 
   // 删除分类
-  const handleDeleteCategory = async (cat: Category) => {
-    if (!confirm(`${cat.name}?`)) {
-      return;
-    }
-    try {
-      const deletedIds = await deleteCategory(cat.id);
-      setCategories((prev) => prev.filter((c) => !deletedIds.includes(c.id)));
-      setDocuments((prev) =>
-        prev.map((d) =>
-          d.categoryId && deletedIds.includes(d.categoryId)
-            ? { ...d, categoryId: null }
-            : d
-        )
-      );
-      if (activeCategoryId && deletedIds.includes(activeCategoryId)) {
-        setActiveCategoryId(null);
-      }
-    } catch (err) {
-      toast.error(String(err));
-    }
+  const handleDeleteCategory = (cat: Category) => {
+    setConfirmModal({
+      open: true,
+      title: t({ id: "DeleteCategoryTitle", message: "Delete Category" }),
+      description: `${cat.name}?`,
+      confirmText: t({ id: "Delete", message: "Delete" }),
+      onConfirm: async () => {
+        try {
+          const deletedIds = await deleteCategory(cat.id);
+          setCategories((prev) => prev.filter((c) => !deletedIds.includes(c.id)));
+          setDocuments((prev) =>
+            prev.map((d) =>
+              d.categoryId && deletedIds.includes(d.categoryId)
+                ? { ...d, categoryId: null }
+                : d
+            )
+          );
+          if (activeCategoryId && deletedIds.includes(activeCategoryId)) {
+            setActiveCategoryId(null);
+          }
+          setConfirmModal((prev) => ({ ...prev, open: false }));
+          toast.success("分类已成功删除");
+        } catch (err) {
+          toast.error(String(err));
+        }
+      },
+    });
   };
 
   // 重命名文档
@@ -338,14 +364,23 @@ export function DocumentsView() {
   };
 
   // 删除文档
-  const handleDeleteDoc = async (doc: DocumentMeta) => {
-    if (!confirm(`${doc.name}?`)) return;
-    try {
-      await deleteDocument(doc.id);
-      setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
-    } catch (err) {
-      toast.error(String(err));
-    }
+  const handleDeleteDoc = (doc: DocumentMeta) => {
+    setConfirmModal({
+      open: true,
+      title: t({ id: "DeleteDocumentTitle", message: "Delete Document" }),
+      description: `${doc.name}?`,
+      confirmText: t({ id: "Delete", message: "Delete" }),
+      onConfirm: async () => {
+        try {
+          await deleteDocument(doc.id);
+          setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
+          setConfirmModal((prev) => ({ ...prev, open: false }));
+          toast.success("文档已成功删除");
+        } catch (err) {
+          toast.error(String(err));
+        }
+      },
+    });
   };
 
   // 下载文档
@@ -402,56 +437,6 @@ export function DocumentsView() {
     }
   };
 
-  // 将 PDF 转换为 Word (docx) 并打开深度编辑
-  const handleConvertToWord = async (doc: DocumentMeta) => {
-    if (convertingDocId) return;
-    setConvertingDocId(doc.id);
-    const toastId = toast.loading(
-      t({
-        id: "ConvertingPdfToWord",
-        message: "Converting PDF to editable Word document...",
-      })
-    );
-    try {
-      const blob = await getDocumentContentBlob(doc.id);
-      const arrayBuffer = await blob.arrayBuffer();
-      const docxBuffer = await convertPdfToDocx(arrayBuffer);
-      const baseName = doc.name.replace(/\.pdf$/i, "");
-      const newDocName = `${baseName} (Word).docx`;
-      const docxBlob = new Blob([docxBuffer.buffer as ArrayBuffer], {
-        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      });
-      const newDoc = await saveNewDocument({
-        file: docxBlob,
-        name: newDocName,
-        type: "docx",
-        categoryId: doc.categoryId,
-      });
-      setDocuments((prev) => [newDoc, ...prev]);
-      toast.success(
-        t({
-          id: "ConvertSuccess",
-          message: "PDF successfully converted to Word! Opening editor...",
-        }),
-        { id: toastId }
-      );
-      router.push(`/editor?docId=${encodeURIComponent(newDoc.id)}`);
-    } catch (err) {
-      toast.error(
-        t({
-          id: "ConvertFailed",
-          message: "Conversion failed, please try again",
-        }) +
-          ": " +
-          (err instanceof Error ? err.message : String(err)),
-        { id: toastId }
-      );
-    } finally {
-      setConvertingDocId(null);
-    }
-  };
-
-
   // 触发本地文件上传弹窗
   const handleTriggerUpload = (defaultCatId?: string | null) => {
     const catId =
@@ -483,6 +468,7 @@ export function DocumentsView() {
     if (ext === "xlsx" || ext === "xls" || ext === "csv") type = "xlsx";
     else if (ext === "pptx" || ext === "ppt") type = "pptx";
     else if (ext === "pdf") type = "pdf";
+    else if (ext === "md" || ext === "markdown") type = "md";
     else if (ext === "docx" || ext === "doc") type = "docx";
     else return;
 
@@ -755,7 +741,7 @@ export function DocumentsView() {
         type="file"
         ref={fileInputRef}
         onChange={handleFileChange}
-        accept=".docx,.doc,.xlsx,.xls,.pptx,.ppt,.pdf,.csv"
+        accept=".docx,.doc,.xlsx,.xls,.pptx,.ppt,.pdf,.csv,.md,.markdown"
         className="hidden"
       />
 
@@ -1178,25 +1164,6 @@ export function DocumentsView() {
                           </div>
 
                           <div className="flex items-center gap-1 shrink-0">
-                            {doc.type === "pdf" && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleConvertToWord(doc);
-                                }}
-                                disabled={convertingDocId === doc.id}
-                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors cursor-pointer disabled:opacity-50"
-                                title={t({ id: "ConvertToWordEdit", message: "Convert to Word & Edit" })}
-                              >
-                                {convertingDocId === doc.id ? (
-                                  <Loader2 className="w-3 h-3 animate-spin" />
-                                ) : (
-                                  <FileEdit className="w-3 h-3" />
-                                )}
-                                <span>Word</span>
-                              </button>
-                            )}
-
                             {doc.shareToken && (
                               <span
                                 onClick={() => handleOpenShare(doc)}
@@ -1215,37 +1182,13 @@ export function DocumentsView() {
                                 </button>
                               </PopoverTrigger>
                               <PopoverContent side="bottom" align="end" className="w-40 p-1 text-xs">
-                                {doc.type === "pdf" ? (
-                                  <>
-                                    <button
-                                      onClick={() => router.push(`/editor?docId=${encodeURIComponent(doc.id)}`)}
-                                      className="w-full flex items-center gap-2 px-2.5 py-1.5 text-foreground hover:bg-muted rounded cursor-pointer"
-                                    >
-                                      <Eye className="w-3.5 h-3.5 text-primary" />
-                                      {t({ id: "PreviewAndAnnotate", message: "Preview & Annotate" })}
-                                    </button>
-                                    <button
-                                      onClick={() => handleConvertToWord(doc)}
-                                      disabled={convertingDocId === doc.id}
-                                      className="w-full flex items-center gap-2 px-2.5 py-1.5 text-foreground hover:bg-primary/10 hover:text-primary rounded cursor-pointer disabled:opacity-50"
-                                    >
-                                      {convertingDocId === doc.id ? (
-                                        <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
-                                      ) : (
-                                        <FileEdit className="w-3.5 h-3.5 text-primary" />
-                                      )}
-                                      {t({ id: "ConvertToWordEdit", message: "Convert to Word & Edit" })}
-                                    </button>
-                                  </>
-                                ) : (
                                   <button
                                     onClick={() => router.push(`/editor?docId=${encodeURIComponent(doc.id)}`)}
                                     className="w-full flex items-center gap-2 px-2.5 py-1.5 text-foreground hover:bg-muted rounded cursor-pointer"
                                   >
-                                    <Edit3 className="w-3.5 h-3.5 text-primary" />
-                                    {t({ id: "EditOnline", message: "Edit Online" })}
+                                    <Eye className="w-3.5 h-3.5 text-primary" />
+                                    {t({ id: "PreviewAndAnnotate", message: "Preview & Annotate" })}
                                   </button>
-                                )}
                                 <button
                                   onClick={() => handleDownloadDoc(doc)}
                                   className="w-full flex items-center gap-2 px-2.5 py-1.5 text-foreground hover:bg-muted rounded cursor-pointer"
@@ -1560,7 +1503,7 @@ export function DocumentsView() {
                       {t({ id: "ClickToSelectDoc", message: "Click to select a local document" })}
                     </p>
                     <p className="text-[11px] text-muted-foreground">
-                      {t({ id: "SupportedFormatsHint", message: "Supports .docx, .xlsx, .pptx, .pdf formats" })}
+                      {t({ id: "SupportedFormatsHint", message: "Supports .docx, .xlsx, .pptx, .pdf, .md formats" })}
                     </p>
                   </div>
                 )}
@@ -1603,6 +1546,44 @@ export function DocumentsView() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 弹窗 6：通用操作确认弹窗 (替代浏览器原生 confirm) */}
+      {confirmModal.open && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-card border border-border w-full max-w-sm rounded-2xl p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-foreground">
+                {confirmModal.title}
+              </h3>
+              <button
+                onClick={() => setConfirmModal((prev) => ({ ...prev, open: false }))}
+                className="text-muted-foreground hover:text-foreground p-1 rounded-md cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {confirmModal.description}
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/60">
+              <button
+                type="button"
+                onClick={() => setConfirmModal((prev) => ({ ...prev, open: false }))}
+                className="px-3.5 py-1.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                {t({ id: "Cancel", message: "Cancel" })}
+              </button>
+              <button
+                type="button"
+                onClick={() => confirmModal.onConfirm()}
+                className="px-4 py-1.5 text-xs font-medium bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 cursor-pointer shadow-sm"
+              >
+                {confirmModal.confirmText || t({ id: "Confirm", message: "Confirm" })}
+              </button>
+            </div>
           </div>
         </div>
       )}
