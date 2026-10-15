@@ -155,5 +155,6 @@
   "h0Mh0e": "{lines} 行, {chars} 字元",
   "ACHeuW": "{lines} 行 · {words} 詞 · {chars} 字元",
   "DocConvertedToDocxNotice": "舊版 .doc 格式已自動升級為現代 .docx 格式進行編輯與保存。",
-  "DocSavedAsDocxSuccess": "文檔已自動升級為 .docx 並成功保存到 Cloudflare R2"
+  "DocSavedAsDocxSuccess": "文檔已自動升級為 .docx 並成功保存到 Cloudflare R2",
+  "HtmlConvertedToMarkdownToast": "已將富文本與表單智慧轉換為 Markdown 格式"
 }

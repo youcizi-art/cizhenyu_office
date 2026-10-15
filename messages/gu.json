@@ -154,5 +154,6 @@
   "h0Mh0e": "{lines} lines, {chars} characters",
   "ACHeuW": "{lines} lines · {words} words · {chars} chars",
   "DocConvertedToDocxNotice": "Legacy .doc format is automatically upgraded to modern .docx for editing and saving.",
-  "DocSavedAsDocxSuccess": "Document upgraded and saved as .docx to Cloudflare R2"
+  "DocSavedAsDocxSuccess": "Document upgraded and saved as .docx to Cloudflare R2",
+  "HtmlConvertedToMarkdownToast": "Rich HTML & interactive form converted to Markdown format"
 }

@@ -31,6 +31,8 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useExtracted } from "next-intl";
+import { htmlToMarkdown } from "@/utils/editor/markdown-paste";
+import { sanitizeAndEnhanceHtml } from "@/utils/editor/markdown-sanitize";
 
 interface MarkdownEditorProps {
   initialContent: string;
@@ -157,6 +159,71 @@ export function MarkdownEditor({
     }
   };
 
+  // 剪贴板粘贴智能处理器 (针对 ChatGPT / Gemini / Claude 等富文本、表单与图片原样还原)
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const clipboardData = e.clipboardData;
+    if (!clipboardData) return;
+
+    // 1. 优先检查是否存在图片文件（如直接复制截图）
+    const imageItem = Array.from(clipboardData.items).find((item) =>
+      item.type.startsWith("image/")
+    );
+    if (imageItem) {
+      const file = imageItem.getAsFile();
+      if (file) {
+        e.preventDefault();
+        const reader = new FileReader();
+        reader.onload = () => {
+          const base64Url = reader.result as string;
+          insertSyntax("![image](", `)`, base64Url);
+        };
+        reader.readAsDataURL(file);
+        return;
+      }
+    }
+
+    // 2. 检查是否有 HTML 富文本 (包含表单控件、结构化表格、排版标签)
+    const rawHtml = clipboardData.getData("text/html");
+    const plainText = clipboardData.getData("text/plain");
+
+    if (rawHtml && rawHtml.trim()) {
+      // 智能识别是否为 AI 界面或富网页输出（包含特定标签或复杂格式）
+      const hasRichContent = /<(form|input|select|button|table|h[1-6]|ul|ol|blockquote|img)/i.test(
+        rawHtml
+      );
+      if (hasRichContent) {
+        e.preventDefault();
+        const convertedMd = htmlToMarkdown(rawHtml);
+        if (convertedMd) {
+          const textarea = textareaRef.current;
+          if (!textarea) return;
+
+          const start = textarea.selectionStart;
+          const end = textarea.selectionEnd;
+          const newContent =
+            content.substring(0, start) + convertedMd + content.substring(end);
+          updateContentWithHistory(newContent);
+
+          setTimeout(() => {
+            textarea.focus();
+            textarea.selectionStart = textarea.selectionEnd =
+              start + convertedMd.length;
+          }, 0);
+
+          toast.success(
+            t({
+              id: "HtmlConvertedToMarkdownToast",
+              message: "Rich HTML & interactive form converted to Markdown format",
+            })
+          );
+          return;
+        }
+      }
+    }
+
+    // 普通文本自然流入原生粘贴流程
+  };
+
   // 工具栏语法插入辅助函数
   const insertSyntax = (before: string, after: string = "", defaultText: string = "") => {
     const textarea = textareaRef.current;
@@ -240,7 +307,17 @@ export function MarkdownEditor({
 
     let html = content;
 
-    // 0. 转义基础 HTML 实体防 XSS
+    // 0. 保护安全的内嵌交互标签（表单、输入框、按钮等），避免被基础实体转义抹杀
+    const safeHtmlBlocks: string[] = [];
+    const safeHtmlPattern =
+      /<(form|input|select|option|button|textarea|label|fieldset|legend|div|span|p|img|br|hr)(?:\s+[^>]*?)?>[\s\S]*?<\/\1>|<(input|img|br|hr)(?:\s+[^>]*?)?\/?>/gi;
+
+    html = html.replace(safeHtmlPattern, (match) => {
+      safeHtmlBlocks.push(match);
+      return `__SAFE_HTML_PLACEHOLDER_${safeHtmlBlocks.length - 1}__`;
+    });
+
+    // 基础 HTML 实体转义防 XSS
     const escapeMap: Record<string, string> = {
       "&": "&amp;",
       "<": "&lt;",
@@ -318,6 +395,14 @@ export function MarkdownEditor({
     // 10. 段落换行
     html = html.replace(/\n\n+/g, "</p><p class='my-3 leading-relaxed text-xs text-foreground/90'>");
     html = `<p class='my-3 leading-relaxed text-xs text-foreground/90'>${html}</p>`;
+
+    // 11. 还原受保护的安全 HTML 表单/交互标签，并进行最终安全净化与交互样式增强
+    if (safeHtmlBlocks.length > 0) {
+      safeHtmlBlocks.forEach((block, idx) => {
+        html = html.replace(`__SAFE_HTML_PLACEHOLDER_${idx}__`, block);
+      });
+      html = sanitizeAndEnhanceHtml(html);
+    }
 
     return html;
   }, [content]);
@@ -641,6 +726,7 @@ export function MarkdownEditor({
               value={content}
               onChange={(e) => updateContentWithHistory(e.target.value)}
               onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
               onScroll={handleEditorScroll}
               placeholder={t({
                 id: "MarkdownPlaceholder",
