@@ -16,6 +16,10 @@ import {
   FileCode2,
   Tag,
   Move,
+  Image as ImageIcon,
+  Video,
+  Music,
+  File as FileGeneric,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -37,6 +41,7 @@ import {
   UploadModal,
   ConfirmModal,
 } from "./documents/document-modals";
+import { MediaPreviewModal } from "./documents/media-preview-modal";
 import { useDocumentDrag } from "./documents/use-document-drag";
 import { useDocumentsData } from "./documents/use-documents-data";
 
@@ -44,6 +49,7 @@ export function DocumentsView() {
   const router = useRouter();
   const t = useExtracted();
   usePageTitle(t({ id: "DocumentsPageTitle", message: "Documents — CIZHENYU Office" }));
+  const [previewMediaDoc, setPreviewMediaDoc] = useState<DocumentMeta | null>(null);
 
   // 从自定义 Hook 获取状态与操作函数
   const {
@@ -103,6 +109,10 @@ export function DocumentsView() {
     { name: "PowerPoint", icon: Presentation, key: "PowerPoint" },
     { name: "PDF", icon: FileType2, key: "PDF" },
     { name: "Markdown", icon: FileCode2, key: "Markdown" },
+    { name: t({ id: "TypeImage", message: "Image" }), icon: ImageIcon, key: "Image" },
+    { name: t({ id: "TypeVideo", message: "Video" }), icon: Video, key: "Video" },
+    { name: t({ id: "TypeAudio", message: "Audio" }), icon: Music, key: "Audio" },
+    { name: t({ id: "TypeOther", message: "Other" }), icon: FileGeneric, key: "Other" },
   ];
 
   // 收集所有现有标签
@@ -150,6 +160,10 @@ export function DocumentsView() {
       if (activeType === "PowerPoint") matchesType = doc.type === "pptx";
       if (activeType === "PDF") matchesType = doc.type === "pdf";
       if (activeType === "Markdown") matchesType = doc.type === "md";
+      if (activeType === "Image") matchesType = doc.type === "image";
+      if (activeType === "Video") matchesType = doc.type === "video";
+      if (activeType === "Audio") matchesType = doc.type === "audio";
+      if (activeType === "Other") matchesType = doc.type === "other";
 
       let matchesCategory = true;
       if (activeCategoryId === "__unclassified__") {
@@ -278,7 +292,7 @@ export function DocumentsView() {
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors shadow-2xs cursor-pointer"
             >
               <Upload className="w-3.5 h-3.5" />
-              <span>{t({ id: "UploadLocalDoc", message: "Upload Document" })}</span>
+              <span>{t({ id: "UploadFile", message: "Upload File" })}</span>
             </button>
           </div>
         </header>
@@ -378,7 +392,24 @@ export function DocumentsView() {
                   key={doc.id}
                   index={idx}
                   doc={doc}
-                  onOpen={() => router.push(`/editor?docId=${encodeURIComponent(doc.id)}&type=${doc.type}`)}
+                  onOpen={(targetDoc) => {
+                    if (
+                      targetDoc.type === "image" ||
+                      targetDoc.type === "video" ||
+                      targetDoc.type === "audio"
+                    ) {
+                      setPreviewMediaDoc(targetDoc);
+                    } else if (targetDoc.type === "other") {
+                      const a = document.createElement("a");
+                      a.href = `/api/documents/${encodeURIComponent(targetDoc.id)}/content`;
+                      a.download = targetDoc.name;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                    } else {
+                      router.push(`/editor?docId=${encodeURIComponent(targetDoc.id)}&type=${targetDoc.type}`);
+                    }
+                  }}
                   onDownload={() => {
                     const a = document.createElement("a");
                     a.href = `/api/documents/${encodeURIComponent(doc.id)}/content`;
@@ -515,6 +546,11 @@ export function DocumentsView() {
         confirmText={confirmModal.confirmText}
         onClose={() => setConfirmModal((prev) => ({ ...prev, open: false }))}
         onConfirm={confirmModal.onConfirm}
+      />
+
+      <MediaPreviewModal
+        doc={previewMediaDoc}
+        onClose={() => setPreviewMediaDoc(null)}
       />
     </div>
   );

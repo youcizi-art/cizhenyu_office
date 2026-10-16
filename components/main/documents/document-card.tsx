@@ -168,22 +168,24 @@ export function DocumentCard({
               </button>
             </PopoverTrigger>
             <PopoverContent align="end" className="w-44 p-1.5 rounded-xl text-xs space-y-0.5">
-              <button
-                onClick={() => onOpen(doc)}
-                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-muted text-foreground transition-colors cursor-pointer"
-              >
-                {doc.type === "pdf" ? (
-                  <>
-                    <Eye className="w-3.5 h-3.5 text-red-500" />
-                    <span>{t({ id: "PreviewFile", message: "Preview" })}</span>
-                  </>
-                ) : (
-                  <>
-                    <FileEdit className="w-3.5 h-3.5 text-primary" />
-                    <span>{t({ id: "EditOnline", message: "Edit Online" })}</span>
-                  </>
-                )}
-              </button>
+              {doc.type !== "other" && (
+                <button
+                  onClick={() => onOpen(doc)}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-muted text-foreground transition-colors cursor-pointer"
+                >
+                  {doc.type === "pdf" || doc.type === "image" || doc.type === "video" || doc.type === "audio" ? (
+                    <>
+                      <Eye className="w-3.5 h-3.5 text-sky-500" />
+                      <span>{t({ id: "PreviewFile", message: "Preview" })}</span>
+                    </>
+                  ) : (
+                    <>
+                      <FileEdit className="w-3.5 h-3.5 text-primary" />
+                      <span>{t({ id: "EditOnline", message: "Edit Online" })}</span>
+                    </>
+                  )}
+                </button>
+              )}
 
               <button
                 onClick={() => onTogglePin(doc)}

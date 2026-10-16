@@ -14,7 +14,7 @@ export async function onRequestPatch(context: PagesContext<"id">): Promise<Respo
   const { request, env, params } = context;
   const isAuth = await verifyAuth(request, env);
   if (!isAuth) {
-    return errorResponse("未授权访问，请先登录", 401);
+    return errorResponse("Unauthorized, please log in first", 401);
   }
 
   const categoryId = params.id as string;
@@ -22,13 +22,13 @@ export async function onRequestPatch(context: PagesContext<"id">): Promise<Respo
     const body = (await request.json()) as { name?: string };
     const name = body?.name?.trim();
     if (!name) {
-      return errorResponse("分类名称不能为空", 400);
+      return errorResponse("Category name cannot be empty", 400);
     }
 
     const metadata = await loadMetadata(env);
     const category = metadata.categories.find((c) => c.id === categoryId);
     if (!category) {
-      return errorResponse("分类不存在", 404);
+      return errorResponse("Category not found", 404);
     }
 
     category.name = name;
@@ -39,7 +39,7 @@ export async function onRequestPatch(context: PagesContext<"id">): Promise<Respo
       category,
     });
   } catch (err) {
-    return errorResponse("更新分类失败: " + String(err), 500);
+    return errorResponse("Failed to update category: " + String(err), 500);
   }
 }
 
@@ -47,7 +47,7 @@ export async function onRequestDelete(context: PagesContext<"id">): Promise<Resp
   const { request, env, params } = context;
   const isAuth = await verifyAuth(request, env);
   if (!isAuth) {
-    return errorResponse("未授权访问，请先登录", 401);
+    return errorResponse("Unauthorized, please log in first", 401);
   }
 
   const categoryId = params.id as string;
@@ -55,7 +55,7 @@ export async function onRequestDelete(context: PagesContext<"id">): Promise<Resp
     const metadata = await loadMetadata(env);
     const index = metadata.categories.findIndex((c) => c.id === categoryId);
     if (index === -1) {
-      return errorResponse("分类不存在", 404);
+      return errorResponse("Category not found", 404);
     }
 
     // 递归找出该分类及其所有子分类 ID
@@ -87,6 +87,6 @@ export async function onRequestDelete(context: PagesContext<"id">): Promise<Resp
       deletedCategoryIds: Array.from(toDeleteIds),
     });
   } catch (err) {
-    return errorResponse("删除分类失败: " + String(err), 500);
+    return errorResponse("Failed to delete category: " + String(err), 500);
   }
 }

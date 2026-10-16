@@ -262,7 +262,7 @@ export function UploadModal({
             <Upload className="w-5 h-5" />
           </div>
           <h2 className="text-base font-semibold text-foreground">
-            {t({ id: "UploadModalTitle", message: "Upload Document to Cloud" })}
+            {t({ id: "UploadModalTitle", message: "Upload File to Cloud" })}
           </h2>
         </div>
 
@@ -270,7 +270,6 @@ export function UploadModal({
           <input
             ref={fileInputRef}
             type="file"
-            accept=".docx,.xlsx,.pptx,.pdf,.md"
             onChange={(e) => onSelectFile(e.target.files?.[0] || null)}
             className="hidden"
           />
@@ -297,10 +296,13 @@ export function UploadModal({
             ) : (
               <div className="space-y-1">
                 <p className="text-xs font-semibold text-foreground">
-                  {t({ id: "ClickToSelectDoc", message: "Click to select a local document" })}
+                  {t({ id: "ClickToSelectFile", message: "Click to select a file" })}
                 </p>
                 <p className="text-[11px] text-muted-foreground">
-                  {t({ id: "SupportedFormatsHint", message: "Supports .docx, .xlsx, .pptx, .pdf, .md" })}
+                  {t({
+                    id: "AllFormatsSupportedHint",
+                    message: "All file types supported (Office, PDF, Markdown, Images, Videos, Audio, etc.)",
+                  })}
                 </p>
               </div>
             )}

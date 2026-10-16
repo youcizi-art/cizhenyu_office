@@ -27,6 +27,8 @@ import {
 import { cn } from "@/lib/utils";
 import { formatRelativeTime } from "@/utils/recent-files";
 import { MarkdownPreviewView } from "@/components/editor/markdown-preview-view";
+import { MediaShareView } from "@/components/share/media-share-view";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
 function ShareDownloadContent() {
   const t = useExtracted();
@@ -52,12 +54,18 @@ function ShareDownloadContent() {
   const [passcodeError, setPasscodeError] = useState<string>("");
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // Markdown 在线展示内容状态
+  // 在线展示内容状态
   const [markdownContent, setMarkdownContent] = useState<string | null>(null);
+  const [mediaVerified, setMediaVerified] = useState<boolean>(false);
+  const [verifiedKey, setVerifiedKey] = useState<string>(initialKey);
 
-  // 判断是否处于 Markdown 展示分享模式
+  // 判断是否处于展示分享模式 (Markdown、图片、视频、音频)
   const isPreviewMode =
-    docInfo?.type === "md" &&
+    docInfo &&
+    (docInfo.type === "md" ||
+      docInfo.type === "image" ||
+      docInfo.type === "video" ||
+      docInfo.type === "audio") &&
     (docInfo.shareMode === "preview" || queryMode === "preview");
 
   useEffect(() => {
@@ -71,21 +79,39 @@ function ShareDownloadContent() {
         const info = await getShareInfo(token);
         setDocInfo(info);
 
-        const isMdPreview =
-          info.type === "md" &&
-          (info.shareMode === "preview" || queryMode === "preview");
+        const isMedia =
+          info.type === "image" || info.type === "video" || info.type === "audio";
+        const isMd = info.type === "md";
+        const wantsPreview = info.shareMode === "preview" || queryMode === "preview";
 
-        // 若为 Markdown 在线展示分享且免密，或 URL 已带密钥，尝试预拉取内容
-        if (isMdPreview) {
+        if (wantsPreview) {
           if (!info.requiresPassword) {
-            const content = await getShareContent(token);
-            setMarkdownContent(content);
-          } else if (initialKey.trim()) {
-            try {
-              const content = await getShareContent(token, initialKey.trim());
+            if (isMd) {
+              const content = await getShareContent(token);
               setMarkdownContent(content);
-            } catch {
-              // 初始密钥无效，停留在输入密码界面
+            } else if (isMedia) {
+              setMediaVerified(true);
+            }
+          } else if (initialKey.trim()) {
+            if (isMd) {
+              try {
+                const content = await getShareContent(token, initialKey.trim());
+                setMarkdownContent(content);
+                setVerifiedKey(initialKey.trim());
+              } catch {
+                // 初始密钥无效，停留在输入密码界面
+              }
+            } else if (isMedia) {
+              try {
+                const testUrl = getShareDownloadUrl(token, initialKey.trim(), true);
+                const probeRes = await fetch(testUrl, { method: "HEAD" });
+                if (probeRes.ok) {
+                  setMediaVerified(true);
+                  setVerifiedKey(initialKey.trim());
+                }
+              } catch {
+                // 初始密钥无效
+              }
             }
           }
         }
@@ -154,7 +180,7 @@ function ShareDownloadContent() {
     triggerDownloadAction(getShareDownloadUrl(token), docInfo.name);
   };
 
-  // 处理 Markdown 在线预览验证提取
+  // 处理展示分享密码提取验证 (Markdown 与 媒体类型)
   const handleVerifyPreview = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token || !docInfo) return;
@@ -167,14 +193,28 @@ function ShareDownloadContent() {
     setIsVerifying(true);
 
     try {
-      const content = await getShareContent(token, passcode.trim());
-      setMarkdownContent(content);
-      toast.success(t({ id: "Unlocked", message: "Access Granted, loading document..." }));
+      if (docInfo.type === "md") {
+        const content = await getShareContent(token, passcode.trim());
+        setMarkdownContent(content);
+        setVerifiedKey(passcode.trim());
+        toast.success(t({ id: "Unlocked", message: "Access Granted, loading document..." }));
+      } else {
+        const testUrl = getShareDownloadUrl(token, passcode.trim(), true);
+        const probeRes = await fetch(testUrl, { method: "HEAD" });
+        if (probeRes.status === 403) {
+          setPasscodeError(t({ id: "InvalidPasscode", message: "Incorrect passcode. Please try again." }));
+          setIsVerifying(false);
+          return;
+        }
+        setMediaVerified(true);
+        setVerifiedKey(passcode.trim());
+        toast.success(t({ id: "Unlocked", message: "Access Granted, loading preview..." }));
+      }
     } catch (err) {
       setPasscodeError(
-        String(err).includes("403") || String(err).includes("错误")
+        String(err).includes("403") || String(err).includes("error")
           ? t({ id: "InvalidPasscode", message: "Incorrect passcode. Please try again." })
-          : t({ id: "DownloadFailed", message: "Verification failed, please try again later" })
+          : t({ id: "VerificationFailed", message: "Verification failed, please try again later" })
       );
     } finally {
       setIsVerifying(false);
@@ -205,7 +245,10 @@ function ShareDownloadContent() {
 
   if (error || !docInfo) {
     return (
-      <div className="flex min-h-screen w-full max-w-full overflow-x-hidden items-center justify-center bg-slate-50 dark:bg-[#0a0a0c] p-4 text-foreground">
+      <div className="relative flex min-h-screen w-full max-w-full overflow-x-hidden items-center justify-center bg-slate-50 dark:bg-[#0a0a0c] p-4 text-foreground">
+        <div className="absolute top-4 right-4 z-20">
+          <LanguageSwitcher />
+        </div>
         <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 text-center shadow-xl">
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
             <AlertCircle className="h-7 w-7" />
@@ -231,8 +274,8 @@ function ShareDownloadContent() {
     );
   }
 
-  // 若处于 Markdown 在线展示分享模式，且内容已成功载入，渲染专门的只读网页阅读器
-  if (isPreviewMode && markdownContent !== null) {
+  // Markdown 在线展示预览模式 (验证成功)
+  if (isPreviewMode && docInfo.type === "md" && markdownContent !== null) {
     return (
       <MarkdownPreviewView
         content={markdownContent}
@@ -244,10 +287,34 @@ function ShareDownloadContent() {
     );
   }
 
+  // 媒体在线展示分享模式 (验证成功)
+  if (
+    isPreviewMode &&
+    (docInfo.type === "image" || docInfo.type === "video" || docInfo.type === "audio") &&
+    mediaVerified
+  ) {
+    const inlineMediaUrl = getShareDownloadUrl(token, verifiedKey || undefined, true);
+    return (
+      <MediaShareView
+        mediaUrl={inlineMediaUrl}
+        docName={docInfo.name}
+        docType={docInfo.type}
+        docSize={docInfo.size}
+        updatedAt={docInfo.updatedAt}
+        onDownload={() => handleDownload()}
+      />
+    );
+  }
+
   const docCfg = getDocConfig(docInfo.type);
 
   return (
     <div className="relative flex min-h-screen w-full max-w-full overflow-x-hidden items-center justify-center bg-slate-50 dark:bg-[#0a0a0c] p-4 font-sans text-foreground">
+      {/* 顶部右上角多语言切换 */}
+      <div className="absolute top-4 right-4 z-20">
+        <LanguageSwitcher />
+      </div>
+
       {/* 背景氛围渐变 */}
       <div className="pointer-events-none absolute -top-40 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-primary/20 blur-3xl dark:bg-primary/10" />
 
@@ -267,7 +334,7 @@ function ShareDownloadContent() {
           {isPreviewMode ? (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-purple-500/10 text-purple-600 dark:text-purple-400 mb-2">
               <Eye className="w-3.5 h-3.5" />
-              {t({ id: "MarkdownSharedPreview", message: "Markdown Online Preview" })}
+              {t({ id: "OnlineSharedPreview", message: "Online Web View" })}
             </span>
           ) : docInfo.requiresPassword ? (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 mb-2">

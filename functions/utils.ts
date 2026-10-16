@@ -160,3 +160,42 @@ export async function saveMetadata(env: Env, metadata: MetadataIndex): Promise<v
 export function generateId(): string {
   return crypto.randomUUID();
 }
+
+/**
+ * 根据文件名或扩展名推断 Content-Type MIME
+ */
+export function getMimeType(fileName: string, defaultType: string = "application/octet-stream"): string {
+  const ext = fileName.split(".").pop()?.toLowerCase() || "";
+  const mimeMap: Record<string, string> = {
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    gif: "image/gif",
+    webp: "image/webp",
+    avif: "image/avif",
+    svg: "image/svg+xml",
+    apng: "image/apng",
+    bmp: "image/bmp",
+    ico: "image/x-icon",
+    mp4: "video/mp4",
+    webm: "video/webm",
+    mov: "video/quicktime",
+    mp3: "audio/mpeg",
+    wav: "audio/wav",
+    ogg: "audio/ogg",
+    aac: "audio/aac",
+    m4a: "audio/mp4",
+    flac: "audio/flac",
+    pdf: "application/pdf",
+    md: "text/markdown; charset=utf-8",
+    txt: "text/plain; charset=utf-8",
+    json: "application/json; charset=utf-8",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    doc: "application/msword",
+    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    xls: "application/vnd.ms-excel",
+    pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    ppt: "application/vnd.ms-powerpoint",
+  };
+  return mimeMap[ext] || defaultType;
+}

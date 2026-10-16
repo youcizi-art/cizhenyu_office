@@ -103,14 +103,20 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     const onUnauthorized = () => {
       setIsAuthenticated(false);
       setRequiresPassword(true);
-      setErrorMessage("登录状态已失效或访问密钥已在后台更改，请重新输入密钥以继续");
+      setErrorMessage(
+        t({
+          id: "AuthSessionExpiredHint",
+          message:
+            "Login session expired or access key changed, please re-enter access key to continue",
+        })
+      );
     };
 
     window.addEventListener("auth:unauthorized", onUnauthorized);
     return () => {
       window.removeEventListener("auth:unauthorized", onUnauthorized);
     };
-  }, []);
+  }, [t]);
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,6 +133,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         setIsAuthenticated(true);
         setPassword("");
         setErrorMessage("");
+        // 登录成功后刷新页面以立即获取用户云端文档列表
+        window.location.reload();
       } else {
         setErrorMessage(
           res.error ||

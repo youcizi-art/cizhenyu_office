@@ -15,30 +15,30 @@ export async function onRequestPut(context: PagesContext<"id">): Promise<Respons
   const { request, env, params } = context;
   const isAuth = await verifyAuth(request, env);
   if (!isAuth) {
-    return errorResponse("未授权访问，请先登录", 401);
+    return errorResponse("Unauthorized, please log in first", 401);
   }
 
   const bucket = getR2Bucket(env);
   if (!bucket) {
-    return errorResponse("Cloudflare R2 Bucket 未绑定", 500);
+    return errorResponse("Cloudflare R2 Bucket not bound", 500);
   }
 
   const docId = params.id as string;
   if (!docId) {
-    return errorResponse("缺少文档 ID", 400);
+    return errorResponse("Missing document ID", 400);
   }
 
   try {
     const metadata = await loadMetadata(env);
     const docIndex = metadata.documents.findIndex((d) => d.id === docId);
     if (docIndex === -1) {
-      return errorResponse("文档不存在", 404);
+      return errorResponse("Document not found", 404);
     }
 
     const doc = metadata.documents[docIndex];
     const arrayBuffer = await request.arrayBuffer();
     if (!arrayBuffer || arrayBuffer.byteLength === 0) {
-      return errorResponse("上传的内容为空", 400);
+      return errorResponse("Uploaded content is empty", 400);
     }
 
     // 允许通过请求头或 query 参数将旧的 .doc 格式升级为 .docx
@@ -73,7 +73,7 @@ export async function onRequestPut(context: PagesContext<"id">): Promise<Respons
       document: doc,
     });
   } catch (err) {
-    return errorResponse("更新文档失败: " + String(err), 500);
+    return errorResponse("Failed to update document: " + String(err), 500);
   }
 }
 
@@ -81,24 +81,24 @@ export async function onRequestDelete(context: PagesContext<"id">): Promise<Resp
   const { request, env, params } = context;
   const isAuth = await verifyAuth(request, env);
   if (!isAuth) {
-    return errorResponse("未授权访问，请先登录", 401);
+    return errorResponse("Unauthorized, please log in first", 401);
   }
 
   const bucket = getR2Bucket(env);
   if (!bucket) {
-    return errorResponse("Cloudflare R2 Bucket 未绑定", 500);
+    return errorResponse("Cloudflare R2 Bucket not bound", 500);
   }
 
   const docId = params.id as string;
   if (!docId) {
-    return errorResponse("缺少文档 ID", 400);
+    return errorResponse("Missing document ID", 400);
   }
 
   try {
     const metadata = await loadMetadata(env);
     const docIndex = metadata.documents.findIndex((d) => d.id === docId);
     if (docIndex === -1) {
-      return errorResponse("文档不存在", 404);
+      return errorResponse("Document not found", 404);
     }
 
     const doc = metadata.documents[docIndex];
@@ -111,9 +111,9 @@ export async function onRequestDelete(context: PagesContext<"id">): Promise<Resp
 
     return jsonResponse({
       success: true,
-      message: "文档已删除",
+      message: "Document deleted successfully",
     });
   } catch (err) {
-    return errorResponse("删除文档失败: " + String(err), 500);
+    return errorResponse("Failed to delete document: " + String(err), 500);
   }
 }

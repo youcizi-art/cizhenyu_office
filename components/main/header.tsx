@@ -9,7 +9,7 @@ import {
   Files,
 } from "lucide-react";
 import Image from "next/image";
-import { PropsWithChildren } from "react";
+import React, { useState, PropsWithChildren } from "react";
 import { useRouter } from "next/navigation";
 import { useExtracted } from "next-intl";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,8 @@ export function Header({ children }: PropsWithChildren<{ className?: string }>) 
   const router = useRouter();
   const t = useExtracted();
   const { requiresPassword, isAuthenticated, handleLogout } = useAuth();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
   const quickActions = [
     {
       type: "docx",
@@ -84,14 +86,49 @@ export function Header({ children }: PropsWithChildren<{ className?: string }>) 
 
         {requiresPassword && isAuthenticated && (
           <button
-            onClick={handleLogout}
+            onClick={() => setShowLogoutConfirm(true)}
             className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all flex items-center justify-center cursor-pointer ml-2"
-            title="退出登录"
+            title={t({ id: "LogOut", message: "Log Out" })}
           >
             <LogOut className="w-5 h-5" />
           </button>
         )}
       </div>
+
+      {/* 退出登录确认弹窗 */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-2xl text-foreground space-y-4">
+            <div className="space-y-1.5">
+              <h3 className="text-base font-bold text-foreground">
+                {t({ id: "LogoutConfirmTitle", message: "Log Out" })}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {t({ id: "LogoutConfirmDesc", message: "Are you sure you want to log out of your session?" })}
+              </p>
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowLogoutConfirm(false)}
+                className="px-3.5 py-2 rounded-xl text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+              >
+                {t({ id: "Cancel", message: "Cancel" })}
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setShowLogoutConfirm(false);
+                  await handleLogout();
+                }}
+                className="px-3.5 py-2 rounded-xl bg-destructive text-destructive-foreground text-xs font-semibold hover:bg-destructive/90 shadow-xs transition-colors cursor-pointer"
+              >
+                {t({ id: "ConfirmLogout", message: "Log Out" })}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

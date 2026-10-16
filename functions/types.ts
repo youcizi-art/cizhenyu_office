@@ -56,7 +56,16 @@ export interface Category {
   createdAt: number;
 }
 
-export type DocumentType = "docx" | "xlsx" | "pptx" | "pdf" | "md";
+export type DocumentType =
+  | "docx"
+  | "xlsx"
+  | "pptx"
+  | "pdf"
+  | "md"
+  | "image"
+  | "video"
+  | "audio"
+  | "other";
 
 export interface DocumentMeta {
   id: string;

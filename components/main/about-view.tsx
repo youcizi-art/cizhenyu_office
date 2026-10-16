@@ -1,12 +1,14 @@
 "use client";
 
 import React from "react";
-import { ShieldCheck, Cloud, Lock, Sparkles, Heart, FileCheck, Layers } from "lucide-react";
+import { ShieldCheck, Cloud, Lock, Sparkles, Heart, FileCheck } from "lucide-react";
 import { usePageTitle } from "@/hooks/use-page-title";
+import { useExtracted } from "next-intl";
 import { Logo } from "../svg";
 
 export function AboutView() {
-  usePageTitle("关于 — CIZHENYU Office");
+  const t = useExtracted();
+  usePageTitle(t({ id: "AboutTitle", message: "About — CIZHENYU Office" }));
 
   return (
     <div className="max-w-4xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500 py-6">
@@ -19,7 +21,11 @@ export function AboutView() {
           CIZHENYU OFFICE
         </h1>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-          现代高性能私有在线 Office 套件，为您提供流畅、安全、高保真的云端文档编辑与资产归档管理体验。
+          {t({
+            id: "AboutHeroDesc",
+            message:
+              "Modern high-performance private online office suite, providing you with smooth, secure, high-fidelity cloud document editing and asset management.",
+          })}
         </p>
       </div>
 
@@ -29,9 +35,15 @@ export function AboutView() {
           <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center mb-4 text-primary">
             <Sparkles className="w-5 h-5" />
           </div>
-          <h3 className="text-base font-bold text-foreground mb-2">桌面级编辑内核</h3>
+          <h3 className="text-base font-bold text-foreground mb-2">
+            {t({ id: "DesktopEditingCore", message: "Desktop-Class Core" })}
+          </h3>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            支持 Word、Excel、PowerPoint、PDF 等全主流 Office 格式，具备极佳的排版兼容度与快速响应体验。
+            {t({
+              id: "DesktopEditingCoreDesc",
+              message:
+                "Supports Word, Excel, PowerPoint, PDF, Markdown and media files with outstanding formatting compatibility and instant responsiveness.",
+            })}
           </p>
         </div>
 
@@ -39,9 +51,15 @@ export function AboutView() {
           <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center mb-4 text-primary">
             <Cloud className="w-5 h-5" />
           </div>
-          <h3 className="text-base font-bold text-foreground mb-2">Cloudflare R2 存储</h3>
+          <h3 className="text-base font-bold text-foreground mb-2">
+            {t({ id: "R2CloudStorage", message: "Cloudflare R2 Storage" })}
+          </h3>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            连接高可用对象存储，实现多级树形目录归类归档、Ctrl+S 快速覆盖保存，以及毫秒级文档加载。
+            {t({
+              id: "R2CloudStorageDesc",
+              message:
+                "Connected to high-availability object storage for multi-level category archiving, Ctrl+S fast saving, and millisecond document loading.",
+            })}
           </p>
         </div>
 
@@ -49,29 +67,50 @@ export function AboutView() {
           <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center mb-4 text-primary">
             <Lock className="w-5 h-5" />
           </div>
-          <h3 className="text-base font-bold text-foreground mb-2">轻量鉴权与安全分享</h3>
+          <h3 className="text-base font-bold text-foreground mb-2">
+            {t({ id: "LightweightAuthSharing", message: "Auth & Secure Sharing" })}
+          </h3>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            采用单密钥访问认证，支持一键生成免密只读安全外链，兼顾私有数据的隐私保护与外部协同分发需求。
+            {t({
+              id: "LightweightAuthSharingDesc",
+              message:
+                "Protected with single access key authentication and instant read-only public or passcode-protected web sharing links.",
+            })}
           </p>
         </div>
       </div>
 
-      {/* 开源合规声明区块 (AGPL-3.0 规定) */}
+      {/* 开源合规声明区块 */}
       <div className="p-8 bg-card border border-border rounded-3xl space-y-4">
         <div className="flex items-center gap-3">
           <ShieldCheck className="w-6 h-6 text-primary" />
-          <h3 className="text-lg font-bold text-foreground">开源技术与许可声明</h3>
+          <h3 className="text-lg font-bold text-foreground">
+            {t({ id: "OpenSourceNoticeTitle", message: "Open Source Technologies & License" })}
+          </h3>
         </div>
         <p className="text-xs text-muted-foreground leading-relaxed">
-          CIZHENYU OFFICE 秉持开源精神，基于优秀的 OnlyOffice 开源核心及社区生态成果进行深度定制与云原生架构重构。
+          {t({
+            id: "OpenSourceNoticeDesc",
+            message:
+              "CIZHENYU Office adheres to open-source values, customized and rebuilt on top of modern open-source core technologies and community standards.",
+          })}
         </p>
         <div className="p-4 bg-muted/40 rounded-xl border border-border/60 text-xs text-muted-foreground space-y-2">
           <div className="flex items-center gap-2 text-foreground font-semibold">
             <FileCheck className="w-4 h-4 text-primary" />
-            <span>开源许可证：GNU Affero General Public License v3.0 (AGPL-3.0)</span>
+            <span>
+              {t({
+                id: "GnuLicenseTitle",
+                message: "Open Source License: GNU Affero General Public License v3.0 (AGPL-3.0)",
+              })}
+            </span>
           </div>
           <p>
-            本程序为自由软件。我们在遵守 AGPL-3.0 开源协议的前提下进行功能扩展、云端存储集成与界面优化，您可以根据自由软件基金会发布的 GNU Affero 通用公共许可证条款重新分发和/或修改它。
+            {t({
+              id: "GnuLicenseDesc",
+              message:
+                "This application is free software. You can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation.",
+            })}
           </p>
         </div>
       </div>
@@ -79,9 +118,15 @@ export function AboutView() {
       {/* 底部愿景 */}
       <div className="p-8 bg-linear-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 rounded-3xl text-center space-y-3">
         <Heart className="w-6 h-6 text-primary mx-auto" />
-        <h3 className="text-lg font-bold text-foreground">构建更敏捷高效的数字办公空间</h3>
+        <h3 className="text-lg font-bold text-foreground">
+          {t({ id: "AboutVisionTitle", message: "Building an Agile & Efficient Digital Workspace" })}
+        </h3>
         <p className="text-xs text-muted-foreground max-w-lg mx-auto leading-relaxed">
-          CIZHENYU OFFICE 将持续聚焦办公体验与云端集成能力的打磨，为团队与个人提供开箱即用、安全自主的办公基础设施。
+          {t({
+            id: "AboutVisionDesc",
+            message:
+              "CIZHENYU Office continuously refines online document workflows and cloud integration capabilities for individuals and teams worldwide.",
+          })}
         </p>
       </div>
     </div>

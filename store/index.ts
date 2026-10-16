@@ -16,6 +16,10 @@ import { type OfficeTheme, type PluginMode } from "@/utils/editor/types";
  */
 function resolveLanguage(language: Language): Locale {
   if (language === LocaleExtend.Auto) {
+    // 分享页面默认第一公民为英文，除非用户主动在界面切换
+    if (typeof window !== "undefined" && window.location.pathname.startsWith("/share")) {
+      return Locale.EN;
+    }
     const browserLang =
       typeof navigator !== "undefined"
         ? navigator.language || (navigator as any).userLanguage

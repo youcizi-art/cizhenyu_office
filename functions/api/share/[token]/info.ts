@@ -9,19 +9,19 @@ export async function onRequestGet(context: PagesContext<"token">): Promise<Resp
   const token = params.token as string;
 
   if (!token) {
-    return errorResponse("缺少分享凭证", 400);
+    return errorResponse("Missing share token", 400);
   }
 
   const bucket = getR2Bucket(env);
   if (!bucket) {
-    return errorResponse("存储服务未就绪", 500);
+    return errorResponse("Storage service not ready", 500);
   }
 
   const metadata = await loadMetadata(env);
   const doc = metadata.documents.find((d) => d.shareToken === token);
 
   if (!doc) {
-    return errorResponse("分享链接不存在或已失效", 404);
+    return errorResponse("Share link does not exist or has expired", 404);
   }
 
   // 仅对外暴露非敏感展示信息，不支持在线查看具体内容，不泄露真实密码

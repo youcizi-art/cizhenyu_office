@@ -7,6 +7,7 @@ import {
   saveMetadata,
   generateId,
   getR2Bucket,
+  getMimeType,
 } from "../../utils";
 
 /**
@@ -16,12 +17,12 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
   const { request, env } = context;
   const isAuth = await verifyAuth(request, env);
   if (!isAuth) {
-    return errorResponse("未授权访问，请先登录", 401);
+    return errorResponse("Unauthorized, please log in first", 401);
   }
 
   const bucket = getR2Bucket(env);
   if (!bucket) {
-    return errorResponse("Cloudflare R2 Bucket 未绑定 (DOCUMENTS_BUCKET)", 500);
+    return errorResponse("Cloudflare R2 Bucket not bound (DOCUMENTS_BUCKET)", 500);
   }
 
   const metadata = await loadMetadata(env);
@@ -32,12 +33,12 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
   const { request, env } = context;
   const isAuth = await verifyAuth(request, env);
   if (!isAuth) {
-    return errorResponse("未授权访问，请先登录", 401);
+    return errorResponse("Unauthorized, please log in first", 401);
   }
 
   const bucket = getR2Bucket(env);
   if (!bucket) {
-    return errorResponse("Cloudflare R2 Bucket 未绑定 (DOCUMENTS_BUCKET)", 500);
+    return errorResponse("Cloudflare R2 Bucket not bound (DOCUMENTS_BUCKET)", 500);
   }
 
   try {
@@ -48,22 +49,24 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     const categoryId = (formData.get("categoryId") as string) || null;
 
     if (!file) {
-      return errorResponse("未包含文件数据", 400);
+      return errorResponse("No file uploaded", 400);
     }
     if (!name) {
-      return errorResponse("文档名称不能为空", 400);
+      return errorResponse("Document name cannot be empty", 400);
     }
 
     const docId = generateId();
-    const r2Key = `files/${docId}.${type}`;
+    const fileExt = name.includes(".") ? name.split(".").pop()!.toLowerCase() : type;
+    const r2Key = `files/${docId}.${fileExt}`;
     const arrayBuffer = await file.arrayBuffer();
     const size = arrayBuffer.byteLength;
     const now = Date.now();
+    const contentType = (file as File).type || getMimeType(name);
 
     // 1. 上传文件二进制到 R2
     await bucket.put(r2Key, arrayBuffer, {
       httpMetadata: {
-        contentType: "application/octet-stream",
+        contentType,
       },
       customMetadata: {
         docId,
@@ -92,6 +95,6 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
       document: newDoc,
     });
   } catch (err) {
-    return errorResponse("保存文档失败: " + String(err), 500);
+    return errorResponse("Failed to save document: " + String(err), 500);
   }
 }

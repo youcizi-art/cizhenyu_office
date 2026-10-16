@@ -20,6 +20,7 @@ import { useExtracted } from "next-intl";
 import { toast } from "sonner";
 import { formatRelativeTime } from "@/utils/recent-files";
 import { cn } from "@/lib/utils";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
 interface TocItem {
   id: string;
@@ -247,6 +248,8 @@ export function MarkdownPreviewView({
               {copied ? t({ id: "Copied", message: "Copied" }) : t({ id: "Copy", message: "Copy" })}
             </span>
           </button>
+
+          <LanguageSwitcher />
 
           <button
             type="button"

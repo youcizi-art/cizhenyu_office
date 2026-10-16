@@ -23,7 +23,7 @@ import {
 
 export function OpenView() {
   const t = useExtracted();
-  usePageTitle("私有在线 Office 工作台 | CIZHENYU");
+  usePageTitle(t({ id: "HomeTitle", message: "Online Office Suite | CIZHENYU" }));
 
   const [onlineDocs, setOnlineDocs] = useState<DocumentMeta[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -167,7 +167,7 @@ export function OpenView() {
                     {label}
                   </h3>
                   <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">
-                    创建空白 {label}
+                    {t({ id: "CreateBlankDocPrefix", message: "Create blank" })} {label}
                   </p>
                 </div>
               </Link>
@@ -181,9 +181,11 @@ export function OpenView() {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Cloud className="w-5 h-5 text-primary" />
-            <h2 className="text-lg font-bold">最近编辑的在线文档</h2>
+            <h2 className="text-lg font-bold">
+              {t({ id: "RecentlyEditedOnlineDocs", message: "Recently Edited Online Documents" })}
+            </h2>
             <span className="text-xs bg-primary/10 text-primary font-medium px-2 py-0.5 rounded-full">
-              R2 云端同步
+              {t({ id: "R2CloudSync", message: "R2 Cloud Sync" })}
             </span>
           </div>
           <Link
@@ -264,7 +266,7 @@ export function OpenView() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold flex items-center gap-2">
               <Clock className="w-5 h-5 text-muted-foreground" />
-              本地临时打开记录
+              {t({ id: "LocalOpenHistory", message: "Local Temporary Open History" })}
             </h2>
           </div>
           <div className="rounded-xl border border-border bg-card/60 overflow-hidden divide-y divide-border">
@@ -273,7 +275,7 @@ export function OpenView() {
                 key={file.path}
                 onClick={() => handleRecentLocalFileClick(file)}
                 className="w-full flex items-center justify-between px-4 py-3 hover:bg-sidebar-hover transition-colors group cursor-pointer"
-                title="重新打开此本地文件"
+                title={t({ id: "ReopenLocalFile", message: "Reopen this local file" })}
               >
                 <div className="flex items-center gap-3">
                   <DocumentIcon type={file.type} size="sm" />
@@ -287,7 +289,7 @@ export function OpenView() {
                 <button
                   onClick={(e) => handleRemoveLocalRecentFile(e, file.path)}
                   className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-border/50 rounded"
-                  title="移除记录"
+                  title={t({ id: "RemoveRecord", message: "Remove record" })}
                 >
                   <span className="text-xs text-muted-foreground hover:text-foreground">×</span>
                 </button>

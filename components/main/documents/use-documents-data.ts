@@ -17,6 +17,7 @@ import {
   DocumentMeta,
   Category,
 } from "@/lib/api";
+import { detectFileType } from "@/lib/document-types";
 
 export function useDocumentsData() {
   const t = useExtracted();
@@ -248,11 +249,7 @@ export function useDocumentsData() {
 
     try {
       setIsUploading(true);
-      const ext = uploadFile.name.split(".").pop()?.toLowerCase();
-      let type: any = "docx";
-      if (ext === "xlsx") type = "xlsx";
-      if (ext === "pptx") type = "pptx";
-      if (ext === "pdf") type = "pdf";
+      const type = detectFileType(uploadFile.name);
       const newDoc = await saveNewDocument({
         file: uploadFile,
         name: uploadFile.name,
@@ -262,7 +259,7 @@ export function useDocumentsData() {
       setDocuments((prev) => [newDoc, ...prev]);
       setUploadModalOpen(false);
       setUploadFile(null);
-      toast.success(t({ id: "UploadSuccess", message: "Document uploaded successfully" }));
+      toast.success(t({ id: "UploadSuccess", message: "File uploaded successfully" }));
     } catch (err) {
       toast.error(String(err));
     } finally {

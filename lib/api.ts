@@ -9,7 +9,17 @@ export interface Category {
   createdAt: number;
 }
 
-export type DocumentType = "docx" | "doc" | "xlsx" | "pptx" | "pdf" | "md";
+export type DocumentType =
+  | "docx"
+  | "doc"
+  | "xlsx"
+  | "pptx"
+  | "pdf"
+  | "md"
+  | "image"
+  | "video"
+  | "audio"
+  | "other";
 
 export interface DocumentMeta {
   id: string;
@@ -77,11 +87,11 @@ export async function login(password: string): Promise<{ success: boolean; error
     });
     const data = await res.json();
     if (!res.ok) {
-      return { success: false, error: data.error || "登录失败" };
+      return { success: false, error: data.error || "Login failed" };
     }
     return { success: true };
   } catch (err) {
-    return { success: false, error: "网络请求异常: " + String(err) };
+    return { success: false, error: "Network request error: " + String(err) };
   }
 }
 
@@ -104,7 +114,7 @@ async function fetchWithAuth(url: string, init?: RequestInit): Promise<Response>
   if (res.status === 401) {
     handleUnauthorized();
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || "未授权访问或登录已失效，请重新登录");
+    throw new Error(err.error || "Unauthorized access or session expired. Please log in again.");
   }
   return res;
 }
@@ -116,7 +126,7 @@ export async function fetchDocumentsAndCategories(): Promise<MetadataResponse> {
   const res = await fetchWithAuth("/api/documents", { cache: "no-store" });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || "获取文档列表失败");
+    throw new Error(err.error || "Failed to fetch documents");
   }
   return res.json();
 }
@@ -145,7 +155,7 @@ export async function saveNewDocument(params: {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || "保存文档失败");
+    throw new Error(err.error || "Failed to save document");
   }
 
   const data = await res.json();
@@ -171,7 +181,7 @@ export async function updateDocumentContent(
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || "更新文档失败");
+    throw new Error(err.error || "Failed to update document");
   }
 
   const data = await res.json();
@@ -186,7 +196,7 @@ export async function getDocumentContentBlob(docId: string): Promise<Blob> {
     cache: "no-store",
   });
   if (!res.ok) {
-    throw new Error("加载文档实体失败");
+    throw new Error("Failed to load document content");
   }
   return res.blob();
 }
@@ -200,7 +210,7 @@ export async function deleteDocument(docId: string): Promise<void> {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || "删除文档失败");
+    throw new Error(err.error || "Failed to delete document");
   }
 }
 
@@ -226,7 +236,7 @@ export async function updateDocumentMeta(
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || "修改文档信息失败");
+    throw new Error(err.error || "Failed to update document metadata");
   }
 
   const data = await res.json();
@@ -245,7 +255,7 @@ export async function reorderDocuments(orderedDocIds: string[]): Promise<void> {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || "保存文档排序失败");
+    throw new Error(err.error || "Failed to save document order");
   }
 }
 
@@ -264,7 +274,7 @@ export async function createCategory(
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || "创建分类失败");
+    throw new Error(err.error || "Failed to create category");
   }
 
   const data = await res.json();
@@ -283,7 +293,7 @@ export async function updateCategory(id: string, name: string): Promise<Category
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || "更新分类失败");
+    throw new Error(err.error || "Failed to update category");
   }
 
   const data = await res.json();
@@ -300,7 +310,7 @@ export async function deleteCategory(id: string): Promise<string[]> {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || "删除分类失败");
+    throw new Error(err.error || "Failed to delete category");
   }
 
   const data = await res.json();
@@ -323,7 +333,7 @@ export async function enableShare(
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || "开启分享失败");
+    throw new Error(err.error || "Failed to enable sharing");
   }
 
   const data = await res.json();
@@ -344,7 +354,7 @@ export async function disableShare(docId: string): Promise<void> {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || "关闭分享失败");
+    throw new Error(err.error || "Failed to disable sharing");
   }
 }
 
@@ -365,18 +375,22 @@ export async function getShareInfo(token: string): Promise<{
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || "获取分享信息失败");
+    throw new Error(err.error || "Failed to fetch share info");
   }
 
   return res.json();
 }
 
 /**
- * 获取公开分享下载地址 (支持提取密钥)
+ * 获取公开分享下载或内联预览地址 (支持提取密钥与内联模式)
  */
-export function getShareDownloadUrl(token: string, passcode?: string): string {
+export function getShareDownloadUrl(token: string, passcode?: string, inline?: boolean): string {
   const base = `/api/share/${encodeURIComponent(token)}/download`;
-  return passcode ? `${base}?key=${encodeURIComponent(passcode)}` : base;
+  const params = new URLSearchParams();
+  if (passcode) params.set("key", passcode);
+  if (inline) params.set("inline", "true");
+  const qs = params.toString();
+  return qs ? `${base}?${qs}` : base;
 }
 
 /**
@@ -388,7 +402,7 @@ export async function getShareContent(token: string, passcode?: string): Promise
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || "获取分享文档内容失败");
+    throw new Error(err.error || "Failed to fetch share content");
   }
   return res.text();
 }

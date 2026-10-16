@@ -27,7 +27,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     const inputPassword = body?.password?.trim() || "";
 
     if (inputPassword !== configuredPassword) {
-      return errorResponse("访问密钥不正确，请重新输入", 401);
+      return errorResponse("Invalid access key, please try again", 401);
     }
 
     const token = await createAuthToken(configuredPassword);
@@ -55,6 +55,6 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
       }
     );
   } catch (err) {
-    return errorResponse("解析请求失败: " + String(err), 400);
+    return errorResponse("Failed to parse request: " + String(err), 400);
   }
 }

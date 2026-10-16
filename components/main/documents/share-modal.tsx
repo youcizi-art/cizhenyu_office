@@ -64,15 +64,21 @@ export function ShareModal({
         setUsePasscode(false);
         setPasscode(generatePasscode());
       }
-      setShareMode(doc.type === "md" && doc.shareMode === "preview" ? "preview" : "download");
+      const canPreview = doc.type === "md" || doc.type === "image" || doc.type === "video" || doc.type === "audio";
+      setShareMode(canPreview && doc.shareMode === "preview" ? "preview" : "download");
     }
   }, [doc]);
 
   if (!open || !doc) return null;
 
-  const isMarkdown = doc.type === "md";
+  const canPreview =
+    doc.type === "md" ||
+    doc.type === "image" ||
+    doc.type === "video" ||
+    doc.type === "audio";
+
   const effectiveUrl =
-    isMarkdown && shareMode === "preview"
+    canPreview && shareMode === "preview"
       ? shareUrl.includes("mode=preview")
         ? shareUrl
         : `${shareUrl}${shareUrl.includes("?") ? "&" : "?"}mode=preview`
@@ -175,8 +181,8 @@ export function ShareModal({
               })}
             </p>
 
-            {/* Markdown 专属：分享方式选择（下载 vs 展示） */}
-            {isMarkdown && (
+            {/* 可在线展示格式：分享方式选择（下载 vs 展示） */}
+            {canPreview && (
               <div className="p-3 rounded-xl border border-border bg-muted/20 space-y-2">
                 <span className="text-xs font-medium text-foreground block">
                   {t({ id: "ShareMode", message: "Share Mode" })}
