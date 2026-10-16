@@ -218,7 +218,7 @@
   "UpdateTagsSuccess": "文档标签已成功更新",
   "FilterByTag": "标签：",
   "AllTags": "全部",
-  "DragHint": "长按卡片 0.25 秒后可拖动调整顺序",
+  "DragHint": "鼠标按住数字角标或触屏长按 300ms 可拖动排序",
   "OrderSaved": "文档排序已保存到云端",
   "SaveOrderFailed": "保存文档排序失败",
   "EnableSharePassword": "开启提取密钥安全保护",
@@ -282,5 +282,8 @@
   "TableOfContents": "目录",
   "OnThisPage": "本页目录",
   "NoHeadings": "本文暂无标题大纲",
-  "ToggleToc": "展开/折叠目录"
+  "ToggleToc": "展开/折叠目录",
+  "DragToReorder": "按住拖动排序",
+  "BackToTop": "返回顶部",
+  "EnterKeyToView": "Enter passcode to read document online"
 }

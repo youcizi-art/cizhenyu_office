@@ -95,33 +95,6 @@ export function DocumentsView() {
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
-  // 长按 0.25s 拖动排序 Hook
-  const gridContainerRef = useRef<HTMLDivElement>(null);
-  useDocumentDrag(gridContainerRef, {
-    enabled: !searchQuery && !selectedTag,
-    onReorder: async (newOrderedIds) => {
-      try {
-        const docMap = new Map(documents.map((d) => [d.id, d]));
-        const updatedDocs: DocumentMeta[] = [];
-        newOrderedIds.forEach((id, idx) => {
-          const d = docMap.get(id);
-          if (d) {
-            d.order = idx;
-            updatedDocs.push(d);
-            docMap.delete(id);
-          }
-        });
-        docMap.forEach((d) => updatedDocs.push(d));
-        setDocuments(updatedDocs);
-
-        await reorderDocuments(newOrderedIds);
-        toast.success(t({ id: "OrderSaved", message: "Document order saved" }));
-      } catch {
-        toast.error(t({ id: "SaveOrderFailed", message: "Failed to save document order" }));
-      }
-    },
-  });
-
   // 文档类型配置
   const types = [
     { name: t({ id: "All", message: "All" }), icon: Files, key: "All" },
@@ -213,6 +186,34 @@ export function DocumentsView() {
       return b.updatedAt - a.updatedAt;
     });
   }, [filteredDocuments]);
+
+  // 长按 300ms 或点击数字角标拖动排序 Hook (参考 tudolist 规范)
+  const gridContainerRef = useRef<HTMLDivElement>(null);
+  useDocumentDrag(gridContainerRef, {
+    enabled: !searchQuery && !selectedTag,
+    deps: [isLoading, sortedDocuments.length],
+    onReorder: async (newOrderedIds) => {
+      try {
+        const docMap = new Map(documents.map((d) => [d.id, d]));
+        const updatedDocs: DocumentMeta[] = [];
+        newOrderedIds.forEach((id, idx) => {
+          const d = docMap.get(id);
+          if (d) {
+            d.order = idx;
+            updatedDocs.push(d);
+            docMap.delete(id);
+          }
+        });
+        docMap.forEach((d) => updatedDocs.push(d));
+        setDocuments(updatedDocs);
+
+        await reorderDocuments(newOrderedIds);
+        toast.success(t({ id: "OrderSaved", message: "Document order saved" }));
+      } catch {
+        toast.error(t({ id: "SaveOrderFailed", message: "Failed to save document order" }));
+      }
+    },
+  });
 
   return (
     <div className="flex h-[calc(100vh-48px)] overflow-hidden bg-background">
@@ -372,9 +373,10 @@ export function DocumentsView() {
               ref={gridContainerRef}
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
             >
-              {sortedDocuments.map((doc) => (
+              {sortedDocuments.map((doc, idx) => (
                 <DocumentCard
                   key={doc.id}
+                  index={idx}
                   doc={doc}
                   onOpen={() => router.push(`/editor?docId=${encodeURIComponent(doc.id)}&type=${doc.type}`)}
                   onDownload={() => {

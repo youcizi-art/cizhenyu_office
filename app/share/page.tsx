@@ -181,9 +181,18 @@ function ShareDownloadContent() {
     }
   };
 
+  // 防止页面横向溢出
+  useEffect(() => {
+    const prev = document.body.style.overflowX;
+    document.body.style.overflowX = "hidden";
+    return () => {
+      document.body.style.overflowX = prev;
+    };
+  }, []);
+
   if (loading) {
     return (
-      <div className="flex min-h-screen w-screen items-center justify-center bg-slate-50 dark:bg-[#0a0a0c] text-foreground">
+      <div className="flex min-h-screen w-full max-w-full overflow-x-hidden items-center justify-center bg-slate-50 dark:bg-[#0a0a0c] text-foreground">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="text-xs text-muted-foreground">
@@ -196,7 +205,7 @@ function ShareDownloadContent() {
 
   if (error || !docInfo) {
     return (
-      <div className="flex min-h-screen w-screen items-center justify-center bg-slate-50 dark:bg-[#0a0a0c] p-4 text-foreground">
+      <div className="flex min-h-screen w-full max-w-full overflow-x-hidden items-center justify-center bg-slate-50 dark:bg-[#0a0a0c] p-4 text-foreground">
         <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 text-center shadow-xl">
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
             <AlertCircle className="h-7 w-7" />
@@ -238,7 +247,7 @@ function ShareDownloadContent() {
   const docCfg = getDocConfig(docInfo.type);
 
   return (
-    <div className="relative flex min-h-screen w-screen items-center justify-center overflow-hidden bg-slate-50 dark:bg-[#0a0a0c] p-4 font-sans text-foreground">
+    <div className="relative flex min-h-screen w-full max-w-full overflow-x-hidden items-center justify-center bg-slate-50 dark:bg-[#0a0a0c] p-4 font-sans text-foreground">
       {/* 背景氛围渐变 */}
       <div className="pointer-events-none absolute -top-40 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-primary/20 blur-3xl dark:bg-primary/10" />
 
@@ -401,7 +410,7 @@ export default function SharePage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen w-screen items-center justify-center bg-slate-50 dark:bg-[#0a0a0c]">
+        <div className="flex min-h-screen w-full max-w-full overflow-x-hidden items-center justify-center bg-slate-50 dark:bg-[#0a0a0c]">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       }

@@ -3,22 +3,46 @@
 import { useEffect, useRef } from "react";
 
 const INTERACTIVE_SELECTOR = "button, a, input, textarea, select, [data-interactive]";
-const HOLD_MS = 250; // 长按 0.25s 触发拖拽
-const MAX_SHAKE_PX = 12; // 0.25s 期间允许的最大手抖像素
+const HOLD_MS = 300; // 按住 300ms 触发拖拽准备
+const DESKTOP_ACTIVATE_PX = 4; // 触发后指针移动阈值
+const INDEX_SELECTOR = ".doc-index";
 
 interface UseDocumentDragOptions {
   enabled?: boolean;
   onReorder: (newIds: string[]) => void | Promise<void>;
+  deps?: unknown[];
+}
+
+interface SlotPosition {
+  index: number;
+  centerX: number;
+  centerY: number;
+}
+
+function isCoarsePointer(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(max-width: 768px), (pointer: coarse)").matches;
+}
+
+function canStartFromTarget(target: HTMLElement, item: HTMLElement): boolean {
+  if (target.closest(INTERACTIVE_SELECTOR)) return false;
+  // 移动端或触控屏：长按卡片任意空白区域触发
+  if (isCoarsePointer()) {
+    return item.contains(target);
+  }
+  // 桌面端鼠标：长按或移动到数字角标 .doc-index 上触发
+  return !!target.closest(INDEX_SELECTOR);
 }
 
 /**
- * 文档卡片响应式网格拖拽排序 Hook
- * 基于 DOM 占位替换与 elementFromPoint 实时穿透碰撞检测
- * 完美适配 CSS Grid 多列网格，零计算误差，平滑丝滑
+ * 文档卡片拖拽重排 Hook (深度参考 tudolist 设计与算法)
+ * - 桌面端：鼠标放置于数字角标按住 300ms 激活拖动
+ * - 移动端：按住卡片主体 300ms 激活拖动并附带震动反馈
+ * - 算法：采用中心点槽位距离映射 + Placeholder 占位无缝替换，彻底杜绝 Grid 布局塌陷
  */
 export function useDocumentDrag(
   containerRef: React.RefObject<HTMLDivElement | null>,
-  { enabled = true, onReorder }: UseDocumentDragOptions
+  { enabled = true, onReorder, deps = [] }: UseDocumentDragOptions
 ) {
   const onReorderRef = useRef(onReorder);
   onReorderRef.current = onReorder;
@@ -27,7 +51,11 @@ export function useDocumentDrag(
     const listEl = containerRef.current;
     if (!listEl || !enabled) return;
 
+    if ((listEl as unknown as { _sortableAbort?: AbortController })._sortableAbort) {
+      (listEl as unknown as { _sortableAbort: AbortController })._sortableAbort.abort();
+    }
     const ac = new AbortController();
+    (listEl as unknown as { _sortableAbort: AbortController })._sortableAbort = ac;
     const { signal } = ac;
 
     const placeholder = document.createElement("div");
@@ -44,13 +72,23 @@ export function useDocumentDrag(
       lastY: number;
       offsetX: number;
       offsetY: number;
+      itemWidth: number;
+      itemHeight: number;
       active: boolean;
       holdReady: boolean;
       holdTimer: ReturnType<typeof setTimeout> | null;
+      sourceIndex: number;
+      targetSlotIndex: number;
+      slotPositions: SlotPosition[];
     } | null = null;
 
     let trackAc: AbortController | null = null;
     let rafId = 0;
+
+    function getItems(): HTMLElement[] {
+      if (!listEl) return [];
+      return Array.from(listEl.querySelectorAll<HTMLElement>(":scope > [data-drag-doc-id]"));
+    }
 
     function stopTracking() {
       if (rafId) {
@@ -62,24 +100,57 @@ export function useDocumentDrag(
     }
 
     function clearHoldTimer() {
-      if (drag?.holdTimer) {
-        clearTimeout(drag.holdTimer);
-        drag.holdTimer = null;
-      }
+      if (!drag?.holdTimer) return;
+      clearTimeout(drag.holdTimer);
+      drag.holdTimer = null;
     }
 
-    function cancelDrag() {
+    function lockScroll() {
+      document.body.classList.add("drag-scroll-lock");
+    }
+
+    function unlockScroll() {
+      document.body.classList.remove("drag-scroll-lock");
+    }
+
+    function snapshotSlots() {
       if (!drag) return;
-      clearHoldTimer();
-      drag.item?.classList.remove("drag-hold-pending", "drag-hold-ready");
-      if (drag.active) {
-        drag.ghost?.remove();
-        drag.item.style.display = "";
-        placeholder.remove();
-        document.body.classList.remove("drag-scroll-lock");
+      const allItems = getItems();
+      drag.sourceIndex = allItems.indexOf(drag.item);
+      drag.slotPositions = allItems.map((el, index) => {
+        const r = el.getBoundingClientRect();
+        return {
+          index,
+          centerX: r.left + r.width / 2,
+          centerY: r.top + r.height / 2,
+        };
+      });
+    }
+
+    function findNearestSlotIndex(cx: number, cy: number): number {
+      if (!drag) return 0;
+      let best = drag.sourceIndex;
+      let bestDist = Infinity;
+      for (const slot of drag.slotPositions) {
+        const d = Math.hypot(cx - slot.centerX, cy - slot.centerY);
+        if (d < bestDist) {
+          bestDist = d;
+          best = slot.index;
+        }
       }
-      drag = null;
-      stopTracking();
+      return best;
+    }
+
+    function movePlaceholderToIndex(targetIndex: number) {
+      if (!drag || drag.targetSlotIndex === targetIndex) return;
+      drag.targetSlotIndex = targetIndex;
+      placeholder.remove();
+      const visible = getItems().filter((el) => el !== drag!.item && el !== placeholder);
+      if (targetIndex >= visible.length) {
+        listEl!.appendChild(placeholder);
+      } else {
+        listEl!.insertBefore(placeholder, visible[targetIndex]);
+      }
     }
 
     function createGhost(item: HTMLElement, rect: DOMRect): HTMLElement {
@@ -100,21 +171,71 @@ export function useDocumentDrag(
       if (!drag || drag.active) return;
       const rect = drag.item.getBoundingClientRect();
       drag.active = true;
-
-      // 1. 创建固定在视口的跟随 ghost 镜像卡片
       drag.ghost = createGhost(drag.item, rect);
       drag.offsetX = drag.lastX - rect.left;
       drag.offsetY = drag.lastY - rect.top;
+      drag.itemWidth = rect.width;
+      drag.itemHeight = rect.height;
 
-      // 2. 将 placeholder 设置为与原卡片相同尺寸，插入原卡片所在位置
-      placeholder.style.width = "100%";
       placeholder.style.height = `${rect.height}px`;
-      listEl!.insertBefore(placeholder, drag.item);
+      placeholder.style.width = "100%";
 
-      // 3. 隐藏原卡片（保持网格元素总数不变，不挤乱多列 Grid）
-      drag.item.style.display = "none";
+      snapshotSlots();
+      document.body.classList.add("is-dragging");
+      drag.item.classList.add("drag-source");
+      drag.targetSlotIndex = -1;
+      movePlaceholderToIndex(drag.sourceIndex);
       drag.item.classList.remove("drag-hold-ready");
-      document.body.classList.add("drag-scroll-lock");
+      lockScroll();
+      try {
+        drag.item.setPointerCapture(drag.pointerId);
+      } catch {
+        // 部分环境不支持 setPointerCapture，忽略
+      }
+    }
+
+    function cancelPending() {
+      if (!drag) return;
+      clearHoldTimer();
+      drag.item?.classList.remove("drag-hold-pending", "drag-hold-ready");
+      unlockScroll();
+      drag = null;
+      stopTracking();
+    }
+
+    function finish(commit: boolean) {
+      stopTracking();
+      unlockScroll();
+      if (!drag) return;
+      clearHoldTimer();
+
+      const { item, ghost, active } = drag;
+      item.classList.remove("drag-hold-pending", "drag-hold-ready");
+      ghost?.remove();
+      document.body.classList.remove("is-dragging");
+      item.classList.remove("drag-source");
+
+      if (commit && active && listEl) {
+        listEl.insertBefore(item, placeholder);
+        listEl.dataset.suppressClickUntil = String(Date.now() + 350);
+
+        // 收集新排序 IDs
+        const reorderedItems = getItems();
+        const newIds = reorderedItems
+          .map((el) => el.getAttribute("data-drag-doc-id"))
+          .filter(Boolean) as string[];
+
+        placeholder.remove();
+        drag = null;
+
+        if (newIds.length > 0) {
+          onReorderRef.current(newIds);
+        }
+        return;
+      }
+
+      placeholder.remove();
+      drag = null;
     }
 
     function updateGhostPosition() {
@@ -124,44 +245,23 @@ export function useDocumentDrag(
       drag.ghost.style.transform = `translate3d(${x}px, ${y}px, 0)`;
     }
 
-    function updatePlaceholderSlot(clientX: number, clientY: number) {
-      if (!drag || !drag.active) return;
-
-      // 利用 elementFromPoint 实时穿透检测当前光标落点下的目标卡片
-      const elAtPoint = document.elementFromPoint(clientX, clientY);
-      if (!elAtPoint) return;
-
-      const targetCard = elAtPoint.closest<HTMLElement>("[data-drag-doc-id]");
-      if (!targetCard || targetCard.parentElement !== listEl || targetCard === drag.item) {
-        return;
-      }
-
-      const rect = targetCard.getBoundingClientRect();
-      const isAfter = clientX > rect.left + rect.width / 2;
-
-      if (isAfter) {
-        if (targetCard.nextSibling !== placeholder) {
-          listEl!.insertBefore(placeholder, targetCard.nextSibling);
-        }
-      } else {
-        if (placeholder.nextSibling !== targetCard) {
-          listEl!.insertBefore(placeholder, targetCard);
-        }
-      }
-    }
-
-    function processPointerMove() {
+    function processMove() {
       if (!drag) return;
+      const { lastX: x, lastY: y, startX, startY, holdReady } = drag;
+      if (!holdReady) return;
 
-      // 若处于长按准备完毕状态，且尚未激活拖拽，立即激活
-      if (drag.holdReady && !drag.active) {
+      if (!drag.active) {
+        const needMove = isCoarsePointer() ? 0 : DESKTOP_ACTIVATE_PX;
+        if (Math.hypot(x - startX, y - startY) < needMove) return;
         activateDrag();
       }
 
-      if (drag.active) {
-        updateGhostPosition();
-        updatePlaceholderSlot(drag.lastX, drag.lastY);
-      }
+      updateGhostPosition();
+      const left = drag.lastX - drag.offsetX;
+      const top = drag.lastY - drag.offsetY;
+      const centerX = left + drag.itemWidth / 2;
+      const centerY = top + drag.itemHeight / 2;
+      movePlaceholderToIndex(findNearestSlotIndex(centerX, centerY));
     }
 
     function onPointerMove(e: PointerEvent) {
@@ -169,66 +269,24 @@ export function useDocumentDrag(
       drag.lastX = e.clientX;
       drag.lastY = e.clientY;
 
-      // 0.25s 之前若指针移动超过手抖阈值，判定为常规页面滚动，取消长按判定
-      if (!drag.holdReady && !drag.active) {
-        if (Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) > MAX_SHAKE_PX) {
-          cancelDrag();
-          return;
-        }
-      }
-
-      if (drag.active || drag.holdReady) {
+      if (drag.active || (drag.holdReady && isCoarsePointer())) {
         e.preventDefault();
       }
 
       if (rafId) return;
       rafId = requestAnimationFrame(() => {
         rafId = 0;
-        processPointerMove();
+        processMove();
       });
     }
 
     function onPointerUp(e: PointerEvent) {
       if (!drag || e.pointerId !== drag.pointerId) return;
-      stopTracking();
-      clearHoldTimer();
-      document.body.classList.remove("drag-scroll-lock");
-
-      const { item, ghost, active } = drag;
-      item.classList.remove("drag-hold-pending", "drag-hold-ready");
-      ghost?.remove();
-
-      if (active) {
-        // 阻止拖动结束后的卡片点击事件
-        listEl!.dataset.suppressClickUntil = String(Date.now() + 450);
-
-        // 扫描网格，根据占位符 placeholder 的最终位置计算全新的文档顺序
-        const children = Array.from(listEl!.children);
-        const finalIds: string[] = [];
-
-        children.forEach((child) => {
-          if (child === placeholder) {
-            const myId = item.getAttribute("data-drag-doc-id");
-            if (myId) finalIds.push(myId);
-          } else if (child.hasAttribute("data-drag-doc-id") && child !== item) {
-            const id = child.getAttribute("data-drag-doc-id");
-            if (id) finalIds.push(id);
-          }
-        });
-
-        // 恢复原卡片显示并移除占位符
-        item.style.display = "";
-        placeholder.remove();
-        drag = null;
-
-        // 提交全新排序给 React 父组件更新
-        if (finalIds.length > 0) {
-          onReorderRef.current?.(finalIds);
-        }
+      if (!drag.holdReady) {
+        cancelPending();
         return;
       }
-
-      cancelDrag();
+      finish(drag.active);
     }
 
     function startTracking() {
@@ -240,7 +298,7 @@ export function useDocumentDrag(
       window.addEventListener("pointercancel", onPointerUp, { signal: ts });
     }
 
-    // 捕获阶段拦截误触点击
+    // 拦截拖拽完成后的点击穿透误触
     listEl.addEventListener(
       "click",
       (e) => {
@@ -256,17 +314,15 @@ export function useDocumentDrag(
     listEl.addEventListener(
       "pointerdown",
       (e: PointerEvent) => {
-        // 仅处理鼠标左键或触控
         if (e.button !== 0 && e.pointerType === "mouse") return;
         const target = e.target as HTMLElement | null;
         if (!target) return;
 
-        // 屏蔽交互组件（如菜单按钮、标签按钮等）
-        if (target.closest(INTERACTIVE_SELECTOR)) return;
-
         const item = target.closest<HTMLElement>("[data-drag-doc-id]");
         if (!item || item.parentElement !== listEl) return;
+        if (!canStartFromTarget(target, item)) return;
 
+        const startRect = item.getBoundingClientRect();
         drag = {
           item,
           ghost: null,
@@ -277,9 +333,14 @@ export function useDocumentDrag(
           lastY: e.clientY,
           offsetX: 0,
           offsetY: 0,
+          itemWidth: startRect.width,
+          itemHeight: startRect.height,
           active: false,
           holdReady: false,
           holdTimer: null,
+          sourceIndex: 0,
+          targetSlotIndex: -1,
+          slotPositions: [],
         };
 
         item.classList.add("drag-hold-pending");
@@ -288,8 +349,9 @@ export function useDocumentDrag(
           drag.holdReady = true;
           item.classList.remove("drag-hold-pending");
           item.classList.add("drag-hold-ready");
+          lockScroll();
           if (typeof navigator !== "undefined" && navigator.vibrate) {
-            navigator.vibrate(25);
+            navigator.vibrate(20);
           }
         }, HOLD_MS);
 
@@ -304,9 +366,6 @@ export function useDocumentDrag(
       unlockScroll();
       placeholder.remove();
     };
-  }, [containerRef, enabled]);
-}
-
-function unlockScroll() {
-  document.body.classList.remove("drag-scroll-lock");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [containerRef, enabled, ...deps]);
 }

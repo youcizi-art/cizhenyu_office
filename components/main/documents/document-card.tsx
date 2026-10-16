@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/tooltip";
 
 interface DocumentCardProps {
+  index?: number;
   doc: DocumentMeta;
   onOpen: (doc: DocumentMeta) => void;
   onDownload: (doc: DocumentMeta) => void;
@@ -49,6 +50,7 @@ interface DocumentCardProps {
 }
 
 export function DocumentCard({
+  index,
   doc,
   onOpen,
   onDownload,
@@ -76,9 +78,23 @@ export function DocumentCard({
           : "border-border/80 hover:border-primary/30"
       )}
     >
-      {/* 顶部行：图标、置顶徽章与更多操作菜单 */}
+      {/* 顶部行：数字角标、类型图标、置顶徽章与更多操作菜单 */}
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="flex items-center gap-2">
+          {typeof index === "number" && (
+            <span
+              className={cn(
+                "doc-index flex h-7 min-w-7 items-center justify-center rounded-lg border text-xs font-semibold px-1.5 transition-colors shrink-0",
+                index < 3 || doc.pinned
+                  ? "bg-primary/10 text-primary border-primary/30"
+                  : "bg-muted/60 text-muted-foreground border-border/80 hover:bg-muted"
+              )}
+              title={t({ id: "DragToReorder", message: "Drag to reorder" })}
+            >
+              {index + 1}
+            </span>
+          )}
+
           <div
             className={cn(
               "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-2xs",
