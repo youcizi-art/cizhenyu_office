@@ -41,13 +41,15 @@
 
 - **📂 全主流格式高保真编辑**: 原生支持 `.docx`、`.xlsx`、`.pptx` 及 `.pdf` 的高保真排版、公式计算、图表展示与编辑。
 - **📝 轻量高效 Markdown 工作台**: 内置全功能 Markdown 编辑器，支持实时双栏联动同步滚动预览、撤销/重做历史、快捷排版工具栏（标题、代码块、数学公式、表格、任务清单）以及实时字数/词数统计。
+- **🖼️ 全格式文件与多媒体专属支持**: 支持上传任意格式文件。图片（JPG, PNG, GIF, WebP, SVG, AVIF）、视频（MP4, WebM）与音频（MP3, WAV, OGG, AAC）具备专属色彩图标标识与在线弹窗预览播放。
+- **📑 服务端真实过滤与分页**: `/documents` 页面支持真正的服务端多维筛选（名称搜索、文档类型、多级分类树、标签）与分页控制（10, 20, 30, 40, 50, 100 条/页）。
+- **📋 不可编辑文件详情弹窗**: 点击其他类型文件弹出元数据详情卡片，展示文件大小、上传时间、修改时间、所属分类与标签，并提供原文件下载、分享、标签修改、分类移动、重命名及删除等快捷操作。
 - **🌲 树形多级分类管理**: 在 `/documents` 页面提供可折叠展开的树形目录侧边栏（收缩时自动展示精简小图标导航），支持无限级子分类、分类重命名、删除及所属文档计数。
 - **📱 移动端深度优化**: 移动端支持优雅的滑出式分类抽屉（Drawer）、横向滚动快捷分类胶囊条，单手触控操作流畅自如。
-- **☁️ Cloudflare R2 云端存储**: 所有文档直接持久化至高可用的 R2 存储桶，支持快速检索、在线编辑与安全归档。
-- **📤 本地文档一键上传**: 支持在文档列表页直接选取本地 Office 文档并指定归属分类批量上传至云端。
-- **🔗 免密只读公开分享**: 支持为任意文档一键生成独立的只读下载外链，未登录访客凭链接即可安全下载。
+- **☁️ Cloudflare R2 & D1 双引擎驱动**: 文档二进制数据存储于 R2，元数据支持 R2 索引或 Cloudflare D1 关系型数据库无缝升级。
+- **🔗 灵活多元分享机制**: 支持直接公开下载、4 位访问密钥保护，以及针对 Markdown 和媒体文件的网页只读展示分享（Web Preview）。
+- **🌐 全站多语言国际化**: 英语为第一公民和默认兜底，支持全球 50+ 种主流语言，并在分享页面提供即时语言切换器。
 - **🔐 双轨访问密码保护**: 支持通过 `.env` 本地构建注入或 Cloudflare 环境变量设置访问口令，防范未授权访问。
-- **⚡ 离线与本地优先体验**: 核心排版引擎在浏览器端本地执行，响应流畅无卡顿。
 
 ---
 
@@ -56,6 +58,7 @@
 - **前端框架**: [Next.js](https://nextjs.org/) 16 (App Router, Turbopack, 静态导出)
 - **文档引擎**: [OnlyOffice](https://www.onlyoffice.com/) WebAssembly 内核
 - **云端存储**: [Cloudflare R2](https://www.cloudflare.com/developer-platform/r2/) 对象存储
+- **关系数据库**: [Cloudflare D1](https://developers.cloudflare.com/d1/) (可选无服务器 SQLite 数据库)
 - **边缘算力**: [Cloudflare Pages & Functions](https://pages.cloudflare.com/) 边缘无服务器计算
 - **状态管理**: [Zustand](https://github.com/pmndrs/zustand)
 - **UI 组件**: [Tailwind CSS](https://tailwindcss.com/) & [Lucide Icons](https://lucide.dev/)
@@ -69,6 +72,7 @@
 | 变量 / 绑定类型 | 变量名称 | 是否必填 | 推荐填写示例 | 作用与配置说明 |
 | :--- | :--- | :---: | :--- | :--- |
 | **R2 存储桶绑定**<br>`(R2 Bucket Binding)` | **`DOCUMENTS_BUCKET`** | **必填** | 选择您的 R2 存储桶（如 `office-ycz-me`） | 绑定 Cloudflare R2 存储桶。后端 Functions 通过此绑定持久化存储文档数据与目录索引。 |
+| **D1 数据库绑定**<br>`(D1 Database Binding)` | **`DB`** | 选填 | 选择您的 D1 数据库（如 `office-d1`） | 绑定 Cloudflare D1 数据库执行 SQL 查询。若未绑定，系统平滑自动使用 R2 索引引擎。 |
 | **构建期访问密钥**<br>`(.env / Build Env)` | **`NEXT_PUBLIC_ACCESS_KEY`**<br>*(推荐方案)* | 选填 | `MySecretPassword2026!` | **最稳妥的访问密钥**。<br>• 写入根目录 `.env.local` 或 `.env` 文件；<br>• 在静态构建期打入代码，**100% 免疫任何平台运行时环境变量丢失的问题**；<br>• 本地无需提交 Git（已加入 `.gitignore`）。 |
 | **运行时访问密钥**<br>`(Pages Functions Env)` | **`PASSWORD`**<br>*(或 `ACCESS_KEY`)* | 选填 | `MySecretPassword2026!` | Cloudflare Pages 后台设置的环境变量 / Secret。作为后端边缘鉴权的二次防护。 |
 
@@ -187,6 +191,25 @@
 
 > [!NOTE]
 > 如果您是在部署完成后首次添加 R2 绑定，请在 Pages 项目的 **部署 (Deployments)** 页面中，找到最新一次部署并点击 **重新部署 (Redeploy)**，以使 R2 绑定在边缘 Functions 中全面生效！
+
+---
+
+### 步骤四：配置 Cloudflare D1 数据库 (可选扩展)
+
+CIZHENYU Office 采用高可用的双引擎架构：原生零配置支持 R2 运行；同时支持无缝扩展至 **Cloudflare D1 关系型数据库**，满足海量资产数据检索与扩展开发需求。
+
+1. 使用 Wrangler 命令行创建 D1 数据库：
+   ```bash
+   npx wrangler d1 create office-d1
+   ```
+2. 执行 SQL 架构建表与索引初始化：
+   ```bash
+   npx wrangler d1 execute office-d1 --file=./d1/schema.sql
+   ```
+3. 在 Cloudflare Pages 中绑定 D1：
+   - 进入 Pages 项目 -> **设置 (Settings)** -> **函数 (Functions)** -> **D1 数据库绑定**；
+   - 添加绑定：**变量名称**: `DB`，**D1 数据库**: 选择 `office-d1`；
+   - 保存并在 **部署 (Deployments)** 中点击 **重新部署 (Redeploy)** 即可。
 
 ---
 

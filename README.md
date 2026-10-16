@@ -41,13 +41,15 @@ Deeply integrated with **Cloudflare R2** object storage and **Cloudflare Pages F
 
 - **📂 Multi-Format High-Fidelity Editing**: Native support for `.docx`, `.xlsx`, `.pptx`, and `.pdf` with precise rendering, formulas, and chart manipulation.
 - **📝 High-Performance Markdown Studio**: Built-in lightweight Markdown editor featuring real-time synchronized split-pane preview, undo/redo history, formatting toolbar (headings, code blocks, tables, task lists), and live word/character statistics.
+- **🖼️ Universal File & Media Management**: Upload any file format without restriction. Media files (Images: JPG, PNG, GIF, WebP, SVG, AVIF; Videos: MP4, WebM; Audio: MP3, WAV, OGG, AAC) have dedicated visual badges and inline preview/playback.
+- **📑 Server-Side Filtering & Pagination**: The `/documents` dashboard features true server-side pagination with customizable page sizes (10, 20, 30, 40, 50, 100 items/page) and multi-dimensional server queries (keyword search, document types, nested categories, and tag filtering).
+- **📋 Non-Editable File Details Modal**: Clicking on non-editable files opens a rich metadata card displaying file type, size, upload timestamp, category, and tags with quick actions for download, share, rename, move, and deletion.
 - **🌲 Tree-Structured Categorization**: Collapsible sidebar in `/documents` supporting nested multi-level folders, compact icon navigation mode, sub-category creation, renaming, deletion, and document counting.
 - **📱 Mobile-First Responsive UX**: Dedicated mobile slide-out drawer (Sheet) for category trees, horizontal scroll quick-pills, and touch-optimized action cards.
-- **☁️ Cloudflare R2 Cloud Storage**: Persistent cloud storage directly bound to R2 buckets, enabling fast search, editing, and reliable archiving.
-- **📤 Local Document Upload**: One-click upload from your local drive with category selection in the documents dashboard.
-- **🔗 Secure Public Sharing**: Generate password-free, read-only download links for external guests.
+- **☁️ Cloudflare R2 & D1 Database Engine**: Persistent cloud storage directly bound to R2 buckets, with optional Cloudflare D1 SQL database support for scalable enterprise asset indexing.
+- **🔗 Flexible Public Sharing**: Generate direct public download links, 4-character passcode protection, or web-view preview links for Markdown and media files.
+- **🌐 Global Multi-Language System**: Full localization with English as the first-class default fallback across 50+ languages, complete with an instant language switcher on share pages.
 - **🔐 Dual-Channel Access Key Protection**: Reliable secret-key protection supporting `.env` build-time injection or Cloudflare environment variables.
-- **⚡ Local-First Performance**: Core rendering engine runs in the browser, offering sub-millisecond local latency.
 
 ---
 
@@ -56,6 +58,7 @@ Deeply integrated with **Cloudflare R2** object storage and **Cloudflare Pages F
 - **Frontend Framework**: [Next.js](https://nextjs.org/) 16 (App Router, Turbopack, Static Export)
 - **Document Engine**: [OnlyOffice](https://www.onlyoffice.com/) WebAssembly kernel
 - **Cloud Storage**: [Cloudflare R2](https://www.cloudflare.com/developer-platform/r2/) Object Storage
+- **Database Engine**: [Cloudflare D1](https://developers.cloudflare.com/d1/) (Optional Serverless SQLite Database)
 - **Serverless Compute**: [Cloudflare Pages & Functions](https://pages.cloudflare.com/) Edge Functions
 - **State Management**: [Zustand](https://github.com/pmndrs/zustand)
 - **UI Components**: [Tailwind CSS](https://tailwindcss.com/) & [Lucide Icons](https://lucide.dev/)
@@ -67,6 +70,7 @@ Deeply integrated with **Cloudflare R2** object storage and **Cloudflare Pages F
 | Binding / Variable Type | Variable Name | Required | Example Value | Description |
 | :--- | :--- | :---: | :--- | :--- |
 | **R2 Bucket Binding**<br>`(Functions Binding)` | **`DOCUMENTS_BUCKET`** | **Required** | Select your bucket (e.g. `office-ycz-me`) | Binds your Cloudflare R2 bucket. Backend Functions use this to persist documents and catalog metadata. |
+| **D1 Database Binding**<br>`(Functions Binding)` | **`DB`** | Optional | Select your D1 database (e.g. `office-d1`) | Binds Cloudflare D1 for SQL-level querying. If omitted, the system seamlessly uses the R2 metadata index engine. |
 | **Build-Time Access Key**<br>`(.env / Build Env)` | **`NEXT_PUBLIC_ACCESS_KEY`**<br>*(Recommended)* | Optional | `MySecretPassword2026!` | **Most reliable access key method**.<br>• Put in root `.env.local` or Cloudflare build variables;<br>• Embedded during build, **100% immune to runtime env loss**;<br>• Never committed to git (in `.gitignore`). |
 | **Runtime Access Key**<br>`(Pages Functions Env)` | **`PASSWORD`**<br>*(or `ACCESS_KEY`)* | Optional | `MySecretPassword2026!` | Cloudflare Pages runtime secret for edge function authentication. |
 
@@ -177,6 +181,25 @@ If deploying via GitHub / GitLab integration:
    - **Variable name**: `DOCUMENTS_BUCKET` *(exact uppercase)*
    - **R2 bucket**: Select your bucket (e.g., `office-ycz-me`)
 5. Click **Save** and trigger a **Redeploy**.
+
+---
+
+### Step 4: Set up Cloudflare D1 Database (Optional)
+
+CIZHENYU Office features a dual-engine architecture: it works out-of-the-box with R2, and seamlessly upgrades to **Cloudflare D1 SQL Database** for large-scale document collections.
+
+1. Create a D1 database using Wrangler:
+   ```bash
+   npx wrangler d1 create office-d1
+   ```
+2. Execute the initialization schema:
+   ```bash
+   npx wrangler d1 execute office-d1 --file=./d1/schema.sql
+   ```
+3. Bind D1 in Cloudflare Pages:
+   - Go to **Settings -> Functions -> D1 database bindings**;
+   - Add binding: **Variable name**: `DB`, **D1 database**: Select `office-d1`;
+   - Trigger a **Redeploy**.
 
 ---
 

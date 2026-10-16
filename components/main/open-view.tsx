@@ -45,8 +45,21 @@ export function OpenView() {
       setIsOnlineLoading(true);
       const res = await fetchDocumentsAndCategories();
       setCategories(res.categories || []);
+      // 仅展示系统支持编辑与查看的核心文档：Word, Excel, PowerPoint, PDF, Markdown
+      const supportedTypes = new Set([
+        "docx",
+        "doc",
+        "xlsx",
+        "xls",
+        "pptx",
+        "ppt",
+        "pdf",
+        "md",
+        "markdown",
+      ]);
+      const validDocs = (res.documents || []).filter((d) => supportedTypes.has(d.type));
       // 按最后修改时间倒序排列
-      const sorted = (res.documents || []).sort((a, b) => b.updatedAt - a.updatedAt);
+      const sorted = validDocs.sort((a, b) => b.updatedAt - a.updatedAt);
       setOnlineDocs(sorted.slice(0, 8));
     } catch (err) {
       console.warn("加载在线文档失败:", err);
@@ -227,7 +240,7 @@ export function OpenView() {
               return (
                 <div
                   key={doc.id}
-                  onClick={() => router.push(`/editor?docId=${encodeURIComponent(doc.id)}`)}
+                  onClick={() => router.push(`/editor?docId=${encodeURIComponent(doc.id)}&type=${doc.type}`)}
                   className="group relative flex flex-col justify-between p-4 rounded-xl border border-border bg-card hover:border-primary/40 hover:shadow-md transition-all duration-200 cursor-pointer text-left"
                 >
                   <div className="flex items-start justify-between gap-2 mb-3">

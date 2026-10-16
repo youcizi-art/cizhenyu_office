@@ -16,13 +16,22 @@ import {
   saveNewDocument,
   DocumentMeta,
   Category,
+  DocumentQueryParams,
+  PaginationInfo,
 } from "@/lib/api";
 import { detectFileType } from "@/lib/document-types";
 
-export function useDocumentsData() {
+export function useDocumentsData(queryParams?: DocumentQueryParams) {
   const t = useExtracted();
   const [documents, setDocuments] = useState<DocumentMeta[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [allTags, setAllTags] = useState<string[]>([]);
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    page: 1,
+    pageSize: 20,
+    total: 0,
+    totalPages: 1,
+  });
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // 弹窗状态
@@ -72,12 +81,14 @@ export function useDocumentsData() {
     onConfirm: () => {},
   });
 
-  const loadData = async () => {
+  const loadData = async (params = queryParams) => {
     try {
       setIsLoading(true);
-      const res = await fetchDocumentsAndCategories();
+      const res = await fetchDocumentsAndCategories(params);
       setDocuments(res.documents || []);
       setCategories(res.categories || []);
+      if (res.allTags) setAllTags(res.allTags);
+      if (res.pagination) setPagination(res.pagination);
     } catch (err) {
       toast.error(String(err));
     } finally {
@@ -86,8 +97,15 @@ export function useDocumentsData() {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    loadData(queryParams);
+  }, [
+    queryParams?.page,
+    queryParams?.pageSize,
+    queryParams?.search,
+    queryParams?.type,
+    queryParams?.categoryId,
+    queryParams?.tag,
+  ]);
 
   // 保存分类
   const handleSaveCategory = async (e: React.FormEvent) => {
@@ -296,6 +314,10 @@ export function useDocumentsData() {
     isUploading,
     confirmModal,
     setConfirmModal,
+    pagination,
+    setPagination,
+    allTags,
+    loadData,
     handleSaveCategory,
     handleDeleteCategory,
     handleTogglePin,

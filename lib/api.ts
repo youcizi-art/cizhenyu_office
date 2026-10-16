@@ -39,9 +39,27 @@ export interface DocumentMeta {
   order?: number;
 }
 
+export interface DocumentQueryParams {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  type?: string;
+  categoryId?: string | null;
+  tag?: string | null;
+}
+
+export interface PaginationInfo {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
 export interface MetadataResponse {
   categories: Category[];
   documents: DocumentMeta[];
+  allTags?: string[];
+  pagination?: PaginationInfo;
 }
 
 /**
@@ -120,10 +138,22 @@ async function fetchWithAuth(url: string, init?: RequestInit): Promise<Response>
 }
 
 /**
- * 获取所有文档与分类
+ * 获取所有文档与分类 (支持服务端分页与多维筛选)
  */
-export async function fetchDocumentsAndCategories(): Promise<MetadataResponse> {
-  const res = await fetchWithAuth("/api/documents", { cache: "no-store" });
+export async function fetchDocumentsAndCategories(
+  params?: DocumentQueryParams
+): Promise<MetadataResponse> {
+  const query = new URLSearchParams();
+  if (params?.page !== undefined) query.set("page", String(params.page));
+  if (params?.pageSize !== undefined) query.set("pageSize", String(params.pageSize));
+  if (params?.search) query.set("search", params.search);
+  if (params?.type && params.type !== "All") query.set("type", params.type);
+  if (params?.categoryId) query.set("categoryId", params.categoryId);
+  if (params?.tag) query.set("tag", params.tag);
+
+  const qs = query.toString();
+  const url = qs ? `/api/documents?${qs}` : "/api/documents";
+  const res = await fetchWithAuth(url, { cache: "no-store" });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || "Failed to fetch documents");

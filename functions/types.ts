@@ -58,8 +58,11 @@ export interface Category {
 
 export type DocumentType =
   | "docx"
+  | "doc"
   | "xlsx"
+  | "xls"
   | "pptx"
+  | "ppt"
   | "pdf"
   | "md"
   | "image"
@@ -85,6 +88,13 @@ export interface DocumentMeta {
   order?: number;
 }
 
+export interface PaginationInfo {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
 export interface MetadataIndex {
   categories: Category[];
   documents: DocumentMeta[];
@@ -95,6 +105,7 @@ export interface Env {
   DOCUMENTS?: R2Bucket;
   PASSWORD?: string;
   ACCESS_KEY?: string;
+  DB?: any; // Cloudflare D1 数据库绑定支持
 }
 
 export interface PagesContext<P extends string = string> {
