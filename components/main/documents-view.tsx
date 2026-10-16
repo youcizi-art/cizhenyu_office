@@ -4,18 +4,13 @@ import React, { useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useExtracted } from "next-intl";
 import {
-  Search,
   Files,
   FileText,
   Table,
   Presentation,
   Loader2,
-  Upload,
-  X,
   FileType2,
   FileCode2,
-  Tag,
-  Move,
   Image as ImageIcon,
   Video,
   Music,
@@ -44,6 +39,7 @@ import {
 import { MediaPreviewModal } from "./documents/media-preview-modal";
 import { FileDetailsModal } from "./documents/file-details-modal";
 import { PaginationBar } from "./documents/pagination-bar";
+import { DocumentsToolbar } from "./documents/documents-toolbar";
 import { useDocumentDrag } from "./documents/use-document-drag";
 import { useDocumentsData } from "./documents/use-documents-data";
 
@@ -245,7 +241,7 @@ export function DocumentsView() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-48px)] overflow-hidden bg-background">
+    <div className="flex h-full w-full overflow-hidden bg-background">
       {/* 桌面端分类树形侧边栏 */}
       <DocumentSidebar
         sidebarOpen={sidebarOpen}
@@ -277,124 +273,28 @@ export function DocumentsView() {
 
       {/* 主工作区 */}
       <main className="flex-1 flex flex-col overflow-hidden">
-        {/* 顶部搜索与上传栏 */}
-        <header className="px-4 py-3 border-b border-border bg-card/30 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2 flex-1 min-w-[240px] max-w-md">
-            <div className="relative w-full">
-              <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1);
-                }}
-                placeholder={t({ id: "SearchDocumentsPlaceholder", message: "Search documents..." })}
-                className="w-full pl-9 pr-4 py-1.5 rounded-xl border border-border bg-background text-xs focus:outline-hidden focus:border-primary focus:ring-2 focus:ring-primary/20"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchQuery("");
-                    setCurrentPage(1);
-                  }}
-                  className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground cursor-pointer"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setUploadModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors shadow-2xs cursor-pointer"
-            >
-              <Upload className="w-3.5 h-3.5" />
-              <span>{t({ id: "UploadFile", message: "Upload File" })}</span>
-            </button>
-          </div>
-        </header>
-
-        {/* 文档类型筛选栏 */}
-        <div className="px-4 py-2 border-b border-border/50 bg-muted/20 flex items-center gap-1 overflow-x-auto text-xs">
-          {types.map((type) => (
-            <button
-              key={type.key}
-              type="button"
-              onClick={() => {
-                setActiveType(type.key);
-                setCurrentPage(1);
-              }}
-              className={cn(
-                "px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors cursor-pointer shrink-0 flex items-center gap-1",
-                activeType === type.key
-                  ? "bg-primary text-primary-foreground shadow-2xs font-semibold"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
-              )}
-            >
-              <type.icon className="w-3 h-3" />
-              <span>{type.name}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* 标签筛选栏 (单独占一行，置于文档类型下方) */}
-        {displayTags.length > 0 && (
-          <div className="px-4 py-1.5 border-b border-border/40 bg-muted/10 flex items-center gap-1.5 overflow-x-auto text-xs animate-in fade-in">
-            <span className="text-[11px] text-muted-foreground flex items-center gap-1 shrink-0 font-medium mr-1">
-              <Tag className="w-3 h-3 text-sky-500" />
-              <span>{t({ id: "FilterByTag", message: "Tags:" })}</span>
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedTag(null);
-                setCurrentPage(1);
-              }}
-              className={cn(
-                "px-2 py-0.5 rounded-md text-[10px] font-medium transition-colors cursor-pointer shrink-0",
-                selectedTag === null
-                  ? "bg-sky-500/10 text-sky-600 dark:text-sky-400 font-semibold border border-sky-500/20"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
-              )}
-            >
-              {t({ id: "AllTags", message: "All" })}
-            </button>
-            {displayTags.map((tag) => (
-              <button
-                key={tag}
-                type="button"
-                onClick={() => {
-                  setSelectedTag(selectedTag === tag ? null : tag);
-                  setCurrentPage(1);
-                }}
-                className={cn(
-                  "px-2 py-0.5 rounded-md text-[10px] font-medium transition-colors cursor-pointer shrink-0",
-                  selectedTag === tag
-                    ? "bg-sky-500/10 text-sky-600 dark:text-sky-400 font-semibold border border-sky-500/20"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                )}
-              >
-                #{tag}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* 提示与拖拽辅助说明条 */}
-        <div className="px-4 py-1.5 bg-muted/10 border-b border-border/40 flex items-center justify-between text-[11px] text-muted-foreground">
-          <div className="flex items-center gap-1.5">
-            <Move className="w-3 h-3 text-primary" />
-            <span>{t({ id: "DragHint", message: "Hold card for 0.25s to drag and reorder" })}</span>
-          </div>
-          <span>
-            {t("{count} documents", { count: String(pagination.total || documents.length) })}
-          </span>
-        </div>
+        {/* 顶部自适应工具栏与类型标签 */}
+        <DocumentsToolbar
+          searchQuery={searchQuery}
+          onSearchChange={(val) => {
+            setSearchQuery(val);
+            setCurrentPage(1);
+          }}
+          activeType={activeType}
+          onTypeChange={(typeKey) => {
+            setActiveType(typeKey);
+            setCurrentPage(1);
+          }}
+          types={types}
+          displayTags={displayTags}
+          selectedTag={selectedTag}
+          onTagChange={(tag) => {
+            setSelectedTag(tag);
+            setCurrentPage(1);
+          }}
+          onOpenUpload={() => setUploadModalOpen(true)}
+          totalCount={pagination.total || documents.length}
+        />
 
         {/* 文档卡片网格列表 */}
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6">

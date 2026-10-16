@@ -60,12 +60,17 @@ function ShareDownloadContent() {
   const [verifiedKey, setVerifiedKey] = useState<string>(initialKey);
 
   // 判断是否处于展示分享模式 (Markdown、图片、视频、音频)
+  const docTypeLower = docInfo?.type?.toLowerCase() || "";
+  const isPreviewableDoc =
+    docTypeLower === "md" ||
+    docTypeLower === "markdown" ||
+    docTypeLower === "image" ||
+    docTypeLower === "video" ||
+    docTypeLower === "audio";
+
   const isPreviewMode =
     docInfo &&
-    (docInfo.type === "md" ||
-      docInfo.type === "image" ||
-      docInfo.type === "video" ||
-      docInfo.type === "audio") &&
+    isPreviewableDoc &&
     (docInfo.shareMode === "preview" || queryMode === "preview");
 
   useEffect(() => {
@@ -287,12 +292,13 @@ function ShareDownloadContent() {
     );
   }
 
-  // 媒体在线展示分享模式 (验证成功)
-  if (
-    isPreviewMode &&
-    (docInfo.type === "image" || docInfo.type === "video" || docInfo.type === "audio") &&
-    mediaVerified
-  ) {
+  // 媒体在线展示分享模式 (免密直接展示，或输入密钥验证成功)
+  const isMediaDoc =
+    docTypeLower === "image" ||
+    docTypeLower === "video" ||
+    docTypeLower === "audio";
+
+  if (isPreviewMode && isMediaDoc && (!docInfo.requiresPassword || mediaVerified)) {
     const inlineMediaUrl = getShareDownloadUrl(token, verifiedKey || undefined, true);
     return (
       <MediaShareView

@@ -45,10 +45,9 @@ Deeply integrated with **Cloudflare R2** object storage and **Cloudflare Pages F
 - **📑 Server-Side Filtering & Pagination**: The `/documents` dashboard features true server-side pagination with customizable page sizes (10, 20, 30, 40, 50, 100 items/page) and multi-dimensional server queries (keyword search, document types, nested categories, and tag filtering).
 - **📋 Non-Editable File Details Modal**: Clicking on non-editable files opens a rich metadata card displaying file type, size, upload timestamp, category, and tags with quick actions for download, share, rename, move, and deletion.
 - **🌲 Tree-Structured Categorization**: Collapsible sidebar in `/documents` supporting nested multi-level folders, compact icon navigation mode, sub-category creation, renaming, deletion, and document counting.
-- **📱 Mobile-First Responsive UX**: Dedicated mobile slide-out drawer (Sheet) for category trees, horizontal scroll quick-pills, and touch-optimized action cards.
-- **☁️ Cloudflare R2 & D1 Database Engine**: Persistent cloud storage directly bound to R2 buckets, with optional Cloudflare D1 SQL database support for scalable enterprise asset indexing.
-- **🔗 Flexible Public Sharing**: Generate direct public download links, 4-character passcode protection, or web-view preview links for Markdown and media files.
-- **🌐 Global Multi-Language System**: Full localization with English as the first-class default fallback across 50+ languages, complete with an instant language switcher on share pages.
+- **📱 Mobile-First Immersive UX**: Desktop search and upload buttons collapse into compact header icons on mobile, opening floating search cards. Pure numeric pagination bar with dynamic `100dvh` viewport clearance ensures zero obstruction by mobile bottom navigation bars.
+- **🎬 Media Fullscreen Web Preview**: Instant online fullscreen playback and rendering for images, videos, and audio (direct access for public shares, or after passcode verification).
+- **🌐 Global Multi-Language System**: Full localization with English as the first-class default fallback across 50+ languages, complete with an instant language switcher on share pages (supporting en, zh-CN, zh-TW, ja, ko, es, de, fr).
 - **🔐 Dual-Channel Access Key Protection**: Reliable secret-key protection supporting `.env` build-time injection or Cloudflare environment variables.
 
 ---

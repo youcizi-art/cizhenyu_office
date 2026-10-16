@@ -441,5 +441,8 @@
   "loadend": "loadend",
   "error": "error",
   "next/og": "next/og",
-  "Showing {start} - {end} of {total} items": "Showing {start} - {end} of {total} items"
+  "Showing {start} - {end} of {total} items": "Showing {start} - {end} of {total} items",
+  "NuGkug": "Showing {start} - {end} of {total} items",
+  "EnablingShare": "Enabling...",
+  "DisablingShare": "Disabling..."
 }

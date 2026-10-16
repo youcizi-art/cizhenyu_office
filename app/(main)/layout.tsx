@@ -56,7 +56,7 @@ export default function MainLayout({
     <AuthGuard>
       <div
         className={cn(
-          "flex flex-col h-screen overflow-hidden font-sans transition-colors duration-500 relative",
+          "flex flex-col h-screen h-[100dvh] overflow-hidden font-sans transition-colors duration-500 relative",
           "bg-muted text-slate-900 dark:bg-[#0b0b0b] dark:text-white",
         )}
       >
@@ -81,7 +81,7 @@ export default function MainLayout({
             )}
           >
             {pathname.startsWith("/documents") ? (
-              <div className="flex-1 w-full h-full flex flex-col overflow-hidden">
+              <div className="flex-1 w-full h-full flex flex-col overflow-hidden pb-[56px] md:pb-0">
                 {children}
               </div>
             ) : (

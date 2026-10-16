@@ -2,7 +2,6 @@
 
 import React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useExtracted } from "next-intl";
 import { cn } from "@/lib/utils";
 
 interface PaginationBarProps {
@@ -24,8 +23,6 @@ export function PaginationBar({
   onPageChange,
   onPageSizeChange,
 }: PaginationBarProps) {
-  const t = useExtracted();
-
   if (total === 0) return null;
 
   const startItem = (currentPage - 1) * pageSize + 1;
@@ -51,52 +48,55 @@ export function PaginationBar({
   };
 
   return (
-    <footer className="px-4 py-2.5 border-t border-border bg-card/40 flex flex-wrap items-center justify-between gap-3 text-xs shrink-0 select-none">
-      {/* 左侧：条数范围信息 */}
-      <div className="flex items-center gap-3 text-muted-foreground">
-        <span>
-          {t("Showing {start} - {end} of {total} items", {
-            start: String(startItem),
-            end: String(endItem),
-            total: String(total),
-          })}
+    <footer className="px-3 py-1.5 border-t border-border bg-card/70 backdrop-blur-xs flex items-center justify-between gap-2 text-xs shrink-0 select-none">
+      {/* 左侧：纯数字条数信息与规格下拉选择 */}
+      <div className="flex items-center gap-2 text-muted-foreground min-w-0">
+        <span className="font-mono text-[11px] font-medium text-foreground tracking-tight whitespace-nowrap">
+          {startItem} - {endItem} <span className="text-muted-foreground font-normal">/</span> {total}
         </span>
 
-        {/* 每页条数选择器 */}
-        <div className="flex items-center gap-1.5 pl-2 border-l border-border">
+        <div className="flex items-center pl-1.5 border-l border-border/60">
           <select
             value={pageSize}
             onChange={(e) => onPageSizeChange(Number(e.target.value))}
-            className="px-2 py-1 rounded-lg border border-border bg-background text-foreground text-xs font-medium focus:outline-hidden focus:border-primary cursor-pointer"
+            className="h-6 px-1.5 rounded-md border border-border bg-background text-foreground text-[11px] font-mono focus:outline-hidden focus:border-primary cursor-pointer"
+            aria-label="Items per page"
           >
             {PAGE_SIZE_OPTIONS.map((size) => (
               <option key={size} value={size}>
-                {size} {t({ id: "PageSizeLabel", message: "per page" })}
+                {size}
               </option>
             ))}
           </select>
         </div>
       </div>
 
-      {/* 右侧：页码切换按钮群 */}
-      <div className="flex items-center gap-1">
+      {/* 右侧：翻页控制器 */}
+      <div className="flex items-center gap-1 shrink-0">
         {/* 上一页 */}
         <button
           type="button"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage <= 1}
-          className="p-1.5 rounded-lg border border-border bg-background text-foreground hover:bg-muted disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
-          aria-label={t({ id: "PreviousPage", message: "Previous" })}
+          className="h-6 w-6 rounded-md border border-border bg-background text-foreground hover:bg-muted disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer flex items-center justify-center"
+          aria-label="Previous"
         >
           <ChevronLeft className="w-3.5 h-3.5" />
         </button>
 
-        {/* 页码 */}
-        <div className="flex items-center gap-1">
+        {/* 移动端紧凑当前页显示 */}
+        <div className="flex md:hidden items-center px-1 font-mono text-[11px] text-muted-foreground whitespace-nowrap">
+          <span className="font-semibold text-foreground">{currentPage}</span>
+          <span className="mx-1">/</span>
+          <span>{totalPages || 1}</span>
+        </div>
+
+        {/* 桌面端完整页码序列 */}
+        <div className="hidden md:flex items-center gap-1">
           {getPageNumbers().map((p, idx) => {
             if (p === "...") {
               return (
-                <span key={`ellipsis-${idx}`} className="px-1.5 py-1 text-muted-foreground">
+                <span key={`ellipsis-${idx}`} className="px-1 text-muted-foreground text-[11px]">
                   ...
                 </span>
               );
@@ -108,7 +108,7 @@ export function PaginationBar({
                 type="button"
                 onClick={() => onPageChange(Number(p))}
                 className={cn(
-                  "min-w-7 h-7 px-2 rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center justify-center",
+                  "min-w-6 h-6 px-1.5 rounded-md text-[11px] font-medium transition-colors cursor-pointer flex items-center justify-center font-mono",
                   isCurrent
                     ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
                     : "border border-border bg-background hover:bg-muted text-foreground"
@@ -125,8 +125,8 @@ export function PaginationBar({
           type="button"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage >= totalPages}
-          className="p-1.5 rounded-lg border border-border bg-background text-foreground hover:bg-muted disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
-          aria-label={t({ id: "NextPage", message: "Next" })}
+          className="h-6 w-6 rounded-md border border-border bg-background text-foreground hover:bg-muted disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer flex items-center justify-center"
+          aria-label="Next"
         >
           <ChevronRight className="w-3.5 h-3.5" />
         </button>

@@ -18,6 +18,9 @@ const SUPPORTED_LANGS: { code: Language; label: string }[] = [
   { code: "zh-TW" as Language, label: "繁體中文" },
   { code: "ja" as Language, label: "日本語" },
   { code: "ko" as Language, label: "한국어" },
+  { code: "es" as Language, label: "Español" },
+  { code: "de" as Language, label: "Deutsch" },
+  { code: "fr" as Language, label: "Français" },
 ];
 
 export function LanguageSwitcher({ className }: { className?: string }) {

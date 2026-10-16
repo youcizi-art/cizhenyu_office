@@ -10,6 +10,7 @@ import {
   RefreshCw,
   Eye,
   Download,
+  Loader2,
 } from "lucide-react";
 import { useExtracted } from "next-intl";
 import { cn } from "@/lib/utils";
@@ -54,6 +55,27 @@ export function ShareModal({
   const [usePasscode, setUsePasscode] = useState<boolean>(false);
   const [passcode, setPasscode] = useState<string>("");
   const [shareMode, setShareMode] = useState<"download" | "preview">("download");
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  const handleEnableShareClick = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await onEnableShare(usePasscode ? passcode.trim() : undefined, shareMode);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDisableShareClick = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await onDisableShare();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     if (doc) {
@@ -158,15 +180,22 @@ export function ShareModal({
             <div className="flex items-center justify-between pt-2">
               <button
                 type="button"
-                onClick={onDisableShare}
-                className="px-3.5 py-1.5 text-xs font-medium rounded-xl border border-destructive/30 text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                disabled={isSubmitting}
+                onClick={handleDisableShareClick}
+                className="px-3.5 py-1.5 text-xs font-medium rounded-xl border border-destructive/30 text-destructive hover:bg-destructive/10 transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {t({ id: "DisableShare", message: "Disable Sharing" })}
+                {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                <span>
+                  {isSubmitting
+                    ? t({ id: "DisablingShare", message: "Disabling..." })
+                    : t({ id: "DisableShare", message: "Disable Sharing" })}
+                </span>
               </button>
               <button
                 type="button"
+                disabled={isSubmitting}
                 onClick={onClose}
-                className="px-3.5 py-1.5 text-xs font-medium rounded-xl border border-border hover:bg-muted transition-colors cursor-pointer"
+                className="px-3.5 py-1.5 text-xs font-medium rounded-xl border border-border hover:bg-muted transition-colors cursor-pointer disabled:opacity-50"
               >
                 {t({ id: "Close", message: "Close" })}
               </button>
@@ -260,17 +289,24 @@ export function ShareModal({
             <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"
+                disabled={isSubmitting}
                 onClick={onClose}
-                className="px-3.5 py-1.5 text-xs font-medium rounded-xl border border-border hover:bg-muted transition-colors cursor-pointer"
+                className="px-3.5 py-1.5 text-xs font-medium rounded-xl border border-border hover:bg-muted transition-colors cursor-pointer disabled:opacity-50"
               >
                 {t({ id: "Cancel", message: "Cancel" })}
               </button>
               <button
                 type="button"
-                onClick={() => onEnableShare(usePasscode ? passcode.trim() : undefined, shareMode)}
-                className="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer"
+                disabled={isSubmitting}
+                onClick={handleEnableShareClick}
+                className="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {t({ id: "EnableShare", message: "Enable Sharing" })}
+                {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                <span>
+                  {isSubmitting
+                    ? t({ id: "EnablingShare", message: "Enabling..." })
+                    : t({ id: "EnableShare", message: "Enable Sharing" })}
+                </span>
               </button>
             </div>
           </div>

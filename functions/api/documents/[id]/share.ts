@@ -31,7 +31,12 @@ export async function onRequestPost(context: PagesContext<"id">): Promise<Respon
       shareMode?: "download" | "preview";
     };
     const sharePassword = typeof body.sharePassword === "string" ? body.sharePassword.trim() : undefined;
-    const shareMode = body.shareMode === "preview" && doc.type === "md" ? "preview" : "download";
+    const isPreviewable =
+      doc.type === "md" ||
+      doc.type === "image" ||
+      doc.type === "video" ||
+      doc.type === "audio";
+    const shareMode = body.shareMode === "preview" && isPreviewable ? "preview" : "download";
 
     // 生成或更新 16 位分享 Token
     const shareToken = generateId().replace(/-/g, "").substring(0, 16);
