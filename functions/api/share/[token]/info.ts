@@ -1,5 +1,11 @@
 import { PagesContext } from "../../../types";
-import { jsonResponse, errorResponse, loadMetadata, getR2Bucket } from "../../../utils";
+import {
+  jsonResponse,
+  errorResponse,
+  loadMetadata,
+  getR2Bucket,
+  checkAndCleanExpiredShare,
+} from "../../../utils";
 
 /**
  * 公开接口：获取分享文档的基本展示信息 (无需登录)
@@ -24,6 +30,12 @@ export async function onRequestGet(context: PagesContext<"token">): Promise<Resp
     return errorResponse("Share link does not exist or has expired", 404);
   }
 
+  // 惰性时效对比：如果已超过有效期，服务端自动关闭分享并回写持久化 R2
+  const isExpired = await checkAndCleanExpiredShare(env, doc, metadata);
+  if (isExpired) {
+    return errorResponse("Share link has expired", 410);
+  }
+
   // 仅对外暴露非敏感展示信息，不支持在线查看具体内容，不泄露真实密码
   return jsonResponse({
     name: doc.name,
@@ -32,5 +44,6 @@ export async function onRequestGet(context: PagesContext<"token">): Promise<Resp
     updatedAt: doc.updatedAt,
     requiresPassword: Boolean(doc.sharePassword),
     shareMode: doc.shareMode || "download",
+    shareExpiresAt: doc.shareExpiresAt,
   });
 }

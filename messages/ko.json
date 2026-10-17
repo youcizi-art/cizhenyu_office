@@ -444,5 +444,16 @@
   "Showing {start} - {end} of {total} items": "Showing {start} - {end} of {total} items",
   "NuGkug": "{total}개 중 {start} - {end}개 항목 표시",
   "EnablingShare": "공유 활성화 중...",
-  "DisablingShare": "공유 비활성화 중..."
+  "DisablingShare": "공유 비활성화 중...",
+  "PermanentShare": "Permanent (Never expires)",
+  "Permanent": "Permanent",
+  "ValidityPeriod": "Validity",
+  "ShareExpiration": "Expiration Period",
+  "ShareExpiredTag": "Expired",
+  "ShareLinkExpired": "This share link has expired and is no longer available",
+  "ValidUntil": "Valid until",
+  "DayShort": "d",
+  "DaysShort": "d",
+  "DaysUnit": "days",
+  "HoursUnit": "hours"
 }

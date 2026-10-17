@@ -33,6 +33,8 @@ export interface DocumentMeta {
   shareToken?: string;
   sharePassword?: string;
   shareMode?: "download" | "preview";
+  shareExpiresAt?: number;
+  shareCreatedAt?: number;
   pinned?: boolean;
   pinnedAt?: number;
   tags?: string[];
@@ -348,17 +350,24 @@ export async function deleteCategory(id: string): Promise<string[]> {
 }
 
 /**
- * 开启或刷新分享链接 (支持设置可选提取密钥与展示/下载模式)
+ * 开启或刷新分享链接 (支持设置可选提取密钥、展示/下载模式与有效期小时数)
  */
 export async function enableShare(
   docId: string,
   sharePassword?: string,
-  shareMode?: "download" | "preview"
-): Promise<{ shareToken: string; sharePassword?: string; shareMode?: "download" | "preview" }> {
+  shareMode?: "download" | "preview",
+  expiresInHours?: number
+): Promise<{
+  shareToken: string;
+  sharePassword?: string;
+  shareMode?: "download" | "preview";
+  shareExpiresAt?: number;
+  shareCreatedAt?: number;
+}> {
   const res = await fetchWithAuth(`/api/documents/${encodeURIComponent(docId)}/share`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ sharePassword, shareMode }),
+    body: JSON.stringify({ sharePassword, shareMode, expiresInHours }),
   });
 
   if (!res.ok) {
@@ -371,6 +380,8 @@ export async function enableShare(
     shareToken: data.shareToken,
     sharePassword: data.document?.sharePassword,
     shareMode: data.document?.shareMode,
+    shareExpiresAt: data.document?.shareExpiresAt,
+    shareCreatedAt: data.document?.shareCreatedAt,
   };
 }
 
@@ -398,6 +409,7 @@ export async function getShareInfo(token: string): Promise<{
   updatedAt: number;
   requiresPassword?: boolean;
   shareMode?: "download" | "preview";
+  shareExpiresAt?: number;
 }> {
   const res = await fetch(`/api/share/${encodeURIComponent(token)}/info`, {
     cache: "no-store",

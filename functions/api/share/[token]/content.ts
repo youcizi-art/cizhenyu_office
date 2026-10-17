@@ -1,9 +1,9 @@
 import { PagesContext } from "../../../types";
-import { errorResponse, loadMetadata, getR2Bucket } from "../../../utils";
+import { errorResponse, loadMetadata, getR2Bucket, checkAndCleanExpiredShare } from "../../../utils";
 
 /**
  * 公开接口：获取 Markdown 分享文档的文本内容 (仅限 md 类型)
- * 支持密码保护验证
+ * 支持密码保护验证与时效检查
  */
 export async function onRequestGet(context: PagesContext<"token">): Promise<Response> {
   const { env, params, request } = context;
@@ -23,6 +23,12 @@ export async function onRequestGet(context: PagesContext<"token">): Promise<Resp
 
   if (!doc) {
     return errorResponse("Share link does not exist or has expired", 404);
+  }
+
+  // 惰性时效对比：如果已超过有效期，服务端自动关闭分享并回写持久化 R2
+  const isExpired = await checkAndCleanExpiredShare(env, doc, metadata);
+  if (isExpired) {
+    return errorResponse("Share link has expired", 410);
   }
 
   if (doc.type !== "md") {

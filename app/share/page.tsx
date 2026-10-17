@@ -47,6 +47,7 @@ function ShareDownloadContent() {
     updatedAt: number;
     requiresPassword?: boolean;
     shareMode?: "download" | "preview";
+    shareExpiresAt?: number;
   } | null>(null);
 
   const [passcode, setPasscode] = useState<string>(initialKey);
@@ -124,9 +125,16 @@ function ShareDownloadContent() {
         const authRes = await checkAuth();
         setIsAdmin(authRes.authenticated);
       } catch (err) {
+        const errMsg = String(err).replace("Error: ", "");
+        const isExpiredMsg = errMsg.toLowerCase().includes("expired") || errMsg.includes("410");
         setError(
-          String(err).replace("Error: ", "") ||
-            t({ id: "ShareLinkInvalid", message: "Share link does not exist or has expired" })
+          isExpiredMsg
+            ? t({
+                id: "ShareLinkExpired",
+                message: "This share link has expired and is no longer available",
+              })
+            : errMsg ||
+                t({ id: "ShareLinkInvalid", message: "Share link does not exist or has expired" })
         );
       } finally {
         setLoading(false);
@@ -361,7 +369,7 @@ function ShareDownloadContent() {
             {docInfo.name}
           </h1>
 
-          <div className="mt-3 flex items-center justify-center gap-4 text-xs text-muted-foreground">
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <HardDrive className="w-3.5 h-3.5" />
               {(docInfo.size / 1024).toFixed(1)} KB
@@ -371,6 +379,18 @@ function ShareDownloadContent() {
               <Clock className="w-3.5 h-3.5" />
               {formatRelativeTime(docInfo.updatedAt)}
             </span>
+            {docInfo.shareExpiresAt && (
+              <>
+                <span>•</span>
+                <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-medium">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>
+                    {t({ id: "ValidUntil", message: "Valid until" })}:{" "}
+                    {new Date(docInfo.shareExpiresAt).toLocaleDateString()}
+                  </span>
+                </span>
+              </>
+            )}
           </div>
         </div>
 

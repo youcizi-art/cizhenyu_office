@@ -29,6 +29,7 @@ export async function onRequestPost(context: PagesContext<"id">): Promise<Respon
     const body = (await request.json().catch(() => ({}))) as {
       sharePassword?: string;
       shareMode?: "download" | "preview";
+      expiresInHours?: number;
     };
     const sharePassword = typeof body.sharePassword === "string" ? body.sharePassword.trim() : undefined;
     const isPreviewable =
@@ -40,14 +41,25 @@ export async function onRequestPost(context: PagesContext<"id">): Promise<Respon
 
     // 生成或更新 16 位分享 Token
     const shareToken = generateId().replace(/-/g, "").substring(0, 16);
+    const now = Date.now();
     doc.shareToken = shareToken;
     doc.shareMode = shareMode;
+    doc.shareCreatedAt = now;
+
+    // 时效设置：步长按小时计算，最长为 7 天 (168 小时)；在 0 或 168 (最右侧) 均视为永久
+    const hours = typeof body.expiresInHours === "number" ? Math.round(body.expiresInHours) : 0;
+    if (hours > 0 && hours < 168) {
+      doc.shareExpiresAt = now + hours * 3600 * 1000;
+    } else {
+      delete doc.shareExpiresAt;
+    }
+
     if (sharePassword) {
       doc.sharePassword = sharePassword;
     } else {
       delete doc.sharePassword;
     }
-    doc.updatedAt = Date.now();
+    doc.updatedAt = now;
 
     await saveMetadata(env, metadata);
 
@@ -79,6 +91,8 @@ export async function onRequestDelete(context: PagesContext<"id">): Promise<Resp
     delete doc.shareToken;
     delete doc.sharePassword;
     delete doc.shareMode;
+    delete doc.shareExpiresAt;
+    delete doc.shareCreatedAt;
     doc.updatedAt = Date.now();
 
     await saveMetadata(env, metadata);

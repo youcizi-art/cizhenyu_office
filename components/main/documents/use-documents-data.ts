@@ -200,16 +200,22 @@ export function useDocumentsData(queryParams?: DocumentQueryParams) {
     }
   };
 
-  // 开启外链 (支持提取密钥与展示/下载模式)
-  const handleEnableShare = async (passcode?: string, shareMode?: "download" | "preview") => {
+  // 开启外链 (支持提取密钥、展示/下载模式与有效期时效)
+  const handleEnableShare = async (
+    passcode?: string,
+    shareMode?: "download" | "preview",
+    expiresInHours?: number
+  ) => {
     if (!shareModal.doc) return;
     try {
-      const res = await enableShare(shareModal.doc.id, passcode, shareMode);
+      const res = await enableShare(shareModal.doc.id, passcode, shareMode, expiresInHours);
       const updatedDoc: DocumentMeta = {
         ...shareModal.doc,
         shareToken: res.shareToken,
         sharePassword: res.sharePassword,
         shareMode: res.shareMode,
+        shareExpiresAt: res.shareExpiresAt,
+        shareCreatedAt: res.shareCreatedAt,
       };
       setDocuments((prev) => prev.map((d) => (d.id === updatedDoc.id ? updatedDoc : d)));
       const origin = typeof window !== "undefined" ? window.location.origin : "";

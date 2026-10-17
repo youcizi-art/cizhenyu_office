@@ -444,5 +444,16 @@
   "Showing {start} - {end} of {total} items": "Showing {start} - {end} of {total} items",
   "NuGkug": "Affichage de {start} à {end} sur {total} éléments",
   "EnablingShare": "Activation du partage...",
-  "DisablingShare": "Désactivation..."
+  "DisablingShare": "Désactivation...",
+  "PermanentShare": "Permanent (Never expires)",
+  "Permanent": "Permanent",
+  "ValidityPeriod": "Validity",
+  "ShareExpiration": "Expiration Period",
+  "ShareExpiredTag": "Expired",
+  "ShareLinkExpired": "This share link has expired and is no longer available",
+  "ValidUntil": "Valid until",
+  "DayShort": "d",
+  "DaysShort": "d",
+  "DaysUnit": "days",
+  "HoursUnit": "hours"
 }

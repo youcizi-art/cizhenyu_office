@@ -1,4 +1,4 @@
-import { Env, MetadataIndex, R2Bucket } from "./types";
+import { Env, MetadataIndex, R2Bucket, DocumentMeta } from "./types";
 
 const METADATA_KEY = "_app/metadata.json";
 const TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 天有效期
@@ -198,4 +198,29 @@ export function getMimeType(fileName: string, defaultType: string = "application
     ppt: "application/vnd.ms-powerpoint",
   };
   return mimeMap[ext] || defaultType;
+}
+
+/**
+ * 校验分享是否已到期。如果已过期，自动清除该文档的分享信息并持久化回写 R2，返回 true (已过期)
+ */
+export async function checkAndCleanExpiredShare(
+  env: Env,
+  doc: DocumentMeta,
+  metadata: MetadataIndex
+): Promise<boolean> {
+  if (doc.shareExpiresAt && Date.now() > doc.shareExpiresAt) {
+    delete doc.shareToken;
+    delete doc.sharePassword;
+    delete doc.shareMode;
+    delete doc.shareExpiresAt;
+    delete doc.shareCreatedAt;
+    doc.updatedAt = Date.now();
+    try {
+      await saveMetadata(env, metadata);
+    } catch (e) {
+      console.error("Failed to persist expired share cleanup:", e);
+    }
+    return true;
+  }
+  return false;
 }

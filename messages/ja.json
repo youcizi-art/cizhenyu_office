@@ -444,5 +444,16 @@
   "Showing {start} - {end} of {total} items": "Showing {start} - {end} of {total} items",
   "NuGkug": "{total} 件中 {start} - {end} 件を表示",
   "EnablingShare": "共有を有効化中...",
-  "DisablingShare": "共有を無効化中..."
+  "DisablingShare": "共有を無効化中...",
+  "PermanentShare": "無期限（有効期限なし）",
+  "Permanent": "無期限",
+  "ValidityPeriod": "有効期間",
+  "ShareExpiration": "有効期限の設定",
+  "ShareExpiredTag": "期限切れ",
+  "ShareLinkExpired": "この共有リンクは有効期限が切れたため利用できません",
+  "ValidUntil": "有効期限",
+  "DayShort": "日",
+  "DaysShort": "日",
+  "DaysUnit": "日",
+  "HoursUnit": "時間"
 }

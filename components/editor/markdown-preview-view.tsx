@@ -51,6 +51,7 @@ export function MarkdownPreviewView({
 }: MarkdownPreviewViewProps) {
   const t = useExtracted();
   const containerRef = useRef<HTMLDivElement>(null);
+  const tocNavRef = useRef<HTMLElement>(null);
   const [copied, setCopied] = useState(false);
   const [tocItems, setTocItems] = useState<TocItem[]>([]);
   const [activeHeadingId, setActiveHeadingId] = useState<string>("");
@@ -132,15 +133,18 @@ export function MarkdownPreviewView({
       setShowBackToTop(window.scrollY > 300);
 
       if (tocItems.length === 0) return;
-      const scrollPos = window.scrollY + 120;
       let currentActive = tocItems[0].id;
 
       for (const item of tocItems) {
         const el = document.getElementById(item.id);
-        if (el && el.offsetTop <= scrollPos) {
-          currentActive = item.id;
-        } else {
-          break;
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          // 章节标题到达视口顶部 120px 以内即判定进入该章节
+          if (rect.top <= 120) {
+            currentActive = item.id;
+          } else {
+            break;
+          }
         }
       }
       setActiveHeadingId(currentActive);
@@ -150,19 +154,36 @@ export function MarkdownPreviewView({
     return () => window.removeEventListener("scroll", handleScroll);
   }, [tocItems]);
 
-  // 当当前高亮章节改变时，自动将右侧目录中对应的选项平滑滚动至目录可视区域中，保证长文档中高亮项始终在视窗可见
+  // 仅在目录导航列表自身内部微调滚动位置，保证超长目录当前项可见，绝不触碰外部 window 的滚动
   useEffect(() => {
-    if (!activeHeadingId) return;
-    const activeBtn = document.querySelector(`[data-toc-id="${activeHeadingId}"]`);
+    if (!activeHeadingId || !tocNavRef.current) return;
+    const navEl = tocNavRef.current;
+    const activeBtn = navEl.querySelector<HTMLElement>(`[data-toc-id="${activeHeadingId}"]`);
     if (activeBtn) {
-      activeBtn.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      const btnTop = activeBtn.offsetTop;
+      const btnHeight = activeBtn.offsetHeight;
+      const navScrollTop = navEl.scrollTop;
+      const navHeight = navEl.clientHeight;
+
+      // 仅当选中的目录项超出目录面板可视区域时，滚动目录面板内部容器自身
+      if (btnTop < navScrollTop) {
+        navEl.scrollTo({ top: Math.max(0, btnTop - 16), behavior: "smooth" });
+      } else if (btnTop + btnHeight > navScrollTop + navHeight) {
+        navEl.scrollTo({ top: btnTop + btnHeight - navHeight + 16, behavior: "smooth" });
+      }
     }
   }, [activeHeadingId]);
 
+  // 点击目录项平滑滚动至标题，并为顶部固定导航栏预留 72px 安全距离
   const scrollToHeading = (id: string) => {
     const el = document.getElementById(id);
     if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      const elementPosition = el.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - 72;
+      window.scrollTo({
+        top: Math.max(0, offsetPosition),
+        behavior: "smooth",
+      });
       setActiveHeadingId(id);
       setShowMobileToc(false);
     }
@@ -262,8 +283,8 @@ export function MarkdownPreviewView({
         </div>
       </header>
 
-      {/* 主体布局：内容正文与大屏右侧粘性目录大纲 */}
-      <div className="flex-1 w-full max-w-7xl mx-auto flex justify-center px-4 py-8 sm:px-8 gap-8 relative">
+      {/* 主体布局：内容正文与大屏右侧智能浮动目录 */}
+      <div className="flex-1 w-full max-w-7xl mx-auto flex justify-center items-start px-4 py-8 sm:px-8 gap-8 relative">
         {/* Markdown 正文预览容器 */}
         <main className="flex-1 max-w-4xl min-w-0">
           <div
@@ -272,11 +293,11 @@ export function MarkdownPreviewView({
           />
         </main>
 
-        {/* 桌面端大屏吸顶右侧目录 (Sticky TOC: 始终停留在视窗右侧跟随浏览) */}
+        {/* 桌面端大屏智能浮动右侧目录 (Sticky TOC: 始终停留在视窗右侧跟随浏览) */}
         {tocItems.length > 0 && (
-          <aside className="hidden lg:block w-72 shrink-0 self-start sticky top-20">
-            <div className="max-h-[calc(100vh-6rem)] overflow-y-auto rounded-2xl border border-border/80 bg-card/80 p-4 backdrop-blur-md shadow-xs flex flex-col">
-              <div className="flex items-center justify-between text-xs font-semibold text-foreground mb-3 pb-2 border-b border-border/60">
+          <aside className="hidden lg:block w-72 shrink-0 sticky top-20">
+            <div className="max-h-[calc(100vh-6rem)] rounded-2xl border border-border/80 bg-card/80 p-4 backdrop-blur-md shadow-xs flex flex-col">
+              <div className="flex items-center justify-between text-xs font-semibold text-foreground mb-3 pb-2 border-b border-border/60 shrink-0">
                 <div className="flex items-center gap-1.5">
                   <ListTree className="w-4 h-4 text-primary" />
                   <span>{t({ id: "OnThisPage", message: "On this page" })}</span>
@@ -286,7 +307,7 @@ export function MarkdownPreviewView({
                 </span>
               </div>
 
-              <nav className="space-y-1 text-xs overflow-y-auto pr-1">
+              <nav ref={tocNavRef} className="space-y-1 text-xs overflow-y-auto pr-1 flex-1">
                 {tocItems.map((item) => (
                   <button
                     key={item.id}

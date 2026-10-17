@@ -454,5 +454,16 @@
   "Showing {start} - {end} of {total} items": "Showing {start} - {end} of {total} items",
   "NuGkug": "显示第 {start} - {end} 条，共 {total} 条",
   "EnablingShare": "正在开启分享...",
-  "DisablingShare": "正在关闭分享..."
+  "DisablingShare": "正在关闭分享...",
+  "PermanentShare": "永久有效",
+  "Permanent": "永久",
+  "ValidityPeriod": "时效",
+  "ShareExpiration": "有效时效",
+  "ShareExpiredTag": "已过期",
+  "ShareLinkExpired": "此分享链接已过期且不再可用",
+  "ValidUntil": "有效期至",
+  "DayShort": "天",
+  "DaysShort": "天",
+  "DaysUnit": "天",
+  "HoursUnit": "小时"
 }

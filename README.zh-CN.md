@@ -9,9 +9,10 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/版本-1.0.0-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/版本-1.1.0-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/框架-Next.js%2016-black.svg" alt="Framework">
   <img src="https://img.shields.io/badge/存储-Cloudflare%20R2-orange.svg" alt="Storage">
+  <img src="https://img.shields.io/badge/数据库-Cloudflare%20D1-yellow.svg" alt="Database">
   <img src="https://img.shields.io/badge/许可证-AGPL%20v3-green.svg" alt="License">
 </p>
 
@@ -29,92 +30,103 @@
 
 ---
 
-## 🚀 概览
+## 🚀 项目概览
 
-**CIZHENYU Office** 是一款基于 WebAssembly 与云原生架构构建的在线办公与文档管理系统。无需在本地安装笨重的桌面办公软件，即可在浏览器中获得桌面级的排版、编辑与计算体验。
+**CIZHENYU Office** 是一款基于 WebAssembly 与云原生架构构建的私有在线办公套件与数字资产管理系统。
 
-系统深度融合 **Cloudflare R2** 对象存储与 **Cloudflare Pages Functions** 边缘算力，提供企业级的多级分类归档、Ctrl+S 云端静默覆盖保存、双轨访问密码保护（支持 `.env` 本地构建注入与 Pages 运行时），以及安全便捷的免密只读外链分享功能。
+无需在本地安装任何笨重的传统桌面办公软件，亦无需自建昂贵易崩溃的后端服务器，即可在现代浏览器中秒级进入桌面级高保真排版、数据计算与文档协同环境。
 
----
-
-## ✨ 核心特性
-
-- **📂 全主流格式高保真编辑**: 原生支持 `.docx`、`.xlsx`、`.pptx` 及 `.pdf` 的高保真排版、公式计算、图表展示与编辑。
-- **📝 轻量高效 Markdown 工作台**: 内置全功能 Markdown 编辑器，支持实时双栏联动同步滚动预览、撤销/重做历史、快捷排版工具栏（标题、代码块、数学公式、表格、任务清单）以及实时字数/词数统计。
-- **🖼️ 全格式文件与多媒体专属支持**: 支持上传任意格式文件。图片（JPG, PNG, GIF, WebP, SVG, AVIF）、视频（MP4, WebM）与音频（MP3, WAV, OGG, AAC）具备专属色彩图标标识与在线弹窗预览播放。
-- **📑 服务端真实过滤与分页**: `/documents` 页面支持真正的服务端多维筛选（名称搜索、文档类型、多级分类树、标签）与分页控制（10, 20, 30, 40, 50, 100 条/页）。
-- **📋 不可编辑文件详情弹窗**: 点击其他类型文件弹出元数据详情卡片，展示文件大小、上传时间、修改时间、所属分类与标签，并提供原文件下载、分享、标签修改、分类移动、重命名及删除等快捷操作。
-- **🌲 树形多级分类管理**: 在 `/documents` 页面提供可折叠展开的树形目录侧边栏（收缩时自动展示精简小图标导航），支持无限级子分类、分类重命名、删除及所属文档计数。
-- **📱 移动端沉浸式体验**: 移动端顶栏搜索与上传收缩为紧凑图标，点击浮动滑出搜索卡片；底栏采用纯数字紧凑设计并结合 `100dvh` 动态视口高度，分页绝不被系统底栏或导航遮挡，列表可视空间大幅扩容。
-- **🎬 多媒体全屏在线分享**: 图片、视频与音频分享时支持免密/密码验证后直接全屏展示与播放（Web Preview），告别单调的强制下载。
-- **🌐 全站多语言国际化**: 英语为第一公民和默认兜底，支持全球 50+ 种主流语言，公开页面与分享视图提供多语言切换器（支持中、英、日、韩、西、德、法等）。
-- **🔐 双轨访问密码保护**: 支持通过 `.env` 本地构建注入或 Cloudflare 环境变量设置访问口令，防范未授权访问。
+系统深度依托 **Cloudflare Pages + Functions + R2 + D1** 边缘无服务器（Serverless）生态，具备极致的轻量性、零维护成本、毫秒级全球就近加速，以及严密可靠的双轨安全访问控制体系。
 
 ---
 
-## 🛠️ 技术架构
+## ✨ 详细功能全景介绍
 
-- **前端框架**: [Next.js](https://nextjs.org/) 16 (App Router, Turbopack, 静态导出)
-- **文档引擎**: [OnlyOffice](https://www.onlyoffice.com/) WebAssembly 内核
-- **云端存储**: [Cloudflare R2](https://www.cloudflare.com/developer-platform/r2/) 对象存储
-- **关系数据库**: [Cloudflare D1](https://developers.cloudflare.com/d1/) (可选无服务器 SQLite 数据库)
-- **边缘算力**: [Cloudflare Pages & Functions](https://pages.cloudflare.com/) 边缘无服务器计算
-- **状态管理**: [Zustand](https://github.com/pmndrs/zustand)
-- **UI 组件**: [Tailwind CSS](https://tailwindcss.com/) & [Lucide Icons](https://lucide.dev/)
+### 1. 📂 四核 Office 深度编辑与高保真排版
+- **三大核心格式原生支持**: 全面支持 `.docx`、`.xlsx`、`.pptx` 的高保真渲染、复杂排版、样式调整、函数公式与图表插入。
+- **高兼容旧版格式**: 支持查看与兼容处理 `.doc`、`.xls`、`.ppt` 等传统 Office 格式。
+- **PDF 在线阅读器**: 原生内置 PDF 高清预览引擎，具备高清晰度缩放与流畅分页阅读。
+- **Wasm 离线内核**: 基于 OnlyOffice 离线 WebAssembly 内核技术，免依赖任何外部重型第三方转换后端，杜绝隐私泄露。
+- **Ctrl+S 云端静默保存**: 编辑过程中按下 `Ctrl + S`（或 Mac 下 `Cmd + S`），文档二进制流直接经由边缘 Functions 静默持久化回写至 Cloudflare R2，绝不丢失任何数据。
+
+### 2. 📝 Markdown 沉浸式创作与专属分享大纲
+- **三模态编辑视图**: 支持“所见即所得 (WYSIWYG)”、“即时渲染 (IR)”与“分屏实时预览 (SV)”一键切换。
+- **精准双栏联动**: 源码区与预览区滚动条平滑同步联动，内置代码块高亮、数学公式（KaTeX）、表格、任务清单与脚注支持。
+- **专属公开分享阅读视图**:
+  - **右侧智能浮动目录 (Sticky TOC)**: 在大屏分享页面中，根据正文层级自动提取完整目录，**智能随视窗保持吸顶浮动跟随**，并根据页面阅读进度高亮当前章节；
+  - **无死锁滚动**: 彻底消除长页面滚动时的自动上滚冲突，正文畅快向下浏览，章节目录内部独立自适应滚动；
+  - **便捷辅助工具**: 支持一键复制 Markdown 纯文本源码、下载原文件，并在移动端支持滑出式抽屉目录。
+
+### 3. 🖼️ 全格式文件管理与多媒体全屏展示
+- **无限制格式上传**: 突破传统 Office 工具的格式边界，支持上传管理任何格式的文件（图片、音视频、压缩包、安装包等）。
+- **多媒体专属标识与预览**:
+  - **图片 (Image)**: 包含 JPG、PNG、GIF、WebP、SVG、AVIF 等，弹窗高清无损原图缩放预览；
+  - **视频 (Video)**: 包含 MP4、WebM、MOV 等，内置原生视频播放器即时播映；
+  - **音频 (Audio)**: 包含 MP3、WAV、OGG、AAC、FLAC 等，内置音频播放卡片；
+- **沉浸式全屏在线分享**: 针对图片、音视频设置“展示分享”模式后，访客打开链接直接进入全屏沉浸式播放/预览视窗（免密直达，密码保护解锁后即刻呈现），无需繁琐先下载后打开。
+- **不可编辑文件详情卡片 (FileDetailsModal)**: 对压缩包、可执行文件等其他类型，点击卡片弹出精美元数据面板，展示文件大小、上传时间、所属分类与标签，提供安全下载、重命名、分类移动、改标签及删除操作。
+
+### 4. 📑 服务端真实物理分页与多维组合筛选
+- **服务端真实分页**: `/documents` 页面支持真正的物理分页拉取，默认每页展示 20 项，支持用户自由切换（10, 20, 30, 40, 50, 100 条/页），极大提升在海量文件库下的加载性能与内存友好性。
+- **多维度交叉筛选**:
+  - **关键词搜索**: 支持对文档名称进行实时模糊匹配；
+  - **文档类型快速切换**: 一键过滤 Word、Excel、PPT、PDF、Markdown、图片、视频、音频或其它文件；
+  - **无限级分类树关联**: 选中分类时递归检索该分类及其所有子目录下的所有文档；
+  - **标签体系 (Tags)**: 支持按文档自定义标签进行联合检索过滤；
+- **智能排序与拖拽重排**:
+  - **置顶支持 (Pin)**: 重要文档一键置顶展示；
+  - **长按自由排序**: 鼠标按住卡片（或移动端长按）0.25 秒触发高自由度拖拽排序，服务端实时同步保存顺序。
+
+### 5. 📱 移动端极致紧凑与防遮挡优化
+- **顶部操作图标收缩**: 在手机端，桌面端大尺寸的搜索框与上传按钮收缩至右上角紧凑操作图标，点击后以浮动卡片滑出搜索面板，平时完全不挤占任何宝贵的屏幕高度。
+- **多余提示行智能隐藏**: 隐藏拖拽辅助说明条，为移动端卡片列表增加 100px 以上的净展示高度。
+- **纯数字超紧凑底部分页条**: 去除长文本，采用 `1 - 20 / 255` 纯数字信息和极窄上下页翻页箭头，单行排版永不换行。
+- **`100dvh` 与安全间距防遮挡**: 结合现代动态视口高度（Dynamic Viewport Height），在移动端为底部分页条预留底部导航栏（MobileNav）的安全浮动距离，绝不被手机系统手势条或底部菜单遮挡。
+
+### 6. 🔗 灵活多元安全外链分享
+- **公开直接下载**: 一键生成直链，无需任何登录权限即可直接下载。
+- **4~8 位提取密钥保护**: 支持开启提取密码保护，支持一键随机生成安全密码，只有凭正确口令的访客方能提取与阅读。
+- **展示与下载双模式**: 针对 Markdown 和音视频媒体文档，支持在“直接下载模式”与“网页在线展示 (Web Preview) 模式”之间灵活切换。
+- **完善交互动效与防重复点击**: 生成和关闭分享链接时提供平滑 Loading 转圈动画与按钮防抖禁用，杜绝网络等待中的重复误触。
+
+### 7. 🌐 全站多语言国际化 (i18n)
+- **英语第一公民与默认兜底**: 全站所有文案以规范英文为基准，完全消除硬编码中文字符串。
+- **50+ 种全球语言覆盖**: 自动支持主流操作系统与浏览器的语言环境自适应。
+- **即时语言切换器**: 在公开分享页面、媒体阅读视图与主系统顶栏均配备语言切换器，深度支持 **中文（简体/繁体）**、**英语**、**日本語**、**한국어 (韩语)**、**Español (西班牙语)**、**Deutsch (德语)**、**Français (法语)** 等主流语种。
+
+### 8. ☁️ Cloudflare R2 + D1 双引擎驱动与多层鉴权
+- **零成本云原生架构**: 采用 Next.js `output: 'export'` 纯静态构建打包，部署至 Cloudflare Pages，不产生服务器空闲运行费用。
+- **双引擎存储模式**:
+  - **原生 R2 引擎**: 零数据库依赖，直接利用 R2 持久化存储二进制流与目录元数据，开箱即用；
+  - **Cloudflare D1 关系型数据库扩展**: 提供现成的 `d1/schema.sql` 迁移建表脚本，针对百万级企业资产管理可直接启用 D1 引擎执行原生 SQL 高性能查询；
+- **双轨访问口令体系**: 支持 `.env.local` 本地构建期注入密钥（100% 免疫平台环境变量丢失）与 Pages 运行时环境变量双保险。
 
 ---
 
-## ⚙️ 关键配置参数与变量说明
+## 🛠️ 技术栈与生态组件
 
-部署前请确保配置以下变量：
+| 模块 | 技术选型 | 说明 |
+| :--- | :--- | :--- |
+| **前端框架** | [Next.js](https://nextjs.org/) 16 (App Router, Turbopack, 纯静态导出) | 业界顶级响应速度与静态 HTML 秒开体验 |
+| **样式与图标** | [Tailwind CSS](https://tailwindcss.com/) v4 & [Lucide Icons](https://lucide.dev/) | 现代化设计系统、暗色模式、精美玻璃拟态与响应式微交互 |
+| **办公文档引擎** | [OnlyOffice](https://www.onlyoffice.com/) WebAssembly SDK | 高保真 Word/Excel/PPT/PDF 离线排版计算引擎 |
+| **Markdown 引擎**| [Vditor](https://github.com/Vanessa219/vditor) | 工业级富文本与 Markdown 双引擎协同 |
+| **存储后端** | [Cloudflare R2](https://www.cloudflare.com/developer-platform/r2/) | 兼容 S3 协议、无出口下行流量费（Zero Egress Fee）的全球分布式对象存储 |
+| **数据库 (可选)**| [Cloudflare D1](https://developers.cloudflare.com/d1/) | 边缘无服务器 SQLite 关系型数据库 |
+| **边缘计算** | [Cloudflare Pages Functions](https://pages.cloudflare.com/) | 全球 300+ 边缘节点无缝接管 API 请求与鉴权拦截 |
+| **状态管理** | [Zustand](https://github.com/pmndrs/zustand) | 极轻量客户端状态管理 |
+| **国际化 (i18n)** | [next-intl](https://next-intl.dev/) | 全球化多语言提取与安全兜底驱动 |
+
+---
+
+## ⚙️ 关键配置参数与环境变量说明
 
 | 变量 / 绑定类型 | 变量名称 | 是否必填 | 推荐填写示例 | 作用与配置说明 |
 | :--- | :--- | :---: | :--- | :--- |
-| **R2 存储桶绑定**<br>`(R2 Bucket Binding)` | **`DOCUMENTS_BUCKET`** | **必填** | 选择您的 R2 存储桶（如 `office-ycz-me`） | 绑定 Cloudflare R2 存储桶。后端 Functions 通过此绑定持久化存储文档数据与目录索引。 |
-| **D1 数据库绑定**<br>`(D1 Database Binding)` | **`DB`** | 选填 | 选择您的 D1 数据库（如 `office-d1`） | 绑定 Cloudflare D1 数据库执行 SQL 查询。若未绑定，系统平滑自动使用 R2 索引引擎。 |
-| **构建期访问密钥**<br>`(.env / Build Env)` | **`NEXT_PUBLIC_ACCESS_KEY`**<br>*(推荐方案)* | 选填 | `MySecretPassword2026!` | **最稳妥的访问密钥**。<br>• 写入根目录 `.env.local` 或 `.env` 文件；<br>• 在静态构建期打入代码，**100% 免疫任何平台运行时环境变量丢失的问题**；<br>• 本地无需提交 Git（已加入 `.gitignore`）。 |
+| **R2 存储桶绑定**<br>`(R2 Bucket Binding)` | **`DOCUMENTS_BUCKET`** | **必填** | `office-ycz-me` | 绑定 Cloudflare R2 存储桶。后端 Functions 通过此绑定持久化存储文档数据与目录索引。 |
+| **D1 数据库绑定**<br>`(D1 Database Binding)` | **`DB`** | 选填 | `office-d1` | 绑定 Cloudflare D1 数据库执行 SQL 查询。若未绑定，系统平滑自动使用 R2 索引引擎。 |
+| **构建期访问密钥**<br>`(.env / Build Env)` | **`NEXT_PUBLIC_ACCESS_KEY`**<br>*(推荐方案)* | 选填 | `MySecretPassword2026!` | **最稳妥的访问密钥**。<br>• 写入根目录 `.env.local` 文件；<br>• 在静态构建期打入代码，**100% 免疫任何平台运行时环境变量丢失的问题**；<br>• 本地已加入 `.gitignore`，安全不泄露。 |
 | **运行时访问密钥**<br>`(Pages Functions Env)` | **`PASSWORD`**<br>*(或 `ACCESS_KEY`)* | 选填 | `MySecretPassword2026!` | Cloudflare Pages 后台设置的环境变量 / Secret。作为后端边缘鉴权的二次防护。 |
-
----
-
-## 🔐 访问密钥配置指南（推荐使用 `.env` 方式）
-
-在 Next.js 静态导出的 Web 应用中，Cloudflare Pages 后台设置的“运行时环境变量”经常会因**环境分支不匹配（Production 与 Preview）**或**静态打包时无法获取**而导致密钥在前端读取为空。
-
-为此系统支持了**`.env` 构建期注入方案**，100% 确保密钥生效：
-
-### 方式一：本地使用 `.env` 文件导入（最推荐、最稳妥）
-
-1. 在项目根目录下创建 `.env.local` 文件（或参考 [`.env.example`](.env.example)）：
-   ```bash
-   cp .env.example .env.local
-   ```
-2. 在 `.env.local` 中填入您的私有访问密钥：
-   ```env
-   NEXT_PUBLIC_ACCESS_KEY=你的安全密码
-   ```
-3. 运行构建命令：
-   ```bash
-   pnpm build
-   ```
-4. 执行发布（例如 `npx wrangler pages deploy out --project-name=office-website`）。
-
-> [!IMPORTANT]
-> **安全性说明**：
-> 1. 项目的 `.gitignore` 中已默认配置了 `.env*` 规则，**`.env.local` 绝对不会被提交至 Git 仓库**，非常安全；
-> 2. 构建时系统会自动将此密钥参与前端 SHA-256 哈希比对校验；访客进入网站时会被第一时间拦截并弹出输入密码卡片，验证通过后发放 30 天加密本地凭据，未授权人员绝无法直接进入。
-
----
-
-### 方式二：在 Cloudflare Pages 控制台配置为“构建环境变量”
-
-如果您是通过 GitHub / GitLab 接入 Cloudflare Pages 进行自动化持续集成的：
-
-1. 进入 Cloudflare 控制台 -> **Workers 和 Pages** -> 点击您的 Pages 项目 -> **设置 (Settings)** -> **环境变量 (Environment variables)**；
-2. 在 **制作 (Production)** 和 **预览 (Preview)** 区域添加以下构建变量：
-   - 变量名称：`NEXT_PUBLIC_ACCESS_KEY`
-   - 变量值：`你的私有访问密钥`
-3. 保存后，在 **部署 (Deployments)** 页面点击 **重新部署 (Redeploy)** 即可！
 
 ---
 
@@ -252,7 +264,10 @@ pnpm build
 
 ### 2. 设置了密码后，刷新页面依然不需要输入密码就能进？
 * **原因**：通过 Cloudflare Pages 控制台设置的 `PASSWORD` 为运行时变量，在纯静态导出模式下可能未被 Functions 正确捕获。
-* **解决方法**：在项目根目录创建 `.env.local` 写入 `NEXT_PUBLIC_ACCESS_KEY=你的密码`，然后重新执行 `pnpm build` 并部署；或者在 Cloudflare Pages 的环境变量中添加 `NEXT_PUBLIC_ACCESS_KEY` 并重新部署。
+* **解决方法**：在项目根目录创建 `.env.local` 写入 `NEXT_PUBLIC_ACCESS_KEY=你的密码`，然后重新执行 `pnpm build` 并部署；或者在 Cloudflare Pages 的构建环境变量中添加 `NEXT_PUBLIC_ACCESS_KEY` 并重新部署。
+
+### 3. Markdown 分享页在长文档下能否流畅定位章节？
+* **特性**：系统采用了独立的视窗浮动目录（Sticky TOC）与安全的相对位置微调算法，彻底杜绝了旧版页面向下滚动时被强制回滚的问题。点击目录项将自动平滑定位并留出顶部导航的安全距离。
 
 ---
 

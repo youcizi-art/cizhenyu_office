@@ -82,6 +82,8 @@ export interface DocumentMeta {
   shareToken?: string;
   sharePassword?: string;
   shareMode?: "download" | "preview";
+  shareExpiresAt?: number;
+  shareCreatedAt?: number;
   pinned?: boolean;
   pinnedAt?: number;
   tags?: string[];

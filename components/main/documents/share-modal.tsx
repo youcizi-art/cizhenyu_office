@@ -11,6 +11,7 @@ import {
   Eye,
   Download,
   Loader2,
+  Clock,
 } from "lucide-react";
 import { useExtracted } from "next-intl";
 import { cn } from "@/lib/utils";
@@ -26,20 +27,45 @@ function generatePasscode(): string {
   return result;
 }
 
+// 格式化已有分享的剩余有效期
+function formatRemainingTime(
+  expiresAt: number,
+  t: (descriptor: { id: string; message: string }) => string
+): string {
+  const diffMs = expiresAt - Date.now();
+  if (diffMs <= 0) {
+    return t({ id: "ShareExpiredTag", message: "Expired" });
+  }
+  const totalHours = Math.ceil(diffMs / (3600 * 1000));
+  const days = Math.floor(totalHours / 24);
+  const remHours = totalHours % 24;
+  if (days > 0) {
+    if (remHours > 0) {
+      return `${days} ${t({ id: "DaysUnit", message: "days" })} ${remHours} ${t({ id: "HoursUnit", message: "hours" })}`;
+    }
+    return `${days} ${t({ id: "DaysUnit", message: "days" })}`;
+  }
+  return `${totalHours} ${t({ id: "HoursUnit", message: "hours" })}`;
+}
+
 interface ShareModalProps {
   open: boolean;
   doc: DocumentMeta | null;
   shareUrl: string;
   copied: boolean;
   onClose: () => void;
-  onEnableShare: (passcode?: string, shareMode?: "download" | "preview") => void | Promise<void>;
+  onEnableShare: (
+    passcode?: string,
+    shareMode?: "download" | "preview",
+    expiresInHours?: number
+  ) => void | Promise<void>;
   onDisableShare: () => void | Promise<void>;
   onCopy: (fullText: string) => void;
 }
 
 /**
  * 分享链接配置弹窗
- * 支持公开下载、密钥提取，以及 Markdown 独有的网页展示分享模式
+ * 支持公开下载、密钥提取、时效设置，以及 Markdown 独有的网页展示分享模式
  */
 export function ShareModal({
   open,
@@ -55,13 +81,15 @@ export function ShareModal({
   const [usePasscode, setUsePasscode] = useState<boolean>(false);
   const [passcode, setPasscode] = useState<string>("");
   const [shareMode, setShareMode] = useState<"download" | "preview">("download");
+  const [expiresInHours, setExpiresInHours] = useState<number>(0); // 0 或 168 均为永久
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   const handleEnableShareClick = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      await onEnableShare(usePasscode ? passcode.trim() : undefined, shareMode);
+      const hoursToSend = expiresInHours > 0 && expiresInHours < 168 ? expiresInHours : 0;
+      await onEnableShare(usePasscode ? passcode.trim() : undefined, shareMode, hoursToSend);
     } finally {
       setIsSubmitting(false);
     }
@@ -88,6 +116,7 @@ export function ShareModal({
       }
       const canPreview = doc.type === "md" || doc.type === "image" || doc.type === "video" || doc.type === "audio";
       setShareMode(canPreview && doc.shareMode === "preview" ? "preview" : "download");
+      setExpiresInHours(0); // 默认为永久
     }
   }, [doc]);
 
@@ -175,6 +204,19 @@ export function ShareModal({
                   {copied ? t({ id: "Copied", message: "Copied" }) : t({ id: "Copy", message: "Copy" })}
                 </button>
               </div>
+
+              {/* 已分享状态展示时效/剩余时间 */}
+              <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1 border-t border-border/50">
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3 h-3 text-muted-foreground" />
+                  <span>{t({ id: "ValidityPeriod", message: "Validity" })}:</span>
+                </span>
+                <span className="font-medium text-foreground">
+                  {doc.shareExpiresAt
+                    ? formatRemainingTime(doc.shareExpiresAt, t)
+                    : t({ id: "PermanentShare", message: "Permanent (Never expires)" })}
+                </span>
+              </div>
             </div>
 
             <div className="flex items-center justify-between pt-2">
@@ -247,6 +289,45 @@ export function ShareModal({
                 </div>
               </div>
             )}
+
+            {/* 分享时效设置：拖动条，步长按小时记，最长 7 天，0 或 168 视为永久 */}
+            <div className="p-3 rounded-xl border border-border bg-muted/20 space-y-2.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-medium text-foreground flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-blue-500" />
+                  <span>{t({ id: "ShareExpiration", message: "Expiration Period" })}</span>
+                </span>
+                <span className="text-[11px] font-semibold text-primary font-mono bg-primary/10 px-2 py-0.5 rounded-md">
+                  {expiresInHours === 0 || expiresInHours >= 168
+                    ? t({ id: "PermanentShare", message: "Permanent (Never expires)" })
+                    : expiresInHours < 24
+                    ? `${expiresInHours} ${t({ id: "HoursUnit", message: "hours" })}`
+                    : `${Math.floor(expiresInHours / 24)} ${t({ id: "DaysUnit", message: "days" })}${
+                        expiresInHours % 24 > 0
+                          ? ` ${expiresInHours % 24} ${t({ id: "HoursUnit", message: "hours" })}`
+                          : ""
+                      }`}
+                </span>
+              </div>
+
+              <div className="space-y-1.5 pt-1">
+                <input
+                  type="range"
+                  min={0}
+                  max={168}
+                  step={1}
+                  value={expiresInHours}
+                  onChange={(e) => setExpiresInHours(Number(e.target.value))}
+                  className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                />
+                <div className="flex items-center justify-between text-[10px] text-muted-foreground px-0.5">
+                  <span>{t({ id: "Permanent", message: "Permanent" })}</span>
+                  <span>1{t({ id: "DayShort", message: "d" })} (24h)</span>
+                  <span>3{t({ id: "DaysShort", message: "d" })} (72h)</span>
+                  <span>{t({ id: "Permanent", message: "Permanent" })}</span>
+                </div>
+              </div>
+            </div>
 
             {/* 提取密钥选项配置 */}
             <div className="p-3 rounded-xl border border-border bg-muted/20 space-y-2.5">
