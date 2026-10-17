@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import Vditor from "vditor";
 import "vditor/dist/index.css";
 import {
@@ -13,8 +13,9 @@ import {
   FileText,
   ListTree,
   X,
-  ChevronRight,
+  ChevronsUpDown,
   ArrowUp,
+  FileQuestion,
 } from "lucide-react";
 import { useExtracted } from "next-intl";
 import { toast } from "sonner";
@@ -22,11 +23,14 @@ import { formatRelativeTime } from "@/utils/recent-files";
 import { cn } from "@/lib/utils";
 import { LanguageSwitcher } from "@/components/language-switcher";
 
-interface TocItem {
-  id: string;
-  text: string;
-  level: number;
-}
+import {
+  TocItem,
+  TocNode,
+  buildTocTree,
+  TocTreeNodeItem,
+} from "./markdown-toc-tree";
+
+export type { TocItem, TocNode };
 
 interface MarkdownPreviewViewProps {
   content: string;
@@ -37,10 +41,49 @@ interface MarkdownPreviewViewProps {
 }
 
 /**
+ * 从原始 Markdown 源码文本中同步提取所有章节标题
+ * 确保第 0 毫秒首屏直接生成完整目录，绝不因异步渲染延迟导致目录丢失或闪烁
+ */
+function extractHeadingsFromMarkdown(mdText: string): TocItem[] {
+  if (!mdText) return [];
+  const lines = mdText.split("\n");
+  const items: TocItem[] = [];
+  let inCodeBlock = false;
+  let index = 0;
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (line.startsWith("```") || line.startsWith("~~~")) {
+      inCodeBlock = !inCodeBlock;
+      continue;
+    }
+    if (inCodeBlock) continue;
+
+    const headingMatch = line.match(/^(#{1,6})\s+(.+)$/);
+    if (headingMatch) {
+      const level = headingMatch[1].length;
+      const text = headingMatch[2]
+        .replace(/[*`_~\[\]]/g, "")
+        .replace(/\(https?:\/\/[^\)]+\)/g, "")
+        .trim();
+      if (text) {
+        items.push({
+          id: `heading-item-${index}`,
+          text,
+          level,
+        });
+        index++;
+      }
+    }
+  }
+  return items;
+}
+
+/**
  * 独立的 Markdown 公开只读预览展示组件
- * - 抑制横向溢出滚动条
- * - 右侧目录始终固定在视窗右侧跟随阅读进度上下浮动 (Sticky + Auto-center)
- * - 支持移动端目录抽屉、Scroll Spy 实时高亮与回到顶部
+ * - 采用双栏布局：左侧正文独立滚动，右侧固定目录栏（Fixed Outline Sidebar）永久固定在视窗右侧
+ * - 支持源码同步提取与 DOM 渲染后双重校准，目录绝对稳定可靠
+ * - 支持章节目录多层级折叠展开、Scroll Spy 实时跟随高亮与移动端抽屉
  */
 export function MarkdownPreviewView({
   content,
@@ -51,14 +94,22 @@ export function MarkdownPreviewView({
 }: MarkdownPreviewViewProps) {
   const t = useExtracted();
   const containerRef = useRef<HTMLDivElement>(null);
+  const contentScrollRef = useRef<HTMLDivElement>(null);
   const tocNavRef = useRef<HTMLElement>(null);
+
   const [copied, setCopied] = useState(false);
-  const [tocItems, setTocItems] = useState<TocItem[]>([]);
-  const [activeHeadingId, setActiveHeadingId] = useState<string>("");
+  // 同步预解析 Markdown，确保首屏直接渲染目录，杜绝异步等待延迟
+  const [tocItems, setTocItems] = useState<TocItem[]>(() =>
+    extractHeadingsFromMarkdown(content)
+  );
+  const [activeHeadingId, setActiveHeadingId] = useState<string>(() =>
+    tocItems[0]?.id || ""
+  );
   const [showMobileToc, setShowMobileToc] = useState<boolean>(false);
   const [showBackToTop, setShowBackToTop] = useState<boolean>(false);
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
 
-  // 严格杜绝全局横向滚动条
+  // 严格杜绝全局横向溢出
   useEffect(() => {
     const prevOverflowX = document.body.style.overflowX;
     document.body.style.overflowX = "hidden";
@@ -67,31 +118,40 @@ export function MarkdownPreviewView({
     };
   }, []);
 
-  // 解析与提取标题目录
-  const extractHeadings = useCallback(() => {
+  // 将 DOM 标题元素与对应的 ID 进行对齐绑定
+  const syncDomHeadingIds = useCallback(() => {
     if (!containerRef.current) return;
     const headingElements = containerRef.current.querySelectorAll<HTMLElement>(
       "h1, h2, h3, h4, h5, h6"
     );
-    const items: TocItem[] = [];
 
+    if (headingElements.length === 0) return;
+
+    const domItems: TocItem[] = [];
     headingElements.forEach((el, index) => {
-      let id = el.getAttribute("id");
-      if (!id) {
-        id = `section-heading-${index}`;
-        el.setAttribute("id", id);
-      }
+      const id = `heading-item-${index}`;
+      el.setAttribute("id", id);
       const level = parseInt(el.tagName.substring(1), 10) || 1;
       const text = el.textContent?.trim() || `Section ${index + 1}`;
-      items.push({ id, text, level });
+      domItems.push({ id, text, level });
     });
 
-    setTocItems(items);
-    if (items.length > 0 && !activeHeadingId) {
-      setActiveHeadingId(items[0].id);
+    setTocItems(domItems);
+    if (!activeHeadingId && domItems.length > 0) {
+      setActiveHeadingId(domItems[0].id);
     }
   }, [activeHeadingId]);
 
+  // 当外部 content 变化时重新同步
+  useEffect(() => {
+    const parsed = extractHeadingsFromMarkdown(content);
+    setTocItems(parsed);
+    if (parsed.length > 0) {
+      setActiveHeadingId(parsed[0].id);
+    }
+  }, [content]);
+
+  // 渲染 Vditor preview
   useEffect(() => {
     if (!containerRef.current) return;
     const isDarkMode = document.documentElement.classList.contains("dark");
@@ -116,45 +176,118 @@ export function MarkdownPreviewView({
         math: {
           engine: "KaTeX",
         },
+        after: () => {
+          syncDomHeadingIds();
+        },
+      }).then(() => {
+        syncDomHeadingIds();
       });
-
-      // 渲染后提取目录
-      setTimeout(extractHeadings, 120);
     } catch {
       if (containerRef.current) {
         containerRef.current.innerText = content;
       }
     }
-  }, [content, extractHeadings]);
+  }, [content, syncDomHeadingIds]);
 
-  // 滚动监听：Scroll Spy 实时高亮当前处于视口顶部的章节与控制返回顶部浮标
-  useEffect(() => {
-    const handleScroll = () => {
-      setShowBackToTop(window.scrollY > 300);
+  // 树形多层级目录结构
+  const tocTree = useMemo(() => buildTocTree(tocItems), [tocItems]);
 
-      if (tocItems.length === 0) return;
-      let currentActive = tocItems[0].id;
+  // 切换折叠与展开
+  const toggleCollapse = useCallback((id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCollapsedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
 
-      for (const item of tocItems) {
-        const el = document.getElementById(item.id);
-        if (el) {
-          const rect = el.getBoundingClientRect();
-          // 章节标题到达视口顶部 120px 以内即判定进入该章节
-          if (rect.top <= 120) {
-            currentActive = item.id;
-          } else {
-            break;
+  // 全部折叠 / 全部展开
+  const toggleAllCollapse = useCallback(() => {
+    if (collapsedIds.size > 0) {
+      setCollapsedIds(new Set());
+    } else {
+      const allParentIds = new Set<string>();
+      const collectParents = (nodes: TocNode[]) => {
+        for (const node of nodes) {
+          if (node.children && node.children.length > 0) {
+            allParentIds.add(node.id);
+            collectParents(node.children);
           }
         }
-      }
-      setActiveHeadingId(currentActive);
-    };
+      };
+      collectParents(tocTree);
+      setCollapsedIds(allParentIds);
+    }
+  }, [collapsedIds.size, tocTree]);
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+  // 查找某个节点的所有祖先 ID，以支持联动自动展开
+  const findAncestors = useCallback(
+    (nodes: TocNode[], targetId: string, currentPath: string[] = []): string[] | null => {
+      for (const node of nodes) {
+        if (node.id === targetId) {
+          return currentPath;
+        }
+        if (node.children && node.children.length > 0) {
+          const found = findAncestors(node.children, targetId, [...currentPath, node.id]);
+          if (found) return found;
+        }
+      }
+      return null;
+    },
+    []
+  );
+
+  // 当正文滚动定位到深层子章节时，自动展开其折叠的祖先分支
+  useEffect(() => {
+    if (!activeHeadingId || tocTree.length === 0) return;
+    const ancestors = findAncestors(tocTree, activeHeadingId);
+    if (ancestors && ancestors.length > 0) {
+      setCollapsedIds((prev) => {
+        let changed = false;
+        const next = new Set(prev);
+        for (const ancestorId of ancestors) {
+          if (next.has(ancestorId)) {
+            next.delete(ancestorId);
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    }
+  }, [activeHeadingId, tocTree, findAncestors]);
+
+  // 正文独立滚动监听：Scroll Spy 实时高亮与返回顶部按钮显示
+  const handleContentScroll = useCallback(() => {
+    const container = contentScrollRef.current;
+    if (!container) return;
+
+    setShowBackToTop(container.scrollTop > 300);
+
+    if (tocItems.length === 0) return;
+    const containerRect = container.getBoundingClientRect();
+    let currentActive = tocItems[0].id;
+
+    for (const item of tocItems) {
+      const el = document.getElementById(item.id);
+      if (el) {
+        const elRect = el.getBoundingClientRect();
+        // 当标题进入正文滚动视口上方 120px 范围时标记为当前阅读项
+        if (elRect.top - containerRect.top <= 120) {
+          currentActive = item.id;
+        } else {
+          break;
+        }
+      }
+    }
+    setActiveHeadingId(currentActive);
   }, [tocItems]);
 
-  // 仅在目录导航列表自身内部微调滚动位置，保证超长目录当前项可见，绝不触碰外部 window 的滚动
+  // 目录导航项自适应微调滚动位置，保证超长目录中当前高亮项始终在视野内
   useEffect(() => {
     if (!activeHeadingId || !tocNavRef.current) return;
     const navEl = tocNavRef.current;
@@ -165,7 +298,6 @@ export function MarkdownPreviewView({
       const navScrollTop = navEl.scrollTop;
       const navHeight = navEl.clientHeight;
 
-      // 仅当选中的目录项超出目录面板可视区域时，滚动目录面板内部容器自身
       if (btnTop < navScrollTop) {
         navEl.scrollTo({ top: Math.max(0, btnTop - 16), behavior: "smooth" });
       } else if (btnTop + btnHeight > navScrollTop + navHeight) {
@@ -174,14 +306,16 @@ export function MarkdownPreviewView({
     }
   }, [activeHeadingId]);
 
-  // 点击目录项平滑滚动至标题，并为顶部固定导航栏预留 72px 安全距离
+  // 点击目录项平滑滚动至对应标题
   const scrollToHeading = (id: string) => {
+    const container = contentScrollRef.current;
     const el = document.getElementById(id);
-    if (el) {
-      const elementPosition = el.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.pageYOffset - 72;
-      window.scrollTo({
-        top: Math.max(0, offsetPosition),
+    if (container && el) {
+      const containerRect = container.getBoundingClientRect();
+      const elRect = el.getBoundingClientRect();
+      const relativeTop = elRect.top - containerRect.top + container.scrollTop - 24;
+      container.scrollTo({
+        top: Math.max(0, relativeTop),
         behavior: "smooth",
       });
       setActiveHeadingId(id);
@@ -190,7 +324,7 @@ export function MarkdownPreviewView({
   };
 
   const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    contentScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleCopy = async () => {
@@ -205,16 +339,16 @@ export function MarkdownPreviewView({
   };
 
   return (
-    <div className="flex flex-col min-h-screen w-full max-w-full overflow-x-hidden bg-background text-foreground font-sans">
-      {/* 顶部极简沉浸式阅读顶栏 */}
-      <header className="sticky top-0 z-40 flex items-center justify-between border-b border-border/80 bg-background/90 px-4 py-2.5 backdrop-blur-md">
+    <div className="flex flex-col h-screen w-full overflow-hidden bg-background text-foreground font-sans">
+      {/* 顶部沉浸式阅读导航栏 */}
+      <header className="h-12 border-b border-border/80 bg-background/90 px-4 flex items-center justify-between z-30 shrink-0 backdrop-blur-md">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 shrink-0">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 shrink-0">
             <FileText className="h-4 w-4" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h1 className="text-sm font-bold truncate text-foreground" title={docName}>
+              <h1 className="text-xs font-bold truncate text-foreground max-w-[160px] sm:max-w-xs md:max-w-md" title={docName}>
                 {docName}
               </h1>
               <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-purple-500/10 px-2 py-0.5 text-[10px] font-semibold text-purple-600 dark:text-purple-400 border border-purple-500/20 shrink-0">
@@ -236,22 +370,21 @@ export function MarkdownPreviewView({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          {/* 目录切换按钮 (适用于所有屏幕，尤其是移动端与小屏) */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* 移动端目录抽屉按钮 */}
           {tocItems.length > 0 && (
             <button
               type="button"
               onClick={() => setShowMobileToc((prev) => !prev)}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer",
+                "lg:hidden inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors cursor-pointer",
                 showMobileToc
-                  ? "border-primary bg-primary/10 text-primary"
+                  ? "border-primary/50 bg-primary/10 text-primary"
                   : "border-border bg-card text-foreground hover:bg-muted"
               )}
               title={t({ id: "ToggleToc", message: "Toggle Table of Contents" })}
             >
               <ListTree className="w-3.5 h-3.5 text-primary" />
-              <span className="hidden sm:inline">{t({ id: "TableOfContents", message: "Table of Contents" })}</span>
               <span className="text-[10px] px-1 py-0.2 rounded-full bg-primary/10 text-primary font-semibold">
                 {tocItems.length}
               </span>
@@ -261,7 +394,7 @@ export function MarkdownPreviewView({
           <button
             type="button"
             onClick={handleCopy}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors cursor-pointer"
             title={t({ id: "CopySource", message: "Copy Source" })}
           >
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
@@ -275,61 +408,85 @@ export function MarkdownPreviewView({
           <button
             type="button"
             onClick={onDownload}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 shadow-2xs transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 shadow-2xs transition-colors cursor-pointer"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>{t({ id: "DownloadFile", message: "Download" })}</span>
+            <span className="hidden sm:inline">{t({ id: "DownloadFile", message: "Download" })}</span>
           </button>
         </div>
       </header>
 
-      {/* 主体布局：内容正文与大屏右侧智能浮动目录 */}
-      <div className="flex-1 w-full max-w-7xl mx-auto flex justify-center items-start px-4 py-8 sm:px-8 gap-8 relative">
-        {/* Markdown 正文预览容器 */}
-        <main className="flex-1 max-w-4xl min-w-0">
-          <div
-            ref={containerRef}
-            className="vditor-reset markdown-body w-full overflow-x-auto leading-relaxed text-sm bg-transparent"
-          />
+      {/* 现代双栏主体：左侧正文独立滚动，右侧固定目录栏常驻 */}
+      <div className="flex-1 flex flex-row overflow-hidden w-full relative">
+        {/* 左侧正文独立滚动区 */}
+        <main
+          ref={contentScrollRef}
+          onScroll={handleContentScroll}
+          className="flex-1 h-full overflow-y-auto px-4 py-8 sm:px-8 lg:px-12 scroll-smooth"
+        >
+          <div className="max-w-4xl mx-auto">
+            <div
+              ref={containerRef}
+              className="vditor-reset markdown-body w-full leading-relaxed text-sm bg-transparent"
+            />
+          </div>
         </main>
 
-        {/* 桌面端大屏智能浮动右侧目录 (Sticky TOC: 始终停留在视窗右侧跟随浏览) */}
-        {tocItems.length > 0 && (
-          <aside className="hidden lg:block w-72 shrink-0 sticky top-20">
-            <div className="max-h-[calc(100vh-6rem)] rounded-2xl border border-border/80 bg-card/80 p-4 backdrop-blur-md shadow-xs flex flex-col">
-              <div className="flex items-center justify-between text-xs font-semibold text-foreground mb-3 pb-2 border-b border-border/60 shrink-0">
-                <div className="flex items-center gap-1.5">
-                  <ListTree className="w-4 h-4 text-primary" />
-                  <span>{t({ id: "OnThisPage", message: "On this page" })}</span>
-                </div>
+        {/* 右侧固定大纲目录栏 (Fixed Outline Sidebar：始终在右侧固定展示，与预览模式一致) */}
+        <aside className="hidden lg:flex flex-col w-72 h-full border-l border-border bg-card/60 backdrop-blur-md shrink-0 select-none">
+          <div className="h-10 px-3.5 border-b border-border/60 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+              <ListTree className="w-3.5 h-3.5 text-primary" />
+              <span>{t({ id: "OnThisPage", message: "On this page" })}</span>
+            </div>
+            {tocItems.length > 0 && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={toggleAllCollapse}
+                  className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground px-1.5 py-0.5 rounded hover:bg-muted transition-colors cursor-pointer"
+                  title={
+                    collapsedIds.size > 0
+                      ? t({ id: "ExpandAll", message: "Expand all" })
+                      : t({ id: "CollapseAll", message: "Collapse all" })
+                  }
+                >
+                  <ChevronsUpDown className="w-3 h-3 text-primary" />
+                  <span>
+                    {collapsedIds.size > 0
+                      ? t({ id: "ExpandAll", message: "Expand" })
+                      : t({ id: "CollapseAll", message: "Collapse" })}
+                  </span>
+                </button>
                 <span className="text-[10px] text-muted-foreground font-normal">
                   {tocItems.length}
                 </span>
               </div>
+            )}
+          </div>
 
-              <nav ref={tocNavRef} className="space-y-1 text-xs overflow-y-auto pr-1 flex-1">
-                {tocItems.map((item) => (
-                  <button
-                    key={item.id}
-                    data-toc-id={item.id}
-                    type="button"
-                    onClick={() => scrollToHeading(item.id)}
-                    style={{ paddingLeft: `${Math.max(0, item.level - 1) * 12 + 8}px` }}
-                    className={cn(
-                      "w-full text-left py-1.5 pr-2 rounded-lg transition-all truncate block cursor-pointer",
-                      activeHeadingId === item.id
-                        ? "text-primary font-semibold bg-primary/10 border-l-2 border-primary"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                    )}
-                    title={item.text}
-                  >
-                    {item.text}
-                  </button>
-                ))}
-              </nav>
-            </div>
-          </aside>
-        )}
+          <nav ref={tocNavRef} className="flex-1 overflow-y-auto p-3 space-y-0.5 text-xs">
+            {tocItems.length > 0 ? (
+              tocTree.map((node) => (
+                <TocTreeNodeItem
+                  key={node.id}
+                  node={node}
+                  activeId={activeHeadingId}
+                  collapsedIds={collapsedIds}
+                  onToggleCollapse={toggleCollapse}
+                  onSelect={scrollToHeading}
+                />
+              ))
+            ) : (
+              <div className="h-32 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                <FileQuestion className="w-6 h-6 text-muted-foreground/60" />
+                <span className="text-xs">
+                  {t({ id: "NoHeadingsFound", message: "No headings found in document" })}
+                </span>
+              </div>
+            )}
+          </nav>
+        </aside>
       </div>
 
       {/* 浮动返回顶部按钮 */}
@@ -346,11 +503,11 @@ export function MarkdownPreviewView({
         </div>
       )}
 
-      {/* 移动端/小屏目录抽屉浮层 */}
+      {/* 移动端目录抽屉浮层 */}
       {showMobileToc && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-xs animate-in fade-in">
-          <div className="w-80 max-w-[85vw] h-full bg-card border-l border-border p-5 flex flex-col shadow-2xl animate-in slide-in-from-right">
-            <div className="flex items-center justify-between pb-3 border-b border-border/60 mb-4">
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-xs animate-in fade-in lg:hidden">
+          <div className="w-80 max-w-[85vw] h-full bg-card border-l border-border p-4 flex flex-col shadow-2xl animate-in slide-in-from-right">
+            <div className="flex items-center justify-between pb-3 border-b border-border/60 mb-3">
               <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                 <ListTree className="w-4 h-4 text-primary" />
                 <span>{t({ id: "TableOfContents", message: "Table of Contents" })}</span>
@@ -364,25 +521,26 @@ export function MarkdownPreviewView({
               </button>
             </div>
 
-            <nav className="flex-1 overflow-y-auto space-y-1.5 text-xs pr-1">
-              {tocItems.map((item) => (
-                <button
-                  key={item.id}
-                  data-toc-id={item.id}
-                  type="button"
-                  onClick={() => scrollToHeading(item.id)}
-                  style={{ paddingLeft: `${Math.max(0, item.level - 1) * 12 + 8}px` }}
-                  className={cn(
-                    "w-full flex items-center justify-between py-2 pr-2 rounded-xl transition-all text-left cursor-pointer",
-                    activeHeadingId === item.id
-                      ? "bg-primary/10 text-primary font-semibold border-l-2 border-primary"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  )}
-                >
-                  <span className="truncate">{item.text}</span>
-                  <ChevronRight className="w-3.5 h-3.5 shrink-0 opacity-50" />
-                </button>
-              ))}
+            <nav className="flex-1 overflow-y-auto space-y-0.5 text-xs pr-1">
+              {tocItems.length > 0 ? (
+                tocTree.map((node) => (
+                  <TocTreeNodeItem
+                    key={node.id}
+                    node={node}
+                    activeId={activeHeadingId}
+                    collapsedIds={collapsedIds}
+                    onToggleCollapse={toggleCollapse}
+                    onSelect={scrollToHeading}
+                  />
+                ))
+              ) : (
+                <div className="h-32 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                  <FileQuestion className="w-6 h-6 text-muted-foreground/60" />
+                  <span className="text-xs">
+                    {t({ id: "NoHeadingsFound", message: "No headings found in document" })}
+                  </span>
+                </div>
+              )}
             </nav>
           </div>
         </div>

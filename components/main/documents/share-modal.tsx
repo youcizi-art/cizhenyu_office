@@ -311,15 +311,23 @@ export function ShareModal({
               </div>
 
               <div className="space-y-1.5 pt-1">
-                <input
-                  type="range"
-                  min={0}
-                  max={168}
-                  step={1}
-                  value={expiresInHours}
-                  onChange={(e) => setExpiresInHours(Number(e.target.value))}
-                  className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
-                />
+                {(() => {
+                  const sliderPercentage = Math.min(100, Math.max(0, (expiresInHours / 168) * 100));
+                  return (
+                    <input
+                      type="range"
+                      min={0}
+                      max={168}
+                      step={1}
+                      value={expiresInHours}
+                      onChange={(e) => setExpiresInHours(Number(e.target.value))}
+                      style={{
+                        background: `linear-gradient(to right, var(--primary) 0%, var(--primary) ${sliderPercentage}%, var(--muted) ${sliderPercentage}%, var(--muted) 100%)`,
+                      }}
+                      className="w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-primary transition-all"
+                    />
+                  );
+                })()}
                 <div className="flex items-center justify-between text-[10px] text-muted-foreground px-0.5">
                   <span>{t({ id: "Permanent", message: "Permanent" })}</span>
                   <span>1{t({ id: "DayShort", message: "d" })} (24h)</span>

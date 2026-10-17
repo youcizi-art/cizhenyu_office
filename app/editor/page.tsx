@@ -13,14 +13,12 @@ import io, { MockSocket } from "@/utils/editor/socket";
 import { createFetchProxy } from "@/utils/editor/fetch";
 import { createXHRProxy } from "@/utils/editor/xhr";
 import { DocEditor } from "@/utils/editor/types";
-import { emptyDocx } from "@/utils/editor/empty";
 import {
   fetchDocumentsAndCategories,
   getDocumentContentBlob,
   updateDocumentContent,
   saveNewDocument,
   createCategory,
-  DocumentMeta,
   Category,
   DocumentType,
 } from "@/lib/api";
@@ -28,19 +26,16 @@ import { toast } from "sonner";
 import { AuthGuard } from "@/components/auth-guard";
 import { Toaster } from "@/components/ui/sonner";
 import { MarkdownEditor } from "@/components/editor/markdown-editor";
+import { UnsavedChangesDialog } from "@/components/editor/unsaved-changes-dialog";
+import { FirstSaveModal } from "@/components/editor/first-save-modal";
 import {
   ArrowLeft,
   Save,
   Download,
-  Cloud,
-  Check,
-  FolderPlus,
   Loader2,
   FileText,
-  FileEdit,
   FileCode2,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { useExtracted } from "next-intl";
 
 function EditorWorkspace() {
@@ -58,7 +53,6 @@ function EditorWorkspace() {
   const [docTitle, setDocTitle] = useState<string>("未命名文档");
   const [docType, setDocType] = useState<DocumentType>("docx");
   const [isSaving, setIsSaving] = useState<boolean>(false);
-  const [isConverting, setIsConverting] = useState<boolean>(false);
   const [categories, setCategories] = useState<Category[]>([]);
 
   // Markdown 专有状态
@@ -70,9 +64,11 @@ function EditorWorkspace() {
   const [saveModalOpen, setSaveModalOpen] = useState<boolean>(false);
   const [inputName, setInputName] = useState<string>("");
   const [selectedCatId, setSelectedCatId] = useState<string | null>(null);
-  const [newCatName, setNewCatName] = useState<string>("");
-  const [showNewCatInput, setShowNewCatInput] = useState<boolean>(false);
   const pendingBufferRef = useRef<Uint8Array | null>(null);
+
+  // 未保存退出确认弹窗状态与退出标记
+  const [unsavedDialogOpen, setUnsavedDialogOpen] = useState<boolean>(false);
+  const pendingExitAfterSaveRef = useRef<boolean>(false);
 
   // 全局拦截 window.alert 为统一 UI 弹窗 (Sonner Toast)
   useEffect(() => {
@@ -102,6 +98,10 @@ function EditorWorkspace() {
           await updateDocumentContent(currentDocId, buffer.buffer as ArrayBuffer);
           isDirty.current = false;
           toast.success(t({ id: "SavedToR2Success", message: "Successfully saved to Cloudflare R2" }));
+          if (pendingExitAfterSaveRef.current) {
+            pendingExitAfterSaveRef.current = false;
+            router.push("/documents");
+          }
         } else {
           // 新建文档首次保存：弹出归档对话框
           pendingBufferRef.current = buffer;
@@ -113,6 +113,7 @@ function EditorWorkspace() {
           setSaveModalOpen(true);
         }
       } catch (err) {
+        pendingExitAfterSaveRef.current = false;
         toast.error(t({ id: "FirstSaveFailed", message: "Save failed: " }) + String(err));
       } finally {
         setIsSaving(false);
@@ -124,6 +125,7 @@ function EditorWorkspace() {
       setIsSaving(true);
       window.editor.downloadAs();
     } else {
+      pendingExitAfterSaveRef.current = false;
       toast.info(t({ id: "EditorStillLoading", message: "Editor is still loading, please wait..." }));
     }
   };
@@ -140,7 +142,7 @@ function EditorWorkspace() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [docType, docId, docTitle]);
 
-  // 页面关闭前检查未保存修改 (使用现代 pagehide/beforeunload 规避 unload 废弃警告)
+  // 页面关闭前检查未保存修改
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (isDirty.current) {
@@ -175,6 +177,36 @@ function EditorWorkspace() {
     if (window.editor?.downloadAs) {
       window.editor.downloadAs();
     }
+  };
+
+  // 点击左上角“返回文档库”处理未保存拦截
+  const handleBackToDocuments = () => {
+    if (isDirty.current) {
+      setUnsavedDialogOpen(true);
+    } else {
+      router.push("/documents");
+    }
+  };
+
+  // 用户确认“放弃修改并离开”
+  const handleDiscardAndExit = () => {
+    isDirty.current = false;
+    pendingExitAfterSaveRef.current = false;
+    setUnsavedDialogOpen(false);
+    router.push("/documents");
+  };
+
+  // 用户确认“保存并离开”
+  const handleSaveAndExit = async () => {
+    pendingExitAfterSaveRef.current = true;
+    setUnsavedDialogOpen(false);
+    await handleTriggerSave();
+  };
+
+  // 取消退出继续编辑
+  const handleCancelExit = () => {
+    pendingExitAfterSaveRef.current = false;
+    setUnsavedDialogOpen(false);
   };
 
   useLayoutEffect(() => {
@@ -242,12 +274,16 @@ function EditorWorkspace() {
               })
             );
           }
+
+          if (pendingExitAfterSaveRef.current) {
+            pendingExitAfterSaveRef.current = false;
+            router.push("/documents");
+          }
           return true;
         } else {
           // 新建文档首次保存：弹出归档对话框
           pendingBufferRef.current = buffer;
           setInputName(title.replace(/\.[^/.]+$/, "") || t({ id: "UntitledDocument", message: "Untitled Document" }));
-          // 加载分类列表
           try {
             const meta = await fetchDocumentsAndCategories();
             setCategories(meta.categories || []);
@@ -256,6 +292,7 @@ function EditorWorkspace() {
           return true;
         }
       } catch (err) {
+        pendingExitAfterSaveRef.current = false;
         toast.error(t({ id: "FirstSaveFailed", message: "Save failed: " }) + String(err));
         return false;
       } finally {
@@ -392,7 +429,6 @@ function EditorWorkspace() {
       if (paramDocId) {
         try {
           setDocId(paramDocId);
-          // 获取文档信息
           const metaRes = await fetchDocumentsAndCategories();
           const currentMeta = metaRes.documents.find((d) => d.id === paramDocId);
           const name = currentMeta ? currentMeta.name : "在线文档";
@@ -412,7 +448,7 @@ function EditorWorkspace() {
             );
           }
 
-          // 如果是 Markdown 文档：直接以 UTF-8 文本载入 Markdown 工作台，无需加载庞大的 OnlyOffice
+          // 如果是 Markdown 文档：直接以 UTF-8 文本载入 Markdown 工作台
           if (type === "md") {
             setIsMdLoading(true);
             const blob = await getDocumentContentBlob(paramDocId);
@@ -494,7 +530,13 @@ function EditorWorkspace() {
       // 静默修改当前浏览器 URL 为正式云端文档地址，不触发重刷
       window.history.replaceState(null, "", `/editor?docId=${newDoc.id}`);
       toast.success(t({ id: "SavedToR2Success", message: "Successfully saved to Cloudflare R2" }));
+
+      if (pendingExitAfterSaveRef.current) {
+        pendingExitAfterSaveRef.current = false;
+        router.push("/documents");
+      }
     } catch (err) {
+      pendingExitAfterSaveRef.current = false;
       toast.error(t({ id: "FirstSaveFailed", message: "First save failed: " }) + String(err));
     } finally {
       setIsSaving(false);
@@ -502,259 +544,139 @@ function EditorWorkspace() {
   };
 
   // 弹窗中即时新建子分类
-  const handleCreateNewCategoryInModal = async () => {
-    const name = newCatName.trim();
-    if (!name) return;
+  const handleCreateNewCategoryInModal = async (name: string) => {
     try {
       const cat = await createCategory(name, selectedCatId);
       setCategories((prev) => [...prev, cat]);
       setSelectedCatId(cat.id);
-      setNewCatName("");
-      setShowNewCatInput(false);
       toast.success(t({ id: "CategoryCreated", message: "Category created" }));
     } catch (err) {
       toast.error(t({ id: "CreateCategoryFailed", message: "Failed to create category: " }) + String(err));
+      throw err;
     }
   };
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-background text-foreground font-sans">
-        {/* 顶部极简状态控制栏 */}
-        <header className="h-12 border-b border-border bg-card/80 backdrop-blur-md px-4 flex items-center justify-between z-30 shrink-0">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => router.push("/documents")}
-              className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-lg hover:bg-muted cursor-pointer"
-              title={t({ id: "BackToDocuments", message: "Back to Documents" })}
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>{t({ id: "Documents", message: "Documents" })}</span>
-            </button>
+      {/* 顶部极简状态控制栏 */}
+      <header className="h-12 border-b border-border bg-card/80 backdrop-blur-md px-4 flex items-center justify-between z-30 shrink-0">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleBackToDocuments}
+            className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-lg hover:bg-muted cursor-pointer"
+            title={t({ id: "BackToDocuments", message: "Back to Documents" })}
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>{t({ id: "Documents", message: "Documents" })}</span>
+          </button>
 
-            <div className="h-4 w-px bg-border" />
-
-            <div className="flex items-center gap-2">
-              {docType === "md" ? (
-                <FileCode2 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-              ) : (
-                <FileText className="w-4 h-4 text-primary" />
-              )}
-              <span className="text-xs font-semibold text-foreground truncate max-w-[200px] md:max-w-md">
-                {docTitle}
-              </span>
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                {t({ id: "R2Sync", message: "R2 Sync" })}
-              </span>
-            </div>
-          </div>
+          <div className="h-4 w-px bg-border" />
 
           <div className="flex items-center gap-2">
-
-            <button
-              onClick={handleTriggerSave}
-              disabled={isSaving}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-medium rounded-lg shadow-xs hover:bg-primary/90 transition-all cursor-pointer disabled:opacity-50"
-              title={t({ id: "SaveToCloud", message: "Save to Cloud (Ctrl+S)" })}
-            >
-              {isSaving ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Save className="w-3.5 h-3.5" />
-              )}
-              <span>
-                {isSaving
-                  ? t({ id: "Saving", message: "Saving..." })
-                  : t({ id: "SaveToCloud", message: "Save to Cloud (Ctrl+S)" })}
-              </span>
-            </button>
-
-            <button
-              onClick={handleTriggerDownload}
-              className="flex items-center gap-1 px-2.5 py-1.5 border border-border text-xs text-foreground font-medium rounded-lg hover:bg-muted transition-colors cursor-pointer"
-              title={t({ id: "DownloadToLocal", message: "Download to Local" })}
-            >
-              <Download className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="hidden md:inline">{t({ id: "DownloadToLocal", message: "Download to Local" })}</span>
-            </button>
-          </div>
-        </header>
-
-        {/* 编辑器主体容器：如果为 md 则渲染现代化沉浸式 Markdown 工作台，否则渲染 OnlyOffice */}
-        {docType === "md" ? (
-          <div className="w-full h-[calc(100vh-48px)] relative overflow-hidden bg-background">
-            {isMdLoading ? (
-              <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-muted-foreground">
-                <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                <span className="text-xs">{t({ id: "LoadingCloudDoc", message: "Loading document from R2..." })}</span>
-              </div>
+            {docType === "md" ? (
+              <FileCode2 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
             ) : (
-              <MarkdownEditor
-                initialContent={markdownContent}
-                onChange={(val) => {
-                  markdownContentRef.current = val;
-                  isDirty.current = true;
-                }}
-                onSave={handleTriggerSave}
-              />
+              <FileText className="w-4 h-4 text-primary" />
             )}
+            <span className="text-xs font-semibold text-foreground truncate max-w-[200px] md:max-w-md">
+              {docTitle}
+            </span>
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              {t({ id: "R2Sync", message: "R2 Sync" })}
+            </span>
           </div>
-        ) : (
-          <div className="w-full h-[calc(100vh-48px)] relative overflow-hidden">
-            <div id="placeholder" className="w-full h-full">
-              <iframe
-                className="w-0 h-0 hidden"
-                src={APP_ROOT + PRELOAD_HTML}
-              />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleTriggerSave}
+            disabled={isSaving}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-medium rounded-lg shadow-xs hover:bg-primary/90 transition-all cursor-pointer disabled:opacity-50"
+            title={t({ id: "SaveToCloud", message: "Save to Cloud (Ctrl+S)" })}
+          >
+            {isSaving ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Save className="w-3.5 h-3.5" />
+            )}
+            <span>
+              {isSaving
+                ? t({ id: "Saving", message: "Saving..." })
+                : t({ id: "SaveToCloud", message: "Save to Cloud (Ctrl+S)" })}
+            </span>
+          </button>
+
+          <button
+            onClick={handleTriggerDownload}
+            className="flex items-center gap-1 px-2.5 py-1.5 border border-border text-xs text-foreground font-medium rounded-lg hover:bg-muted transition-colors cursor-pointer"
+            title={t({ id: "DownloadToLocal", message: "Download to Local" })}
+          >
+            <Download className="w-3.5 h-3.5 text-muted-foreground" />
+            <span className="hidden md:inline">{t({ id: "DownloadToLocal", message: "Download to Local" })}</span>
+          </button>
+        </div>
+      </header>
+
+      {/* 编辑器主体容器：如果为 md 则渲染现代化沉浸式 Markdown 工作台，否则渲染 OnlyOffice */}
+      {docType === "md" ? (
+        <div className="w-full h-[calc(100vh-48px)] relative overflow-hidden bg-background">
+          {isMdLoading ? (
+            <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-muted-foreground">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              <span className="text-xs">{t({ id: "LoadingCloudDoc", message: "Loading document from R2..." })}</span>
             </div>
+          ) : (
+            <MarkdownEditor
+              initialContent={markdownContent}
+              onChange={(val) => {
+                markdownContentRef.current = val;
+                isDirty.current = true;
+              }}
+              onSave={handleTriggerSave}
+            />
+          )}
+        </div>
+      ) : (
+        <div className="w-full h-[calc(100vh-48px)] relative overflow-hidden">
+          <div id="placeholder" className="w-full h-full">
+            <iframe
+              className="w-0 h-0 hidden"
+              src={APP_ROOT + PRELOAD_HTML}
+            />
           </div>
-        )}
+        </div>
+      )}
 
-        {/* 首次保存归档选择弹窗 (支持树形选择与现场新建分类) */}
-        {saveModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
-            <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl animate-in fade-in zoom-in-95">
-              <div className="flex items-center gap-2.5 mb-2">
-                <div className="p-2 rounded-xl bg-primary/10 text-primary">
-                  <Cloud className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="text-base font-bold text-foreground">
-                    {t({ id: "SaveToR2OnlineDoc", message: "Save to R2 Cloud Storage" })}
-                  </h2>
-                  <p className="text-xs text-muted-foreground">
-                    {t({ id: "FirstSaveDesc", message: "Choose document name and category. Future Ctrl+S will auto-save silently." })}
-                  </p>
-                </div>
-              </div>
+      {/* 首次保存归档选择弹窗 (已抽取为独立子组件) */}
+      <FirstSaveModal
+        open={saveModalOpen}
+        isSaving={isSaving}
+        inputName={inputName}
+        setInputName={setInputName}
+        selectedCatId={selectedCatId}
+        setSelectedCatId={setSelectedCatId}
+        categories={categories}
+        onConfirmSave={handleConfirmFirstSave}
+        onCreateCategory={handleCreateNewCategoryInModal}
+        onClose={() => {
+          setSaveModalOpen(false);
+          pendingBufferRef.current = null;
+          pendingExitAfterSaveRef.current = false;
+        }}
+      />
 
-              <form onSubmit={handleConfirmFirstSave} className="space-y-4 mt-4">
-                <div>
-                  <label className="block text-xs font-medium text-foreground mb-1">
-                    {t({ id: "DocNameLabel", message: "Document Name" })}
-                  </label>
-                  <input
-                    type="text"
-                    value={inputName}
-                    onChange={(e) => setInputName(e.target.value)}
-                    placeholder={t({ id: "DocNamePlaceholderExample", message: "e.g., Annual Business Plan" })}
-                    required
-                    autoFocus
-                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-hidden"
-                  />
-                </div>
+      {/* 未保存修改退出拦截弹窗 (覆盖 Word/Excel/PPT/Markdown) */}
+      <UnsavedChangesDialog
+        open={unsavedDialogOpen}
+        isSaving={isSaving}
+        onSaveAndExit={handleSaveAndExit}
+        onDiscardAndExit={handleDiscardAndExit}
+        onCancel={handleCancelExit}
+      />
 
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs font-medium text-foreground">
-                      {t({ id: "SaveCategoryLabel", message: "Save Category / Folder" })}
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setShowNewCatInput(!showNewCatInput)}
-                      className="text-xs text-primary hover:underline flex items-center gap-1 cursor-pointer"
-                    >
-                      <FolderPlus className="w-3.5 h-3.5" />
-                      {t({ id: "NewCategory", message: "New Category" })}
-                    </button>
-                  </div>
-
-                  {showNewCatInput && (
-                    <div className="flex items-center gap-2 mb-2 p-2 rounded-lg bg-muted/60 border border-border">
-                      <input
-                        type="text"
-                        value={newCatName}
-                        onChange={(e) => setNewCatName(e.target.value)}
-                        placeholder={t({ id: "CategoryNamePlaceholder", message: "Enter category name..." })}
-                        className="flex-1 rounded-md border border-border bg-background px-2.5 py-1 text-xs text-foreground focus:outline-hidden"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleCreateNewCategoryInModal}
-                        className="px-2.5 py-1 bg-primary text-primary-foreground text-xs rounded-md font-medium cursor-pointer"
-                      >
-                        {t({ id: "Save", message: "Save" })}
-                      </button>
-                    </div>
-                  )}
-
-                  {/* 递归树形选择目录 */}
-                  <div className="max-h-48 overflow-y-auto space-y-1 border border-border rounded-xl p-2 bg-background">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedCatId(null)}
-                      className={cn(
-                        "w-full text-left px-3 py-1.5 text-xs rounded-lg transition-colors flex items-center justify-between cursor-pointer",
-                        selectedCatId === null
-                          ? "bg-primary/10 text-primary font-bold"
-                          : "hover:bg-muted text-foreground"
-                      )}
-                    >
-                      <span>📁 {t({ id: "RootDirectory", message: "Uncategorized (Root)" })}</span>
-                      {selectedCatId === null && <Check className="w-3.5 h-3.5" />}
-                    </button>
-
-                    {categories.map((c) => {
-                      let level = 0;
-                      let cur: Category | undefined = c;
-                      while (cur?.parentId) {
-                        level++;
-                        cur = categories.find((p) => p.id === cur?.parentId);
-                      }
-                      const isSelected = selectedCatId === c.id;
-                      return (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onClick={() => setSelectedCatId(c.id)}
-                          style={{ paddingLeft: `${12 + level * 16}px` }}
-                          className={cn(
-                            "w-full text-left pr-3 py-1.5 text-xs rounded-lg transition-colors flex items-center justify-between cursor-pointer",
-                            isSelected
-                              ? "bg-primary/10 text-primary font-bold"
-                              : "hover:bg-muted text-foreground"
-                          )}
-                        >
-                          <span>📁 {c.name}</span>
-                          {isSelected && <Check className="w-3.5 h-3.5" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSaveModalOpen(false);
-                      pendingBufferRef.current = null;
-                    }}
-                    className="px-3.5 py-2 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
-                  >
-                    {t({ id: "Cancel", message: "Cancel" })}
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSaving}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-xs font-medium rounded-xl shadow-sm hover:bg-primary/90 transition-all cursor-pointer disabled:opacity-50"
-                  >
-                    {isSaving ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Cloud className="w-3.5 h-3.5" />
-                    )}
-                    <span>{t({ id: "ConfirmSaveToCloud", message: "Confirm Save to Cloud" })}</span>
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-
-        <Toaster position="top-center" richColors />
-      </div>
+      <Toaster position="top-center" richColors />
+    </div>
   );
 }
 

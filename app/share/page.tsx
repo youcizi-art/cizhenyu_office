@@ -234,12 +234,25 @@ function ShareDownloadContent() {
     }
   };
 
-  // 防止页面横向溢出
+  // 防止页面横向溢出，并严禁公开分享页面弹出任何安装提示
   useEffect(() => {
     const prev = document.body.style.overflowX;
     document.body.style.overflowX = "hidden";
+
+    // 移除 manifest 链接并拦截 beforeinstallprompt
+    const manifest = document.querySelector('link[rel="manifest"]');
+    if (manifest) {
+      manifest.remove();
+    }
+    const blockInstall = (e: Event) => {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    };
+    window.addEventListener("beforeinstallprompt", blockInstall, true);
+
     return () => {
       document.body.style.overflowX = prev;
+      window.removeEventListener("beforeinstallprompt", blockInstall, true);
     };
   }, []);
 

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Search, Upload, X, Tag, Move } from "lucide-react";
+import { Search, Upload, X, Tag } from "lucide-react";
 import { useExtracted } from "next-intl";
 import { cn } from "@/lib/utils";
 
@@ -199,17 +199,6 @@ export function DocumentsToolbar({
           ))}
         </div>
       )}
-
-      {/* 提示与拖拽辅助说明条 (仅桌面端展示，移动端直接隐藏节省空间) */}
-      <div className="hidden md:flex px-4 py-1.5 bg-muted/10 border-b border-border/40 items-center justify-between text-[11px] text-muted-foreground">
-        <div className="flex items-center gap-1.5">
-          <Move className="w-3 h-3 text-primary" />
-          <span>{t({ id: "DragHint", message: "Hold card for 0.25s to drag and reorder" })}</span>
-        </div>
-        <span>
-          {t("{count} documents", { count: String(totalCount) })}
-        </span>
-      </div>
     </>
   );
 }
