@@ -455,5 +455,17 @@
   "DayShort": "d",
   "DaysShort": "d",
   "DaysUnit": "days",
-  "HoursUnit": "hours"
+  "HoursUnit": "hours",
+  "Desktop Application": "Desktop Application",
+  "Desktop App Active": "Desktop App Active",
+  "Install CIZHENYU Office": "Install CIZHENYU Office",
+  "Installed": "Installed",
+  "Install to Desktop": "Install to Desktop",
+  "Update App": "Update App",
+  "Updating...": "Updating...",
+  "CIZHENYU Office is installed as a standalone desktop application. Click Update App to force-reload latest assets and clear cache, identical to pressing Ctrl + F5.": "CIZHENYU Office is installed as a standalone desktop application. Click Update App to force-reload latest assets and clear cache, identical to pressing Ctrl + F5.",
+  "Install CIZHENYU Office directly to your desktop or home screen for quick launch and a distraction-free window experience.": "Install CIZHENYU Office directly to your desktop or home screen for quick launch and a distraction-free window experience.",
+  "PwaInstallSuccess": "Application installed to desktop successfully",
+  "PwaInstallManualHint": "Please click the install icon in your browser address bar or use 'Add to Home Screen' in the browser menu.",
+  "UpdatingApp": "Updating application and performing a hard refresh..."
 }

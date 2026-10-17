@@ -9,6 +9,11 @@ import {
   Star,
   Layers,
   ShieldOff,
+  Monitor,
+  Download,
+  RefreshCw,
+  CheckCircle2,
+  Loader2,
 } from "lucide-react";
 import * as Illustration from "@/components/svg";
 import { useExtracted } from "next-intl";
@@ -24,6 +29,7 @@ import {
 import { OfficeTheme } from "@/utils/editor/types";
 import { isDarkTheme } from "@/utils/utils";
 import { usePageTitle } from "@/hooks/use-page-title";
+import { usePwa } from "@/hooks/use-pwa";
 
 // Get display name for a language code
 function getLanguageLabel(code: Language): string {
@@ -45,6 +51,7 @@ export function SettingsView() {
   const t = useExtracted();
   usePageTitle(t("Settings — CIZHENYU Office"));
   const { language, theme, plugins, setState } = useAppStore();
+  const { isInstalled, isUpdating, installApp, updateApp } = usePwa();
 
   const themes: {
     id: OfficeTheme;
@@ -227,6 +234,67 @@ export function SettingsView() {
                 </div>
               </button>
             ))}
+          </div>
+        </section>
+
+        {/* Desktop Application Section (PWA) */}
+        <section className="space-y-4">
+          <div className="flex items-center gap-2 text-lg font-semibold">
+            <Monitor className="w-5 h-5 text-primary" />
+            <h2>{t("Desktop Application")}</h2>
+          </div>
+          <div className="p-5 rounded-2xl border border-border bg-card/60 backdrop-blur-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-sm text-foreground">
+                  {isInstalled ? t("Desktop App Active") : t("Install CIZHENYU Office")}
+                </span>
+                {isInstalled && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                    <CheckCircle2 className="w-3 h-3" />
+                    <span>{t("Installed")}</span>
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-text-secondary leading-relaxed max-w-xl">
+                {isInstalled
+                  ? t(
+                      "CIZHENYU Office is installed as a standalone desktop application. Click Update App to force-reload latest assets and clear cache, identical to pressing Ctrl + F5."
+                    )
+                  : t(
+                      "Install CIZHENYU Office directly to your desktop or home screen for quick launch and a distraction-free window experience."
+                    )}
+              </p>
+            </div>
+
+            <div className="shrink-0 flex items-center">
+              {!isInstalled ? (
+                <button
+                  type="button"
+                  onClick={installApp}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-xs shadow-md hover:bg-primary/90 active:scale-[0.98] transition-all cursor-pointer"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>{t("Install to Desktop")}</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={isUpdating}
+                  onClick={updateApp}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-xs shadow-md hover:bg-primary/90 active:scale-[0.98] disabled:opacity-70 transition-all cursor-pointer"
+                >
+                  {isUpdating ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-4 h-4" />
+                  )}
+                  <span>
+                    {isUpdating ? t("Updating...") : t("Update App")}
+                  </span>
+                </button>
+              )}
+            </div>
           </div>
         </section>
       </div>

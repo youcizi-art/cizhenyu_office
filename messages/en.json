@@ -265,6 +265,15 @@
   "rET/Cl": "Load Featured Plugins",
   "mfU/qe": "Load All Plugins",
   "6PEpzR": "Disable Plugins",
+  "NfVGzD": "Desktop Application",
+  "hux/8C": "Desktop App Active",
+  "ZcnNzD": "Install CIZHENYU Office",
+  "V22724": "Installed",
+  "Bgdl5n": "CIZHENYU Office is installed as a standalone desktop application. Click Update App to force-reload latest assets and clear cache, identical to pressing Ctrl + F5.",
+  "c4gK6V": "Install CIZHENYU Office directly to your desktop or home screen for quick launch and a distraction-free window experience.",
+  "VDoCgz": "Install to Desktop",
+  "oP+D47": "Updating...",
+  "NEMhhh": "Update App",
   "lgDYNz": "Changing these settings will affect the OnlyOffice editor interface. Some changes may require reloading the editor to take full effect.",
   "bW7B87": "New",
   "3vZA+I": "Free Office Templates — Word, Excel & PowerPoint | CIZHENYU Office",
@@ -279,5 +288,8 @@
   "F03jGl": "No templates found matching your criteria.",
   "jKKg2o": "Clear all filters",
   "Download": "Download",
-  "AudioPreview": "Audio Online Playback"
+  "AudioPreview": "Audio Online Playback",
+  "PwaInstallSuccess": "Application installed to desktop successfully",
+  "PwaInstallManualHint": "Please click the install icon in your browser address bar or use 'Add to Home Screen' in the browser menu.",
+  "UpdatingApp": "Updating application and performing a hard refresh..."
 }

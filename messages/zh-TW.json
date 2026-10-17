@@ -456,5 +456,17 @@
   "DayShort": "天",
   "DaysShort": "天",
   "DaysUnit": "天",
-  "HoursUnit": "小時"
+  "HoursUnit": "小時",
+  "Desktop Application": "桌面應用",
+  "Desktop App Active": "桌面應用已就緒",
+  "Install CIZHENYU Office": "安裝 CIZHENYU Office",
+  "Installed": "已安裝",
+  "Install to Desktop": "安裝到桌面",
+  "Update App": "更新應用",
+  "Updating...": "正在更新...",
+  "CIZHENYU Office is installed as a standalone desktop application. Click Update App to force-reload latest assets and clear cache, identical to pressing Ctrl + F5.": "CIZHENYU Office 已作為獨立桌面應用程式安裝。點擊「更新應用」將清空本機快取並強制取得最新版本（效果等同於按下 Ctrl + F5）。",
+  "Install CIZHENYU Office directly to your desktop or home screen for quick launch and a distraction-free window experience.": "將 CIZHENYU Office 直接安裝到桌面或主畫面，享受快速啟動與無干擾的獨立視窗體驗。",
+  "PwaInstallSuccess": "應用已成功安裝到桌面",
+  "PwaInstallManualHint": "請點擊瀏覽器網址列右側的安裝圖示，或在瀏覽器選單中使用「新增至主畫面/安裝此應用」。",
+  "UpdatingApp": "正在更新應用並執行強制重新整理..."
 }

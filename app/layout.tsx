@@ -3,12 +3,14 @@ import { GoogleAnalytics } from '@next/third-parties/google'
 import { getMessages } from "next-intl/server";
 import { I18nProvider } from "@/components/i18n-provider";
 import { ProgressProvider } from "@/components/progress-provider";
+import { PwaRegistrar } from "@/components/pwa-registrar";
 import "./globals.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://office.example.com";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
+  manifest: "/manifest.json",
   title: {
     default: "CIZHENYU Office — 在线 Word, Excel & PowerPoint 编辑器",
     template: "%s",
@@ -97,6 +99,7 @@ export default async function RootLayout({
   return (
     <html suppressHydrationWarning>
       <head>
+        <meta name="theme-color" content="#0f172a" />
         <script>{`(${preload.toString()})()`}</script>
         <script
           type="application/ld+json"
@@ -104,6 +107,7 @@ export default async function RootLayout({
         />
       </head>
       <body>
+        <PwaRegistrar />
         <ProgressProvider>
           <I18nProvider initialMessages={messages}>{children}</I18nProvider>
         </ProgressProvider>
