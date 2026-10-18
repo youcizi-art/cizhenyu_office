@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { X, Zap } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/hooks/use-i18n";
 import { isExtensionAvailable, EXTENSION_STORE_URL } from "@/utils/extension";
 
 const STORAGE_KEY = "dismiss:get_ext";

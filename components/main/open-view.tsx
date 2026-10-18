@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FolderOpen, Clock, Cloud, ArrowRight, Loader2, Sparkles } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/hooks/use-i18n";
 import { cn } from "@/lib/utils";
 import { FilePickerCard } from "@/components/file-picker-card";
 import { DocumentIcon } from "@/components/document-icon";

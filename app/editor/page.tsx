@@ -36,7 +36,7 @@ import {
   FileText,
   FileCode2,
 } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/hooks/use-i18n";
 
 function EditorWorkspace() {
   const t = useExtracted();

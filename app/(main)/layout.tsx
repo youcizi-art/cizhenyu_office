@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/hooks/use-i18n";
 import { Header } from "@/components/main/header";
 import { Sidebar } from "@/components/main/sidebar";
 import { DragDropOverlay } from "@/components/drag-drop-overlay";

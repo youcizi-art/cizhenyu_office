@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/hooks/use-i18n";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];

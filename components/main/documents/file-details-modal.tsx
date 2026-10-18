@@ -16,7 +16,7 @@ import {
   AlertCircle,
   File as FileGeneric,
 } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/hooks/use-i18n";
 import { DocumentMeta, Category } from "@/lib/api";
 import { getDocConfig } from "@/lib/document-types";
 import { formatRelativeTime } from "@/utils/recent-files";

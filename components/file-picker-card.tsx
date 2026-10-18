@@ -2,7 +2,7 @@
 
 import { Upload, FileText, FolderOpen, Download } from "lucide-react";
 import { useRef, useState, useEffect } from "react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/hooks/use-i18n";
 
 interface FilePickerCardProps {
   onFileSelect?: (file: File) => void;

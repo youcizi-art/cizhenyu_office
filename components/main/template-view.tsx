@@ -10,7 +10,7 @@ import {
   Presentation,
   Loader2,
 } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/hooks/use-i18n";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/store";

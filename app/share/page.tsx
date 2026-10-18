@@ -14,7 +14,7 @@ import {
   ShieldCheck,
   Eye,
 } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/hooks/use-i18n";
 import { toast } from "sonner";
 import { getDocConfig } from "@/lib/document-types";
 import {

@@ -11,7 +11,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/hooks/use-i18n";
 import { cn } from "@/lib/utils";
 import { getNewUrl } from "@/utils/editor/utils";
 import { getDocConfig } from "@/lib/document-types";

@@ -16,7 +16,7 @@ import {
   AlertTriangle,
   Folder,
 } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/hooks/use-i18n";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Category, DocumentMeta } from "@/lib/api";

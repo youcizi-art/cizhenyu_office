@@ -6,7 +6,7 @@ import "vditor/dist/index.css";
 import { Sparkles, Zap, Columns, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useResolvedLanguage } from "@/store";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/hooks/use-i18n";
 import { toast } from "sonner";
 import { htmlToMarkdown } from "@/utils/editor/markdown-paste";
 

@@ -11,7 +11,7 @@ import {
 import Image from "next/image";
 import React, { useState, PropsWithChildren } from "react";
 import { useRouter } from "next/navigation";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/hooks/use-i18n";
 import { cn } from "@/lib/utils";
 
 import { useAuth } from "@/components/auth-guard";

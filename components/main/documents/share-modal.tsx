@@ -13,7 +13,7 @@ import {
   Loader2,
   Clock,
 } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/hooks/use-i18n";
 import { cn } from "@/lib/utils";
 import { DocumentMeta } from "@/lib/api";
 

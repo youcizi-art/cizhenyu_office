@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Tag, X } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/hooks/use-i18n";
 import { DocumentMeta } from "@/lib/api";
 
 interface TagsModalProps {

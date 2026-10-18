@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/hooks/use-i18n";
 import { FolderOpen, Cloud, Settings, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 

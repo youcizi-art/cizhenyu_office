@@ -75,12 +75,18 @@ export function I18nProvider({ children, initialMessages }: I18nProviderProps) {
       messages={messages}
       timeZone={getTimeZone(currentLocale)}
       onError={(error) => {
-        // 忽略 MISSING_MESSAGE 噪音，生产环境自动使用 key/fallback 渲染
-        if (error.code !== "MISSING_MESSAGE") {
+        // 忽略 MISSING_MESSAGE 和 INVALID_MESSAGE 噪音，生产环境自动安全降级渲染
+        if (error.code !== "MISSING_MESSAGE" && error.code !== "INVALID_MESSAGE") {
           console.error(error);
         }
       }}
-      getMessageFallback={({ key }) => key}
+      getMessageFallback={({ key }) => {
+        if (typeof key === "string") return key;
+        if (key && typeof key === "object") {
+          return (key as any).message || (key as any).id || "";
+        }
+        return "";
+      }}
     >
       {children}
     </NextIntlClientProvider>

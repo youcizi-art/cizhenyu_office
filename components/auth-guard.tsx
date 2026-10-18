@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/hooks/use-i18n";
 import { checkAuth, login, logout } from "@/lib/api";
 import { Lock, KeyRound, Loader2, ShieldCheck } from "lucide-react";
 

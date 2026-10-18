@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/hooks/use-i18n";
 import { EXTENSION_STORE_URL } from "@/utils/extension";
 
 interface InstallExtensionDialogProps {
