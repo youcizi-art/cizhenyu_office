@@ -256,15 +256,13 @@ export function SettingsView() {
                   </span>
                 )}
               </div>
-              <p className="text-xs text-text-secondary leading-relaxed max-w-xl">
-                {isInstalled
-                  ? t(
-                      "CIZHENYU Office is installed as a standalone desktop application. Click Update App to force-reload latest assets and clear cache, identical to pressing Ctrl + F5."
-                    )
-                  : t(
-                      "Install CIZHENYU Office directly to your desktop or home screen for quick launch and a distraction-free window experience."
-                    )}
-              </p>
+              {!isInstalled && (
+                <p className="text-xs text-text-secondary leading-relaxed max-w-xl">
+                  {t(
+                    "Install CIZHENYU Office directly to your desktop or home screen for quick launch and a distraction-free window experience."
+                  )}
+                </p>
+              )}
             </div>
 
             <div className="shrink-0 flex items-center">
