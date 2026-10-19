@@ -2,7 +2,7 @@
 
 import React from "react";
 import { AlertTriangle, Save, LogOut, X, Loader2 } from "lucide-react";
-import { useExtracted } from "@/hooks/use-i18n";
+import { useExtracted } from "next-intl";
 
 interface UnsavedChangesDialogProps {
   open: boolean;

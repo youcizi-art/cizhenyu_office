@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useExtracted } from "@/hooks/use-i18n";
+import { useExtracted } from "next-intl";
 
 interface DragDropOverlayProps {
   onFileDrop: (file: File, handle?: FileSystemFileHandle) => void;

@@ -454,8 +454,8 @@
   "ValidUntil": "Valid until",
   "DayShort": "d",
   "DaysShort": "d",
-  "DaysUnit": "days",
-  "HoursUnit": "hours",
+  "DaysUnit": "jours",
+  "HoursUnit": "heures",
   "Desktop Application": "Desktop Application",
   "Desktop App Active": "Desktop App Active",
   "Install CIZHENYU Office": "Install CIZHENYU Office",
@@ -486,5 +486,14 @@
   "KeepEditing": "Continuer l'édition",
   "CloseSidebar": "Fermer la barre latérale",
   "OpenSidebar": "Ouvrir la barre latérale du plan",
-  "NoHeadingsFound": "Aucun titre trouvé dans le document"
+  "NoHeadingsFound": "Aucun titre trouvé dans le document",
+  "DaysLabel": "d",
+  "HoursLabel": "h",
+  "MinsLabel": "m",
+  "SecsLabel": "s",
+  "ShareCountdownTitle": "Compte à rebours d’expiration",
+  "ShareCountdownExpired": "Partage expiré",
+  "ShareCountdownNotice": "Le lien expirera à la fin du compte à rebours.",
+  "CollapseCountdown": "Collapse",
+  "ExpandCountdown": "Expand countdown"
 }

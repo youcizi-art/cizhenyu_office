@@ -3,7 +3,7 @@
 import React from "react";
 import { ShieldCheck, Cloud, Lock, Sparkles, Heart, FileCheck } from "lucide-react";
 import { usePageTitle } from "@/hooks/use-page-title";
-import { useExtracted } from "@/hooks/use-i18n";
+import { useExtracted } from "next-intl";
 import { Logo } from "../svg";
 
 export function AboutView() {

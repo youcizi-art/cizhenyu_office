@@ -445,10 +445,10 @@
   "NuGkug": "{total} 件中 {start} - {end} 件を表示",
   "EnablingShare": "共有を有効化中...",
   "DisablingShare": "共有を無効化中...",
-  "PermanentShare": "無期限（有効期限なし）",
+  "PermanentShare": "無期限 (期限なし)",
   "Permanent": "無期限",
   "ValidityPeriod": "有効期間",
-  "ShareExpiration": "有効期限の設定",
+  "ShareExpiration": "共有有効期間",
   "ShareExpiredTag": "期限切れ",
   "ShareLinkExpired": "この共有リンクは有効期限が切れたため利用できません",
   "ValidUntil": "有効期限",
@@ -486,5 +486,14 @@
   "KeepEditing": "編集を続ける",
   "CloseSidebar": "サイドバーを閉じる",
   "OpenSidebar": "目次サイドバーを開く",
-  "NoHeadingsFound": "見出しが見つかりません"
+  "NoHeadingsFound": "見出しが見つかりません",
+  "DaysLabel": "日",
+  "HoursLabel": "時",
+  "MinsLabel": "分",
+  "SecsLabel": "秒",
+  "ShareCountdownTitle": "共有有効期限カウントダウン",
+  "ShareCountdownExpired": "共有の有効期限が切れました",
+  "ShareCountdownNotice": "カウントダウンが終了するとリンクは無効になります。",
+  "CollapseCountdown": "折りたたむ",
+  "ExpandCountdown": "展開する"
 }

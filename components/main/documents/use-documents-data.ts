@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { useExtracted } from "@/hooks/use-i18n";
+import { useExtracted } from "next-intl";
 import {
   fetchDocumentsAndCategories,
   createCategory,
@@ -81,6 +81,9 @@ export function useDocumentsData(queryParams?: DocumentQueryParams) {
     onConfirm: () => {},
   });
 
+  const [totalAllDocs, setTotalAllDocs] = useState<number>(0);
+  const [unclassifiedCount, setUnclassifiedCount] = useState<number>(0);
+
   const loadData = async (params = queryParams) => {
     try {
       setIsLoading(true);
@@ -89,6 +92,14 @@ export function useDocumentsData(queryParams?: DocumentQueryParams) {
       setCategories(res.categories || []);
       if (res.allTags) setAllTags(res.allTags);
       if (res.pagination) setPagination(res.pagination);
+      if (typeof res.totalCount === "number") {
+        setTotalAllDocs(res.totalCount);
+      } else if (!params?.categoryId && !params?.search && !params?.type && !params?.tag) {
+        setTotalAllDocs(res.pagination?.total ?? (res.documents || []).length);
+      }
+      if (typeof res.unclassifiedCount === "number") {
+        setUnclassifiedCount(res.unclassifiedCount);
+      }
     } catch (err) {
       toast.error(String(err));
     } finally {
@@ -322,6 +333,8 @@ export function useDocumentsData(queryParams?: DocumentQueryParams) {
     setConfirmModal,
     pagination,
     setPagination,
+    totalAllDocs,
+    unclassifiedCount,
     allTags,
     loadData,
     handleSaveCategory,

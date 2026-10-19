@@ -17,7 +17,7 @@ import {
   ArrowUp,
   FileQuestion,
 } from "lucide-react";
-import { useExtracted } from "@/hooks/use-i18n";
+import { useExtracted } from "next-intl";
 import { toast } from "sonner";
 import { formatRelativeTime } from "@/utils/recent-files";
 import { cn } from "@/lib/utils";

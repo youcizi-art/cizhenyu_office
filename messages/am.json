@@ -486,5 +486,14 @@
   "KeepEditing": "Keep Editing",
   "CloseSidebar": "Close sidebar",
   "OpenSidebar": "Open outline sidebar",
-  "NoHeadingsFound": "No headings found in document"
+  "NoHeadingsFound": "No headings found in document",
+  "DaysLabel": "d",
+  "HoursLabel": "h",
+  "MinsLabel": "m",
+  "SecsLabel": "s",
+  "ShareCountdownTitle": "Expiration Countdown",
+  "ShareCountdownExpired": "Share Expired",
+  "ShareCountdownNotice": "This share link will automatically expire when the countdown ends.",
+  "CollapseCountdown": "Collapse",
+  "ExpandCountdown": "Expand countdown"
 }

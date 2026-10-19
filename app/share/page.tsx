@@ -14,7 +14,7 @@ import {
   ShieldCheck,
   Eye,
 } from "lucide-react";
-import { useExtracted } from "@/hooks/use-i18n";
+import { useExtracted } from "next-intl";
 import { toast } from "sonner";
 import { getDocConfig } from "@/lib/document-types";
 import {
@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 import { formatRelativeTime } from "@/utils/recent-files";
 import { MarkdownPreviewView } from "@/components/editor/markdown-preview-view";
 import { MediaShareView } from "@/components/share/media-share-view";
+import { ShareCountdownBadge } from "@/components/share/share-countdown-badge";
 import { LanguageSwitcher } from "@/components/language-switcher";
 
 function ShareDownloadContent() {
@@ -48,6 +49,7 @@ function ShareDownloadContent() {
     requiresPassword?: boolean;
     shareMode?: "download" | "preview";
     shareExpiresAt?: number;
+    serverTime?: number;
   } | null>(null);
 
   const [passcode, setPasscode] = useState<string>(initialKey);
@@ -303,13 +305,19 @@ function ShareDownloadContent() {
   // Markdown 在线展示预览模式 (验证成功)
   if (isPreviewMode && docInfo.type === "md" && markdownContent !== null) {
     return (
-      <MarkdownPreviewView
-        content={markdownContent}
-        docName={docInfo.name}
-        docSize={docInfo.size}
-        updatedAt={docInfo.updatedAt}
-        onDownload={() => handleDownload()}
-      />
+      <>
+        <MarkdownPreviewView
+          content={markdownContent}
+          docName={docInfo.name}
+          docSize={docInfo.size}
+          updatedAt={docInfo.updatedAt}
+          onDownload={() => handleDownload()}
+        />
+        <ShareCountdownBadge
+          expiresAt={docInfo.shareExpiresAt}
+          serverTime={docInfo.serverTime}
+        />
+      </>
     );
   }
 
@@ -322,14 +330,20 @@ function ShareDownloadContent() {
   if (isPreviewMode && isMediaDoc && (!docInfo.requiresPassword || mediaVerified)) {
     const inlineMediaUrl = getShareDownloadUrl(token, verifiedKey || undefined, true);
     return (
-      <MediaShareView
-        mediaUrl={inlineMediaUrl}
-        docName={docInfo.name}
-        docType={docInfo.type}
-        docSize={docInfo.size}
-        updatedAt={docInfo.updatedAt}
-        onDownload={() => handleDownload()}
-      />
+      <>
+        <MediaShareView
+          mediaUrl={inlineMediaUrl}
+          docName={docInfo.name}
+          docType={docInfo.type}
+          docSize={docInfo.size}
+          updatedAt={docInfo.updatedAt}
+          onDownload={() => handleDownload()}
+        />
+        <ShareCountdownBadge
+          expiresAt={docInfo.shareExpiresAt}
+          serverTime={docInfo.serverTime}
+        />
+      </>
     );
   }
 
@@ -508,6 +522,12 @@ function ShareDownloadContent() {
           </p>
         </div>
       </div>
+
+      {/* 非永久分享：左下角常驻悬浮倒计时挂件 */}
+      <ShareCountdownBadge
+        expiresAt={docInfo.shareExpiresAt}
+        serverTime={docInfo.serverTime}
+      />
     </div>
   );
 }

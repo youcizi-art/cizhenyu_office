@@ -2,7 +2,7 @@
 
 import React from "react";
 import { X, Download, HardDrive, Clock, Film, Music, Image as ImageIcon, File } from "lucide-react";
-import { useExtracted } from "@/hooks/use-i18n";
+import { useExtracted } from "next-intl";
 import { DocumentMeta } from "@/lib/api";
 import { formatRelativeTime } from "@/utils/recent-files";
 import { cn } from "@/lib/utils";

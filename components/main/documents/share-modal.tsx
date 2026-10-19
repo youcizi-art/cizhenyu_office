@@ -13,7 +13,7 @@ import {
   Loader2,
   Clock,
 } from "lucide-react";
-import { useExtracted } from "@/hooks/use-i18n";
+import { useExtracted } from "next-intl";
 import { cn } from "@/lib/utils";
 import { DocumentMeta } from "@/lib/api";
 
@@ -27,25 +27,45 @@ function generatePasscode(): string {
   return result;
 }
 
+function safeTranslate(
+  t: (descriptor: { id: string; message: string }) => any,
+  id: string,
+  fallback: string
+): string {
+  try {
+    const val = t({ id, message: fallback });
+    if (typeof val === "string") return val;
+    if (val && typeof val === "object") {
+      return val.message || val.defaultMessage || val.id || fallback;
+    }
+    return String(val ?? fallback);
+  } catch {
+    return fallback;
+  }
+}
+
 // 格式化已有分享的剩余有效期
 function formatRemainingTime(
   expiresAt: number,
-  t: (descriptor: { id: string; message: string }) => string
+  t: (descriptor: { id: string; message: string }) => any
 ): string {
   const diffMs = expiresAt - Date.now();
   if (diffMs <= 0) {
-    return t({ id: "ShareExpiredTag", message: "Expired" });
+    return safeTranslate(t, "ShareExpiredTag", "Expired");
   }
   const totalHours = Math.ceil(diffMs / (3600 * 1000));
   const days = Math.floor(totalHours / 24);
   const remHours = totalHours % 24;
+  const daysText = safeTranslate(t, "DaysUnit", "days");
+  const hoursText = safeTranslate(t, "HoursUnit", "hours");
+
   if (days > 0) {
     if (remHours > 0) {
-      return `${days} ${t({ id: "DaysUnit", message: "days" })} ${remHours} ${t({ id: "HoursUnit", message: "hours" })}`;
+      return `${days} ${daysText} ${remHours} ${hoursText}`;
     }
-    return `${days} ${t({ id: "DaysUnit", message: "days" })}`;
+    return `${days} ${daysText}`;
   }
-  return `${totalHours} ${t({ id: "HoursUnit", message: "hours" })}`;
+  return `${totalHours} ${hoursText}`;
 }
 
 interface ShareModalProps {
@@ -299,12 +319,12 @@ export function ShareModal({
                 </span>
                 <span className="text-[11px] font-semibold text-primary font-mono bg-primary/10 px-2 py-0.5 rounded-md">
                   {expiresInHours === 0 || expiresInHours >= 168
-                    ? t({ id: "PermanentShare", message: "Permanent (Never expires)" })
+                    ? safeTranslate(t, "PermanentShare", "Permanent (Never expires)")
                     : expiresInHours < 24
-                    ? `${expiresInHours} ${t({ id: "HoursUnit", message: "hours" })}`
-                    : `${Math.floor(expiresInHours / 24)} ${t({ id: "DaysUnit", message: "days" })}${
+                    ? `${expiresInHours} ${safeTranslate(t, "HoursUnit", "hours")}`
+                    : `${Math.floor(expiresInHours / 24)} ${safeTranslate(t, "DaysUnit", "days")}${
                         expiresInHours % 24 > 0
-                          ? ` ${expiresInHours % 24} ${t({ id: "HoursUnit", message: "hours" })}`
+                          ? ` ${expiresInHours % 24} ${safeTranslate(t, "HoursUnit", "hours")}`
                           : ""
                       }`}
                 </span>

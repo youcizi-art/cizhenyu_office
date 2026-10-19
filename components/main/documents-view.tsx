@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useExtracted } from "@/hooks/use-i18n";
+import { useExtracted } from "next-intl";
 import {
   Files,
   FileText,
@@ -109,6 +109,8 @@ export function DocumentsView() {
     isUploading,
     confirmModal,
     setConfirmModal,
+    totalAllDocs,
+    unclassifiedCount,
     loadData,
     handleSaveCategory,
     handleDeleteCategory,
@@ -154,10 +156,6 @@ export function DocumentsView() {
     };
     return buildNodes(null);
   }, [categories]);
-
-  const unclassifiedCount = useMemo(() => {
-    return documents.filter((d) => !d.categoryId).length;
-  }, [documents]);
 
   // 容器滚动引用
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -252,7 +250,7 @@ export function DocumentsView() {
           setSelectedTag(null);
           setCurrentPage(1);
         }}
-        documentsCount={pagination.total || documents.length}
+        documentsCount={totalAllDocs || pagination.total || documents.length}
         unclassifiedCount={unclassifiedCount}
         categoryTree={categoryTree}
         expandedCats={expandedCats}

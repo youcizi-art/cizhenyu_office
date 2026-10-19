@@ -16,7 +16,7 @@ import {
   Loader2,
 } from "lucide-react";
 import * as Illustration from "@/components/svg";
-import { useExtracted } from "@/hooks/use-i18n";
+import { useExtracted } from "next-intl";
 import { cn } from "@/lib/utils";
 import { languages, LocaleName, LocaleExtend, Language } from "@ziziyi/utils";
 import {

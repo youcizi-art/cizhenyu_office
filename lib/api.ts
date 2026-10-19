@@ -61,6 +61,8 @@ export interface MetadataResponse {
   categories: Category[];
   documents: DocumentMeta[];
   allTags?: string[];
+  totalCount?: number;
+  unclassifiedCount?: number;
   pagination?: PaginationInfo;
 }
 
@@ -410,6 +412,7 @@ export async function getShareInfo(token: string): Promise<{
   requiresPassword?: boolean;
   shareMode?: "download" | "preview";
   shareExpiresAt?: number;
+  serverTime?: number;
 }> {
   const res = await fetch(`/api/share/${encodeURIComponent(token)}/info`, {
     cache: "no-store",

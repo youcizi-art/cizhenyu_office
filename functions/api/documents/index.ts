@@ -107,6 +107,9 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
     return b.updatedAt - a.updatedAt;
   });
 
+  const allTotalCount = rawDocs.length;
+  const allUnclassifiedCount = rawDocs.filter((d) => !d.categoryId).length;
+
   // 3. 服务端分页切片处理
   if (pageParam !== null || pageSizeParam !== null) {
     const page = Math.max(1, parseInt(pageParam || "1", 10) || 1);
@@ -119,6 +122,8 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
       categories,
       documents: paginatedDocs,
       allTags,
+      totalCount: allTotalCount,
+      unclassifiedCount: allUnclassifiedCount,
       pagination: {
         page,
         pageSize,
@@ -133,6 +138,8 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
     categories,
     documents: filtered,
     allTags,
+    totalCount: allTotalCount,
+    unclassifiedCount: allUnclassifiedCount,
     pagination: {
       page: 1,
       pageSize: filtered.length,

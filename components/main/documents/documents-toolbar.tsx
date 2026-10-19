@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Search, Upload, X, Tag } from "lucide-react";
-import { useExtracted } from "@/hooks/use-i18n";
+import { useExtracted } from "next-intl";
 import { cn } from "@/lib/utils";
 
 export interface DocumentTypeOption {

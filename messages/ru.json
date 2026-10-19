@@ -454,8 +454,8 @@
   "ValidUntil": "Valid until",
   "DayShort": "d",
   "DaysShort": "d",
-  "DaysUnit": "days",
-  "HoursUnit": "hours",
+  "DaysUnit": "дн.",
+  "HoursUnit": "ч.",
   "Desktop Application": "Desktop Application",
   "Desktop App Active": "Desktop App Active",
   "Install CIZHENYU Office": "Install CIZHENYU Office",
@@ -486,5 +486,14 @@
   "KeepEditing": "Продолжить редактирование",
   "CloseSidebar": "Закрыть боковую панель",
   "OpenSidebar": "Открыть боковую панель структуры",
-  "NoHeadingsFound": "В документе не найдено заголовков"
+  "NoHeadingsFound": "В документе не найдено заголовков",
+  "DaysLabel": "d",
+  "HoursLabel": "h",
+  "MinsLabel": "m",
+  "SecsLabel": "s",
+  "ShareCountdownTitle": "Обратный отсчет срока действия",
+  "ShareCountdownExpired": "Срок действия ссылки истек",
+  "ShareCountdownNotice": "Ссылка перестанет действовать по окончании обратного отсчета.",
+  "CollapseCountdown": "Collapse",
+  "ExpandCountdown": "Expand countdown"
 }

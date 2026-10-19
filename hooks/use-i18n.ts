@@ -28,7 +28,11 @@ export function useI18n(namespace?: string) {
       if (typeof keyOrDescriptor === "string") {
         try {
           const res = baseT(keyOrDescriptor, values, formats);
-          return typeof res === "string" ? res : String(res ?? "");
+          if (typeof res === "string") return res;
+          if (res && typeof res === "object") {
+            return (res as any).message || (res as any).id || keyOrDescriptor;
+          }
+          return String(res ?? keyOrDescriptor);
         } catch {
           return keyOrDescriptor;
         }
@@ -38,15 +42,24 @@ export function useI18n(namespace?: string) {
       if (keyOrDescriptor && typeof keyOrDescriptor === "object") {
         const id = keyOrDescriptor.id;
         const fallback =
-          keyOrDescriptor.message || keyOrDescriptor.defaultMessage || id || "";
+          typeof keyOrDescriptor.message === "string"
+            ? keyOrDescriptor.message
+            : typeof keyOrDescriptor.defaultMessage === "string"
+            ? keyOrDescriptor.defaultMessage
+            : typeof id === "string"
+            ? id
+            : "";
 
         if (!id) return fallback;
 
         try {
           // 先尝试以 id 从多语言字典查找
           const translated = baseT(id, values, formats);
-          if (translated && typeof translated === "string") {
+          if (typeof translated === "string") {
             return translated;
+          }
+          if (translated && typeof translated === "object") {
+            return (translated as any).message || (translated as any).id || fallback;
           }
           return fallback;
         } catch {

@@ -454,8 +454,8 @@
   "ValidUntil": "Valid until",
   "DayShort": "d",
   "DaysShort": "d",
-  "DaysUnit": "days",
-  "HoursUnit": "hours",
+  "DaysUnit": "Tage",
+  "HoursUnit": "Std.",
   "Desktop Application": "Desktop Application",
   "Desktop App Active": "Desktop App Active",
   "Install CIZHENYU Office": "Install CIZHENYU Office",
@@ -486,5 +486,14 @@
   "KeepEditing": "Weiter bearbeiten",
   "CloseSidebar": "Seitenleiste schließen",
   "OpenSidebar": "Gliederungsleiste öffnen",
-  "NoHeadingsFound": "Keine Überschriften im Dokument gefunden"
+  "NoHeadingsFound": "Keine Überschriften im Dokument gefunden",
+  "DaysLabel": "d",
+  "HoursLabel": "h",
+  "MinsLabel": "m",
+  "SecsLabel": "s",
+  "ShareCountdownTitle": "Ablauf-Countdown",
+  "ShareCountdownExpired": "Freigabe abgelaufen",
+  "ShareCountdownNotice": "Der Link läuft nach Ablauf des Countdowns ab.",
+  "CollapseCountdown": "Collapse",
+  "ExpandCountdown": "Expand countdown"
 }

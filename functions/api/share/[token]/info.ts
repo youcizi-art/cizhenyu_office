@@ -45,5 +45,6 @@ export async function onRequestGet(context: PagesContext<"token">): Promise<Resp
     requiresPassword: Boolean(doc.sharePassword),
     shareMode: doc.shareMode || "download",
     shareExpiresAt: doc.shareExpiresAt,
+    serverTime: Date.now(),
   });
 }

@@ -13,7 +13,7 @@ import {
   Plus,
   X,
 } from "lucide-react";
-import { useExtracted } from "@/hooks/use-i18n";
+import { useExtracted } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Category } from "@/lib/api";
 

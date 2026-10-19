@@ -19,7 +19,7 @@ import {
   FileEdit,
   KeyRound,
 } from "lucide-react";
-import { useExtracted } from "@/hooks/use-i18n";
+import { useExtracted } from "next-intl";
 import { cn } from "@/lib/utils";
 import { getDocConfig } from "@/lib/document-types";
 import { formatRelativeTime } from "@/utils/recent-files";
