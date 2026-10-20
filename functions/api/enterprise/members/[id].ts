@@ -1,8 +1,16 @@
-import { eq, and } from "drizzle-orm";
-import { getDb, schema } from "../../../lib/db";
+import { getDb } from "../../../lib/db";
 import { getEnterpriseSession, assertOrgRole, recordAuditLog } from "../../../lib/rbac";
 import { jsonResponse, errorResponse } from "../../../utils";
 import { PagesContext, OrgRole } from "../../../types";
+
+interface TargetUserRow {
+  id: string;
+  org_id: string;
+  email: string;
+  name: string;
+  role: string;
+  status: string;
+}
 
 /**
  * 成员角色修改与移除 (PUT / DELETE)
@@ -32,17 +40,15 @@ export async function onRequestPut(context: PagesContext<"id">): Promise<Respons
     const db = getDb(env);
 
     // 查询目标成员
-    const targetMembers = await db
-      .select()
-      .from(schema.users)
-      .where(and(eq(schema.users.id, targetUserId), eq(schema.users.orgId, session.org.id)))
-      .limit(1);
+    const targetUser = await db.queryOne<TargetUserRow>(
+      "SELECT id, org_id, email, name, role, status FROM users WHERE id = ? AND org_id = ? LIMIT 1",
+      targetUserId,
+      session.org.id
+    );
 
-    if (targetMembers.length === 0) {
+    if (!targetUser) {
       return errorResponse("Member not found in current organization", 404);
     }
-
-    const targetUser = targetMembers[0];
 
     // 不能降权自己或修改自己的角色
     if (targetUser.id === session.user.id && body.role && body.role !== session.user.role) {
@@ -57,19 +63,28 @@ export async function onRequestPut(context: PagesContext<"id">): Promise<Respons
       return errorResponse("Forbidden: Only organization owner can manage owner roles", 403);
     }
 
-    const updateData: Partial<typeof schema.users.$inferInsert> = {
-      updatedAt: Date.now(),
-    };
+    const updates: string[] = ["updated_at = ?"];
+    const values: unknown[] = [Date.now()];
 
-    if (body.role) updateData.role = body.role;
-    if (body.status) updateData.status = body.status;
-    if (body.name) updateData.name = body.name.trim();
+    if (body.role) {
+      updates.push("role = ?");
+      values.push(body.role);
+    }
+    if (body.status) {
+      updates.push("status = ?");
+      values.push(body.status);
+    }
+    if (body.name) {
+      updates.push("name = ?");
+      values.push(body.name.trim());
+    }
 
-    await db.update(schema.users).set(updateData).where(eq(schema.users.id, targetUserId));
+    values.push(targetUserId);
+    await db.execute(`UPDATE users SET ${updates.join(", ")} WHERE id = ?`, ...values);
 
     // 如果状态变为 disabled，物理清理该成员当前所有有效 Session
     if (body.status === "disabled") {
-      await db.delete(schema.userSessions).where(eq(schema.userSessions.userId, targetUserId));
+      await db.execute("DELETE FROM user_sessions WHERE user_id = ?", targetUserId);
     }
 
     await recordAuditLog(db, {
@@ -112,25 +127,24 @@ export async function onRequestDelete(context: PagesContext<"id">): Promise<Resp
   try {
     const db = getDb(env);
 
-    const targetMembers = await db
-      .select()
-      .from(schema.users)
-      .where(and(eq(schema.users.id, targetUserId), eq(schema.users.orgId, session.org.id)))
-      .limit(1);
+    const targetUser = await db.queryOne<TargetUserRow>(
+      "SELECT id, email, name, role FROM users WHERE id = ? AND org_id = ? LIMIT 1",
+      targetUserId,
+      session.org.id
+    );
 
-    if (targetMembers.length === 0) {
+    if (!targetUser) {
       return errorResponse("Member not found", 404);
     }
 
-    const targetUser = targetMembers[0];
     if (targetUser.role === "owner" && session.user.role !== "owner") {
       return errorResponse("Forbidden: Cannot remove the organization owner", 403);
     }
 
     // 物理级联删除用户及其相关 session、文档权限
-    await db.delete(schema.userSessions).where(eq(schema.userSessions.userId, targetUserId));
-    await db.delete(schema.documentPermissions).where(eq(schema.documentPermissions.userId, targetUserId));
-    await db.delete(schema.users).where(eq(schema.users.id, targetUserId));
+    await db.execute("DELETE FROM user_sessions WHERE user_id = ?", targetUserId);
+    await db.execute("DELETE FROM document_permissions WHERE user_id = ?", targetUserId);
+    await db.execute("DELETE FROM users WHERE id = ?", targetUserId);
 
     await recordAuditLog(db, {
       orgId: session.org.id,

@@ -1,9 +1,19 @@
-import { eq } from "drizzle-orm";
-import { getDb, schema } from "../../../lib/db";
+import { getDb } from "../../../lib/db";
 import { getEnterpriseSession, assertOrgRole, recordAuditLog } from "../../../lib/rbac";
 import { hashPassword } from "../../../lib/auth-crypto";
 import { jsonResponse, errorResponse } from "../../../utils";
 import { PagesContext, OrgRole } from "../../../types";
+
+interface MemberRow {
+  id: string;
+  email: string;
+  name: string;
+  avatar: string | null;
+  role: string;
+  status: string;
+  created_at: number;
+  updated_at: number;
+}
 
 /**
  * 企业成员列表与新增成员 (GET / POST)
@@ -17,19 +27,21 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
 
   try {
     const db = getDb(env);
-    const members = await db
-      .select({
-        id: schema.users.id,
-        email: schema.users.email,
-        name: schema.users.name,
-        avatar: schema.users.avatar,
-        role: schema.users.role,
-        status: schema.users.status,
-        createdAt: schema.users.createdAt,
-        updatedAt: schema.users.updatedAt,
-      })
-      .from(schema.users)
-      .where(eq(schema.users.orgId, session.org.id));
+    const rows = await db.queryAll<MemberRow>(
+      "SELECT id, email, name, avatar, role, status, created_at, updated_at FROM users WHERE org_id = ?",
+      session.org.id
+    );
+
+    const members = rows.map((r) => ({
+      id: r.id,
+      email: r.email,
+      name: r.name,
+      avatar: r.avatar,
+      role: r.role as OrgRole,
+      status: r.status as "active" | "disabled" | "invited",
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
+    }));
 
     return jsonResponse({
       success: true,
@@ -78,12 +90,13 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     const db = getDb(env);
 
     // 1. 席位上限校验
-    const currentMembers = await db
-      .select({ id: schema.users.id })
-      .from(schema.users)
-      .where(eq(schema.users.orgId, session.org.id));
+    const countRow = await db.queryOne<{ count: number }>(
+      "SELECT COUNT(*) AS count FROM users WHERE org_id = ?",
+      session.org.id
+    );
+    const currentCount = countRow ? countRow.count : 0;
 
-    if (currentMembers.length >= session.org.maxSeats) {
+    if (currentCount >= session.org.maxSeats) {
       return errorResponse(
         `Seat limit exceeded: Organization maximum seats is ${session.org.maxSeats}`,
         400
@@ -91,13 +104,12 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     }
 
     // 2. 邮箱重复校验
-    const existing = await db
-      .select({ id: schema.users.id })
-      .from(schema.users)
-      .where(eq(schema.users.email, email))
-      .limit(1);
+    const existing = await db.queryOne<{ id: string }>(
+      "SELECT id FROM users WHERE email = ? LIMIT 1",
+      email
+    );
 
-    if (existing.length > 0) {
+    if (existing) {
       return errorResponse("User with this email already exists", 409);
     }
 
@@ -106,19 +118,21 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     const newUserId = crypto.randomUUID();
     const now = Date.now();
 
-    await db.insert(schema.users).values({
-      id: newUserId,
-      orgId: session.org.id,
+    await db.execute(
+      `INSERT INTO users (id, org_id, email, password_hash, salt, name, avatar, role, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      newUserId,
+      session.org.id,
       email,
-      passwordHash: hash,
+      hash,
       salt,
-      name: name || email.split("@")[0],
-      avatar: null,
+      name || email.split("@")[0],
+      null,
       role,
-      status: "active",
-      createdAt: now,
-      updatedAt: now,
-    });
+      "active",
+      now,
+      now
+    );
 
     // 4. 记录审计日志
     await recordAuditLog(db, {

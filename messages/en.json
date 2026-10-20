@@ -226,7 +226,7 @@
   "DeleteDocumentTitle": "Delete Document",
   "Delete": "Delete",
   "DeleteSuccess": "Document deleted",
-  "LoadingR2Docs": "Loading documents from R2 cloud storage...",
+  "LoadingR2Docs": "Loading cloud documents...",
   "NoMatchingDocs": "No matching documents found",
   "TryAnotherSearch": "Try adjusting your filters, or upload a local document.",
   "RenameSuccess": "Document renamed",

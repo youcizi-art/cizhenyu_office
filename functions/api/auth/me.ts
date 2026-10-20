@@ -1,5 +1,5 @@
 import { getEnterpriseSession } from "../../lib/rbac";
-import { getDb, schema } from "../../lib/db";
+import { getDb } from "../../lib/db";
 import { jsonResponse } from "../../utils";
 import { PagesContext } from "../../types";
 
@@ -22,8 +22,8 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
     if (!session) {
       // 检查系统是否有任何用户（用于前端决定展示“初始化企业管理员”还是“常规企业登录”）
       const db = getDb(env);
-      const anyUsers = await db.select({ id: schema.users.id }).from(schema.users).limit(1);
-      const isInitialized = anyUsers.length > 0;
+      const anyUser = await db.queryOne<{ id: string }>("SELECT id FROM users LIMIT 1");
+      const isInitialized = Boolean(anyUser);
 
       return jsonResponse({
         authenticated: false,

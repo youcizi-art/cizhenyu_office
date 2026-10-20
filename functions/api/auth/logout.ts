@@ -1,5 +1,4 @@
-import { eq } from "drizzle-orm";
-import { getDb, schema } from "../../lib/db";
+import { getDb } from "../../lib/db";
 import { extractSessionToken, getEnterpriseSession, recordAuditLog } from "../../lib/rbac";
 import { sha256Hex, clearSessionCookie } from "../../lib/auth-crypto";
 import { jsonResponse } from "../../utils";
@@ -18,7 +17,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
       if (token) {
         const db = getDb(env);
         const tokenHash = await sha256Hex(token);
-        await db.delete(schema.userSessions).where(eq(schema.userSessions.tokenHash, tokenHash));
+        await db.execute("DELETE FROM user_sessions WHERE token_hash = ?", tokenHash);
 
         if (session) {
           await recordAuditLog(db, {

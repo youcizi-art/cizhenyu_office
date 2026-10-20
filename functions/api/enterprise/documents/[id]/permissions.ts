@@ -1,5 +1,4 @@
-import { eq, and } from "drizzle-orm";
-import { getDb, schema } from "../../../../lib/db";
+import { getDb } from "../../../../lib/db";
 import {
   getEnterpriseSession,
   getDocumentPermission,
@@ -8,6 +7,17 @@ import {
 } from "../../../../lib/rbac";
 import { jsonResponse, errorResponse } from "../../../../utils";
 import { PagesContext, DocPermission } from "../../../../types";
+
+interface PermRow {
+  id: string;
+  userId: string;
+  permission: string;
+  userName: string;
+  userEmail: string;
+  userAvatar: string | null;
+  userRole: string;
+  createdAt: number;
+}
 
 /**
  * 单文档 ACL 细粒度权限查询、授予与撤销 (GET / POST / DELETE)
@@ -30,21 +40,22 @@ export async function onRequestGet(context: PagesContext<"id">): Promise<Respons
       return errorResponse("Forbidden: You do not have permission to view ACL of this document", 403);
     }
 
-    // 联合查询授权列表
-    const permissions = await db
-      .select({
-        id: schema.documentPermissions.id,
-        userId: schema.documentPermissions.userId,
-        permission: schema.documentPermissions.permission,
-        userName: schema.users.name,
-        userEmail: schema.users.email,
-        userAvatar: schema.users.avatar,
-        userRole: schema.users.role,
-        createdAt: schema.documentPermissions.createdAt,
-      })
-      .from(schema.documentPermissions)
-      .innerJoin(schema.users, eq(schema.documentPermissions.userId, schema.users.id))
-      .where(eq(schema.documentPermissions.documentId, documentId));
+    const sql = `
+      SELECT 
+        dp.id AS id,
+        dp.user_id AS userId,
+        dp.permission AS permission,
+        u.name AS userName,
+        u.email AS userEmail,
+        u.avatar AS userAvatar,
+        u.role AS userRole,
+        dp.created_at AS createdAt
+      FROM document_permissions dp
+      INNER JOIN users u ON dp.user_id = u.id
+      WHERE dp.document_id = ?
+    `;
+
+    const permissions = await db.queryAll<PermRow>(sql, documentId);
 
     return jsonResponse({
       success: true,
@@ -91,34 +102,30 @@ export async function onRequestPost(context: PagesContext<"id">): Promise<Respon
     const now = Date.now();
 
     // 检查是否已有授权记录，做 Upsert
-    const existing = await db
-      .select()
-      .from(schema.documentPermissions)
-      .where(
-        and(
-          eq(schema.documentPermissions.documentId, documentId),
-          eq(schema.documentPermissions.userId, targetUserId)
-        )
-      )
-      .limit(1);
+    const existing = await db.queryOne<{ id: string }>(
+      "SELECT id FROM document_permissions WHERE document_id = ? AND user_id = ? LIMIT 1",
+      documentId,
+      targetUserId
+    );
 
-    if (existing.length > 0) {
-      await db
-        .update(schema.documentPermissions)
-        .set({
-          permission,
-          updatedAt: now,
-        })
-        .where(eq(schema.documentPermissions.id, existing[0].id));
-    } else {
-      await db.insert(schema.documentPermissions).values({
-        id: crypto.randomUUID(),
-        documentId,
-        userId: targetUserId,
+    if (existing) {
+      await db.execute(
+        "UPDATE document_permissions SET permission = ?, updated_at = ? WHERE id = ?",
         permission,
-        createdAt: now,
-        updatedAt: now,
-      });
+        now,
+        existing.id
+      );
+    } else {
+      await db.execute(
+        `INSERT INTO document_permissions (id, document_id, user_id, permission, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        crypto.randomUUID(),
+        documentId,
+        targetUserId,
+        permission,
+        now,
+        now
+      );
     }
 
     await recordAuditLog(db, {
@@ -163,14 +170,11 @@ export async function onRequestDelete(context: PagesContext<"id">): Promise<Resp
       return errorResponse("Forbidden: Document owner or administrator privileges required", 403);
     }
 
-    await db
-      .delete(schema.documentPermissions)
-      .where(
-        and(
-          eq(schema.documentPermissions.documentId, documentId),
-          eq(schema.documentPermissions.userId, targetUserId)
-        )
-      );
+    await db.execute(
+      "DELETE FROM document_permissions WHERE document_id = ? AND user_id = ?",
+      documentId,
+      targetUserId
+    );
 
     await recordAuditLog(db, {
       orgId: session.org.id,

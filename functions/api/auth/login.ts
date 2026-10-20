@@ -1,5 +1,4 @@
-import { eq } from "drizzle-orm";
-import { getDb, schema } from "../../lib/db";
+import { getDb } from "../../lib/db";
 import {
   verifyPassword,
   hashPassword,
@@ -8,9 +7,23 @@ import {
 } from "../../lib/auth-crypto";
 import { recordAuditLog } from "../../lib/rbac";
 import { jsonResponse, errorResponse } from "../../utils";
-import { PagesContext } from "../../types";
+import { PagesContext, OrgRole } from "../../types";
 
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 天
+
+interface UserRow {
+  id: string;
+  org_id: string;
+  email: string;
+  password_hash: string;
+  salt: string;
+  name: string;
+  avatar: string | null;
+  role: string;
+  status: string;
+  created_at: number;
+  updated_at: number;
+}
 
 /**
  * 企业版用户登录与组织首次初始化 (POST)
@@ -41,61 +54,61 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     const now = Date.now();
 
     // 1. 检查是否存在该用户
-    const foundUsers = await db
-      .select()
-      .from(schema.users)
-      .where(eq(schema.users.email, email))
-      .limit(1);
-
-    let targetUser = foundUsers[0];
+    let targetUser = await db.queryOne<UserRow>(
+      "SELECT * FROM users WHERE email = ? LIMIT 1",
+      email
+    );
 
     // 2. 冷启动智能引导：如果系统没有任何用户，且当前是初次登录，自动注册为超级所有者 (Owner)
     if (!targetUser) {
-      const allUsersCount = await db.select({ id: schema.users.id }).from(schema.users).limit(1);
-      if (allUsersCount.length === 0) {
+      const anyUser = await db.queryOne<{ id: string }>("SELECT id FROM users LIMIT 1");
+      if (!anyUser) {
         // 创建默认企业组织
         const orgId = crypto.randomUUID();
         const orgName = (body.orgName || "CIZHENYU Enterprise").trim();
-        await db.insert(schema.organizations).values({
-          id: orgId,
-          name: orgName,
-          logoUrl: null,
-          maxSeats: 50,
-          createdAt: now,
-          updatedAt: now,
-        });
+        await db.execute(
+          "INSERT INTO organizations (id, name, logo_url, max_seats, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+          orgId,
+          orgName,
+          null,
+          50,
+          now,
+          now
+        );
 
         // 创建首位所有者用户
         const userId = crypto.randomUUID();
         const { hash, salt } = await hashPassword(password);
         const userName = (body.name || email.split("@")[0] || "Admin").trim();
 
-        await db.insert(schema.users).values({
-          id: userId,
+        await db.execute(
+          `INSERT INTO users (id, org_id, email, password_hash, salt, name, avatar, role, status, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          userId,
           orgId,
           email,
-          passwordHash: hash,
+          hash,
           salt,
-          name: userName,
-          avatar: null,
-          role: "owner",
-          status: "active",
-          createdAt: now,
-          updatedAt: now,
-        });
+          userName,
+          null,
+          "owner",
+          "active",
+          now,
+          now
+        );
 
         targetUser = {
           id: userId,
-          orgId,
+          org_id: orgId,
           email,
-          passwordHash: hash,
+          password_hash: hash,
           salt,
           name: userName,
           avatar: null,
           role: "owner",
           status: "active",
-          createdAt: now,
-          updatedAt: now,
+          created_at: now,
+          updated_at: now,
         };
       } else {
         return errorResponse("Invalid email or password", 401);
@@ -110,7 +123,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     // 4. 校验密码哈希
     const isPasswordValid = await verifyPassword(
       password,
-      targetUser.passwordHash,
+      targetUser.password_hash,
       targetUser.salt
     );
     if (!isPasswordValid) {
@@ -124,35 +137,32 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     const clientIp = request.headers.get("CF-Connecting-IP") || undefined;
     const userAgent = request.headers.get("User-Agent") || undefined;
 
-    await db.insert(schema.userSessions).values({
-      id: sessionId,
-      userId: targetUser.id,
+    await db.execute(
+      `INSERT INTO user_sessions (id, user_id, token_hash, ip_address, user_agent, expires_at, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      sessionId,
+      targetUser.id,
       tokenHash,
-      ipAddress: clientIp,
-      userAgent,
+      clientIp || null,
+      userAgent || null,
       expiresAt,
-      createdAt: now,
-    });
+      now
+    );
 
     // 6. 获取组织信息
-    const orgs = await db
-      .select()
-      .from(schema.organizations)
-      .where(eq(schema.organizations.id, targetUser.orgId))
-      .limit(1);
-
-    const org = orgs[0] || {
-      id: targetUser.orgId,
+    const org = (await db.queryOne<{ id: string; name: string; logo_url: string | null; max_seats: number }>(
+      "SELECT id, name, logo_url, max_seats FROM organizations WHERE id = ? LIMIT 1",
+      targetUser.org_id
+    )) || {
+      id: targetUser.org_id,
       name: "Enterprise",
-      logoUrl: null,
-      maxSeats: 20,
-      createdAt: now,
-      updatedAt: now,
+      logo_url: null,
+      max_seats: 20,
     };
 
     // 7. 写入审计日志
     await recordAuditLog(db, {
-      orgId: targetUser.orgId,
+      orgId: targetUser.org_id,
       userId: targetUser.id,
       userName: targetUser.name,
       action: "user_login",
@@ -168,17 +178,17 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
         token,
         user: {
           id: targetUser.id,
-          orgId: targetUser.orgId,
+          orgId: targetUser.org_id,
           email: targetUser.email,
           name: targetUser.name,
           avatar: targetUser.avatar,
-          role: targetUser.role,
+          role: targetUser.role as OrgRole,
         },
         org: {
           id: org.id,
           name: org.name,
-          logoUrl: org.logoUrl,
-          maxSeats: org.maxSeats,
+          logoUrl: org.logo_url,
+          maxSeats: org.max_seats,
         },
       },
       200,

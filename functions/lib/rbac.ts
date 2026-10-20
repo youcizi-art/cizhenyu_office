@@ -1,7 +1,6 @@
-import { eq, and, gt } from "drizzle-orm";
-import { getDb, schema, AppDatabase } from "./db";
+import { getDb, DatabaseClient } from "./db";
 import { sha256Hex } from "./auth-crypto";
-import { PagesContext, EnterpriseUser, EnterpriseOrg, OrgRole, DocPermission, Env } from "../types";
+import { EnterpriseUser, EnterpriseOrg, OrgRole, DocPermission, Env } from "../types";
 
 const ROLE_RANKS: Record<OrgRole, number> = {
   owner: 4,
@@ -64,53 +63,66 @@ export async function getEnterpriseSession(
     const tokenHash = await sha256Hex(token);
     const now = Date.now();
 
-    // 联合查询 session、user 与 organization
-    const sessions = await db
-      .select({
-        sessionId: schema.userSessions.id,
-        expiresAt: schema.userSessions.expiresAt,
-        userId: schema.users.id,
-        orgId: schema.users.orgId,
-        email: schema.users.email,
-        name: schema.users.name,
-        avatar: schema.users.avatar,
-        role: schema.users.role,
-        status: schema.users.status,
-        userCreatedAt: schema.users.createdAt,
-        userUpdatedAt: schema.users.updatedAt,
-        orgName: schema.organizations.name,
-        orgLogoUrl: schema.organizations.logoUrl,
-        orgMaxSeats: schema.organizations.maxSeats,
-        orgCreatedAt: schema.organizations.createdAt,
-        orgUpdatedAt: schema.organizations.updatedAt,
-      })
-      .from(schema.userSessions)
-      .innerJoin(schema.users, eq(schema.userSessions.userId, schema.users.id))
-      .innerJoin(schema.organizations, eq(schema.users.orgId, schema.organizations.id))
-      .where(
-        and(
-          eq(schema.userSessions.tokenHash, tokenHash),
-          gt(schema.userSessions.expiresAt, now)
-        )
-      )
-      .limit(1);
+    const sql = `
+      SELECT 
+        s.id AS sessionId,
+        s.expires_at AS expiresAt,
+        u.id AS userId,
+        u.org_id AS orgId,
+        u.email AS email,
+        u.name AS name,
+        u.avatar AS avatar,
+        u.role AS role,
+        u.status AS status,
+        u.created_at AS userCreatedAt,
+        u.updated_at AS userUpdatedAt,
+        o.name AS orgName,
+        o.logo_url AS orgLogoUrl,
+        o.max_seats AS orgMaxSeats,
+        o.created_at AS orgCreatedAt,
+        o.updated_at AS orgUpdatedAt
+      FROM user_sessions s
+      INNER JOIN users u ON s.user_id = u.id
+      INNER JOIN organizations o ON u.org_id = o.id
+      WHERE s.token_hash = ? AND s.expires_at > ?
+      LIMIT 1
+    `;
 
-    if (!sessions || sessions.length === 0) {
+    const item = await db.queryOne<{
+      sessionId: string;
+      expiresAt: number;
+      userId: string;
+      orgId: string;
+      email: string;
+      name: string;
+      avatar: string | null;
+      role: string;
+      status: string;
+      userCreatedAt: number;
+      userUpdatedAt: number;
+      orgName: string;
+      orgLogoUrl: string | null;
+      orgMaxSeats: number;
+      orgCreatedAt: number;
+      orgUpdatedAt: number;
+    }>(sql, tokenHash, now);
+
+    if (!item) {
       return null;
     }
 
-    const item = sessions[0];
     if (item.status !== "active") {
-      return null; // 用户已处于非活跃或被禁用状态
+      return null; // 用户已被禁用
     }
 
-    // 智能滑动续期：若会话剩余时间小于 7 天，延长至 30 天
+    // 滑动续期
     if (item.expiresAt - now < SLIDING_RENEWAL_WINDOW_MS) {
       const newExpiresAt = now + SESSION_TTL_MS;
-      await db
-        .update(schema.userSessions)
-        .set({ expiresAt: newExpiresAt })
-        .where(eq(schema.userSessions.id, item.sessionId));
+      await db.execute(
+        "UPDATE user_sessions SET expires_at = ? WHERE id = ?",
+        newExpiresAt,
+        item.sessionId
+      );
     }
 
     const user: EnterpriseUser = {
@@ -152,31 +164,24 @@ export function assertOrgRole(userRole: OrgRole, minRole: OrgRole): boolean {
  * 获取用户对指定文档的 ACL 权限
  */
 export async function getDocumentPermission(
-  db: AppDatabase,
+  db: DatabaseClient,
   docId: string,
   user: EnterpriseUser
 ): Promise<DocPermission | null> {
-  // 1. 若用户是企业 owner 或 admin，自动拥有该文档的 owner 最高权限
+  // 1. 若用户是企业 owner 或 admin，自动拥有最高 owner 权限
   if (user.role === "owner" || user.role === "admin") {
     return "owner";
   }
 
-  // 2. 从 document_permissions 表检索专属授权
-  const perms = await db
-    .select({
-      permission: schema.documentPermissions.permission,
-    })
-    .from(schema.documentPermissions)
-    .where(
-      and(
-        eq(schema.documentPermissions.documentId, docId),
-        eq(schema.documentPermissions.userId, user.id)
-      )
-    )
-    .limit(1);
+  // 2. 查询 ACL 表
+  const row = await db.queryOne<{ permission: string }>(
+    "SELECT permission FROM document_permissions WHERE document_id = ? AND user_id = ? LIMIT 1",
+    docId,
+    user.id
+  );
 
-  if (perms && perms.length > 0) {
-    return perms[0].permission as DocPermission;
+  if (row && row.permission) {
+    return row.permission as DocPermission;
   }
 
   return null;
@@ -210,7 +215,7 @@ export function canUserPerform(
  * 写入合规审计日志
  */
 export async function recordAuditLog(
-  db: AppDatabase,
+  db: DatabaseClient,
   params: {
     orgId: string;
     userId?: string;
@@ -222,17 +227,19 @@ export async function recordAuditLog(
   }
 ): Promise<void> {
   try {
-    await db.insert(schema.auditLogs).values({
-      id: crypto.randomUUID(),
-      orgId: params.orgId,
-      userId: params.userId || null,
-      userName: params.userName || null,
-      action: params.action,
-      targetId: params.targetId || null,
-      details: params.details ? JSON.stringify(params.details) : null,
-      ipAddress: params.ipAddress || null,
-      createdAt: Date.now(),
-    });
+    await db.execute(
+      `INSERT INTO audit_logs (id, org_id, user_id, user_name, action, target_id, details, ip_address, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      crypto.randomUUID(),
+      params.orgId,
+      params.userId || null,
+      params.userName || null,
+      params.action,
+      params.targetId || null,
+      params.details ? JSON.stringify(params.details) : null,
+      params.ipAddress || null,
+      Date.now()
+    );
   } catch (err) {
     console.error("Failed to write audit log:", err);
   }
