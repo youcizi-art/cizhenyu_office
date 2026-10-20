@@ -15,13 +15,27 @@ import { useExtracted } from "next-intl";
 import { cn } from "@/lib/utils";
 
 import { useAuth } from "@/components/auth-guard";
-import { LogOut } from "lucide-react";
+import { useEnterprise } from "@/components/enterprise/context/enterprise-auth-context";
+import { EnterpriseLoginDialog } from "@/components/enterprise/auth/enterprise-login-dialog";
+import { MemberManagementDialog } from "@/components/enterprise/members/member-management-dialog";
+import { RoleBadge } from "@/components/enterprise/permissions/permission-badge";
+import { LogOut, Building2, Users } from "lucide-react";
 
 export function Header({ children }: PropsWithChildren<{ className?: string }>) {
   const router = useRouter();
   const t = useExtracted();
   const { requiresPassword, isAuthenticated, handleLogout } = useAuth();
+  const {
+    user: enterpriseUser,
+    org: enterpriseOrg,
+    isAuthenticated: isEnterpriseAuth,
+    isAdmin: isEnterpriseAdmin,
+    handleLogout: handleEnterpriseLogout,
+  } = useEnterprise();
+
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showEnterpriseLogin, setShowEnterpriseLogin] = useState(false);
+  const [showMemberManagement, setShowMemberManagement] = useState(false);
 
   const quickActions = [
     {
@@ -84,16 +98,69 @@ export function Header({ children }: PropsWithChildren<{ className?: string }>) 
           </button>
         ))}
 
+        {/* 企业版工作区状态 / 登录入口 */}
+        {isEnterpriseAuth && enterpriseUser ? (
+          <div className="flex items-center gap-1.5 ml-2 pl-2 border-l border-border/50">
+            <button
+              onClick={() => isEnterpriseAdmin && setShowMemberManagement(true)}
+              className={cn(
+                "flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs transition-all border",
+                isEnterpriseAdmin
+                  ? "bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 cursor-pointer"
+                  : "bg-muted/40 border-border/40 text-foreground cursor-default"
+              )}
+              title={
+                isEnterpriseAdmin
+                  ? t({ id: "Enterprise.Header.ManageTeam", message: "Manage Workspace Members" })
+                  : enterpriseOrg?.name || "Enterprise"
+              }
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              <span className="font-medium max-w-[100px] truncate">
+                {enterpriseOrg?.name || "Enterprise"}
+              </span>
+              <RoleBadge role={enterpriseUser.role} size="sm" />
+            </button>
+            <button
+              onClick={handleEnterpriseLogout}
+              className="p-1.5 text-muted-foreground hover:text-destructive rounded-lg hover:bg-destructive/10 transition-colors cursor-pointer"
+              title={t({ id: "Enterprise.Header.SignOut", message: "Sign out of Enterprise account" })}
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowEnterpriseLogin(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 transition-all cursor-pointer ml-1"
+          >
+            <Building2 className="w-3.5 h-3.5" />
+            <span>{t({ id: "Enterprise.Header.EnterpriseEdition", message: "Enterprise" })}</span>
+          </button>
+        )}
+
         {requiresPassword && isAuthenticated && (
           <button
             onClick={() => setShowLogoutConfirm(true)}
-            className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all flex items-center justify-center cursor-pointer ml-2"
+            className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all flex items-center justify-center cursor-pointer ml-1"
             title={t({ id: "LogOut", message: "Log Out" })}
           >
             <LogOut className="w-5 h-5" />
           </button>
         )}
       </div>
+
+      {/* 企业登录与初始化弹窗 */}
+      <EnterpriseLoginDialog
+        isOpen={showEnterpriseLogin}
+        onClose={() => setShowEnterpriseLogin(false)}
+      />
+
+      {/* 企业成员管理弹窗 */}
+      <MemberManagementDialog
+        isOpen={showMemberManagement}
+        onClose={() => setShowMemberManagement(false)}
+      />
 
       {/* 退出登录确认弹窗 */}
       {showLogoutConfirm && (

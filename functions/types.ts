@@ -120,3 +120,28 @@ export interface PagesContext<P extends string = string> {
   params: Record<P, string | string[]>;
   data: Record<string, unknown>;
 }
+
+export type OrgRole = "owner" | "admin" | "member" | "viewer";
+export type DocPermission = "owner" | "editor" | "commenter" | "viewer";
+
+export interface EnterpriseUser {
+  id: string;
+  orgId: string;
+  email: string;
+  name: string;
+  avatar: string | null;
+  role: OrgRole;
+  status: "active" | "disabled" | "invited";
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface EnterpriseOrg {
+  id: string;
+  name: string;
+  logoUrl: string | null;
+  maxSeats: number;
+  createdAt: number;
+  updatedAt: number;
+}
+

@@ -18,6 +18,7 @@ import {
   Eye,
   FileEdit,
   KeyRound,
+  Shield,
 } from "lucide-react";
 import { useExtracted } from "next-intl";
 import { cn } from "@/lib/utils";
@@ -47,6 +48,7 @@ interface DocumentCardProps {
   onTogglePin: (doc: DocumentMeta) => void;
   onEditTags: (doc: DocumentMeta) => void;
   onTagClick?: (tag: string) => void;
+  onManagePermissions?: (doc: DocumentMeta) => void;
 }
 
 export function DocumentCard({
@@ -61,6 +63,7 @@ export function DocumentCard({
   onTogglePin,
   onEditTags,
   onTagClick,
+  onManagePermissions,
 }: DocumentCardProps) {
   const t = useExtracted();
   const docCfg = getDocConfig(doc.type);
@@ -219,6 +222,16 @@ export function DocumentCard({
                 <Share2 className="w-3.5 h-3.5 text-emerald-500" />
                 <span>{t({ id: "ShareLink", message: "Share Link" })}</span>
               </button>
+
+              {onManagePermissions && (
+                <button
+                  onClick={() => onManagePermissions(doc)}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-muted text-foreground transition-colors cursor-pointer"
+                >
+                  <Shield className="w-3.5 h-3.5 text-purple-500" />
+                  <span>{t({ id: "Enterprise.Permissions.MenuAction", message: "Permissions" })}</span>
+                </button>
+              )}
 
               <button
                 onClick={() => onDownload(doc)}

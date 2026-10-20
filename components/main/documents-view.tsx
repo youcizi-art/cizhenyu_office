@@ -42,6 +42,8 @@ import { PaginationBar } from "./documents/pagination-bar";
 import { DocumentsToolbar } from "./documents/documents-toolbar";
 import { useDocumentDrag } from "./documents/use-document-drag";
 import { useDocumentsData } from "./documents/use-documents-data";
+import { useEnterprise } from "@/components/enterprise/context/enterprise-auth-context";
+import { DocPermissionDialog } from "@/components/enterprise/permissions/doc-permission-dialog";
 
 export function DocumentsView() {
   const router = useRouter();
@@ -51,6 +53,9 @@ export function DocumentsView() {
   // 弹窗状态
   const [previewMediaDoc, setPreviewMediaDoc] = useState<DocumentMeta | null>(null);
   const [fileDetailsDoc, setFileDetailsDoc] = useState<DocumentMeta | null>(null);
+  const [permissionDoc, setPermissionDoc] = useState<DocumentMeta | null>(null);
+
+  const { isAuthenticated: isEnterpriseAuth, user: enterpriseUser } = useEnterprise();
 
   // 侧边栏折叠与展开状态
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
@@ -336,6 +341,9 @@ export function DocumentsView() {
                   }}
                   onMove={(targetDoc) => setMoveDocModal({ open: true, doc: targetDoc })}
                   onDelete={handleDeleteDoc}
+                  onManagePermissions={
+                    isEnterpriseAuth ? (targetDoc) => setPermissionDoc(targetDoc) : undefined
+                  }
                 />
               ))}
             </div>
@@ -471,6 +479,16 @@ export function DocumentsView() {
         }}
         onDelete={handleDeleteDoc}
       />
+
+      {permissionDoc && (
+        <DocPermissionDialog
+          isOpen={Boolean(permissionDoc)}
+          onClose={() => setPermissionDoc(null)}
+          documentId={permissionDoc.id}
+          documentName={permissionDoc.name}
+          currentUserId={enterpriseUser?.id || ""}
+        />
+      )}
     </div>
   );
 }

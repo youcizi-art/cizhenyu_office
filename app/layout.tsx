@@ -4,6 +4,7 @@ import { getMessages } from "next-intl/server";
 import { I18nProvider } from "@/components/i18n-provider";
 import { ProgressProvider } from "@/components/progress-provider";
 import { PwaRegistrar } from "@/components/pwa-registrar";
+import { EnterpriseProvider } from "@/components/enterprise/context/enterprise-auth-context";
 import "./globals.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://office.example.com";
@@ -109,7 +110,9 @@ export default async function RootLayout({
       <body>
         <PwaRegistrar />
         <ProgressProvider>
-          <I18nProvider initialMessages={messages}>{children}</I18nProvider>
+          <I18nProvider initialMessages={messages}>
+            <EnterpriseProvider>{children}</EnterpriseProvider>
+          </I18nProvider>
         </ProgressProvider>
       </body>
       <GoogleAnalytics gaId="G-EFLBPT6TS8" />
