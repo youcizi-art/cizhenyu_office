@@ -15,7 +15,7 @@ export async function onRequestPost(context: PagesContext<"id">): Promise<Respon
   const { request, env, params } = context;
   const isAuth = await verifyAuth(request, env);
   if (!isAuth) {
-    return errorResponse("未授权访问，请先登录", 401);
+    return errorResponse("Unauthorized, please log in first", 401);
   }
 
   const docId = params.id as string;
@@ -23,7 +23,37 @@ export async function onRequestPost(context: PagesContext<"id">): Promise<Respon
     const metadata = await loadMetadata(env);
     const doc = metadata.documents.find((d) => d.id === docId);
     if (!doc) {
-      return errorResponse("文档不存在", 404);
+      return errorResponse("Document not found", 404);
+    }
+
+    // 企业级四维 RBAC 校验与操作审计
+    const { getEnterpriseSession, recordAuditLog } = await import("../../../lib/rbac");
+    const { resolveUserEffectivePermissions } = await import("../../../lib/permission-engine");
+    const { getDb } = await import("../../../lib/db");
+
+    const session = await getEnterpriseSession(request, env);
+    if (session && env.DB) {
+      const db = getDb(env);
+      const resolved = await resolveUserEffectivePermissions(db, session.user, {
+        id: doc.id,
+        type: doc.type,
+        categoryId: doc.categoryId,
+        tags: doc.tags || [],
+      });
+
+      if (!resolved.actions.includes("share")) {
+        return errorResponse("Forbidden: You do not have 'share' permission for this document", 403);
+      }
+
+      await recordAuditLog(db, {
+        orgId: session.org.id,
+        userId: session.user.id,
+        userName: session.user.name,
+        action: "doc_share_created",
+        targetId: doc.id,
+        details: { docName: doc.name },
+        ipAddress: request.headers.get("CF-Connecting-IP") || undefined,
+      });
     }
 
     const body = (await request.json().catch(() => ({}))) as {
@@ -69,7 +99,7 @@ export async function onRequestPost(context: PagesContext<"id">): Promise<Respon
       document: doc,
     });
   } catch (err) {
-    return errorResponse("设置分享失败: " + String(err), 500);
+    return errorResponse("Failed to configure share link: " + String(err), 500);
   }
 }
 
@@ -77,7 +107,7 @@ export async function onRequestDelete(context: PagesContext<"id">): Promise<Resp
   const { request, env, params } = context;
   const isAuth = await verifyAuth(request, env);
   if (!isAuth) {
-    return errorResponse("未授权访问，请先登录", 401);
+    return errorResponse("Unauthorized, please log in first", 401);
   }
 
   const docId = params.id as string;
@@ -85,7 +115,7 @@ export async function onRequestDelete(context: PagesContext<"id">): Promise<Resp
     const metadata = await loadMetadata(env);
     const doc = metadata.documents.find((d) => d.id === docId);
     if (!doc) {
-      return errorResponse("文档不存在", 404);
+      return errorResponse("Document not found", 404);
     }
 
     delete doc.shareToken;
@@ -99,10 +129,10 @@ export async function onRequestDelete(context: PagesContext<"id">): Promise<Resp
 
     return jsonResponse({
       success: true,
-      message: "已关闭分享",
+      message: "Share link closed successfully",
       document: doc,
     });
   } catch (err) {
-    return errorResponse("关闭分享失败: " + String(err), 500);
+    return errorResponse("Failed to close share link: " + String(err), 500);
   }
 }

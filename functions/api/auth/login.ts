@@ -59,10 +59,13 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
       email
     );
 
-    // 2. 冷启动智能引导：如果系统没有任何用户，且当前是初次登录，自动注册为超级所有者 (Owner)
+    // 2. 冷启动智能引导：仅当系统库内没有任何用户时，才允许通过首次输入初始化超级所有者 (Owner)
     if (!targetUser) {
       const anyUser = await db.queryOne<{ id: string }>("SELECT id FROM users LIMIT 1");
       if (!anyUser) {
+        if (!body.orgName || !body.name) {
+          return errorResponse("Organization name and Administrator name are required for initialization", 400);
+        }
         // 创建默认企业组织
         const orgId = crypto.randomUUID();
         const orgName = (body.orgName || "CIZHENYU Enterprise").trim();

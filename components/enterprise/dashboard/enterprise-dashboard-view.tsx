@@ -10,6 +10,7 @@ import { DashboardQuickActions } from "./dashboard-quick-actions";
 import { DashboardActivityFeed } from "./dashboard-activity-feed";
 import { MemberManagementDialog } from "../members/member-management-dialog";
 import { InvitationManagementDialog } from "../members/invitation-management-dialog";
+import { RoleGroupManagementDialog } from "../admin/role-groups/role-group-management-dialog";
 import { RoleBadge } from "../permissions/permission-badge";
 import {
   FileText,
@@ -30,6 +31,7 @@ export function EnterpriseDashboardView() {
   const [data, setData] = useState<EnterpriseDashboardData | null>(null);
   const [membersOpen, setMembersOpen] = useState(false);
   const [invitationsOpen, setInvitationsOpen] = useState(false);
+  const [permissionsOpen, setPermissionsOpen] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -124,6 +126,7 @@ export function EnterpriseDashboardView() {
       <DashboardQuickActions
         onOpenMembers={() => setMembersOpen(true)}
         onOpenInvitations={() => setInvitationsOpen(true)}
+        onOpenPermissions={() => setPermissionsOpen(true)}
       />
 
       {/* 团队动态与安全审计流 */}
@@ -143,6 +146,14 @@ export function EnterpriseDashboardView() {
         <InvitationManagementDialog
           isOpen={invitationsOpen}
           onClose={() => setInvitationsOpen(false)}
+        />
+      )}
+
+      {/* 弹窗：权限矩阵与角色组管理 */}
+      {isAdmin && (
+        <RoleGroupManagementDialog
+          isOpen={permissionsOpen}
+          onClose={() => setPermissionsOpen(false)}
         />
       )}
     </div>

@@ -150,7 +150,49 @@ CREATE TABLE IF NOT EXISTS invitation_codes (
   FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
 );
 
--- 12. 性能索引
+-- 12. 角色组表 (Role Groups)
+CREATE TABLE IF NOT EXISTS role_groups (
+  id TEXT PRIMARY KEY,
+  org_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  is_system INTEGER NOT NULL DEFAULT 0, -- 1: 系统内置角色组(Owner/Admin/Member/Viewer), 0: 自定义
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+);
+
+-- 13. 用户-角色组多对多关联表
+CREATE TABLE IF NOT EXISTS user_role_groups (
+  id TEXT PRIMARY KEY,
+  org_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  role_group_id TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  UNIQUE(user_id, role_group_id),
+  FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (role_group_id) REFERENCES role_groups(id) ON DELETE CASCADE
+);
+
+-- 14. 四维权限规则表 (Permission Rules)
+-- scope_type: 'document' | 'category' | 'tag' | 'file_type'
+-- allow_actions & deny_actions: JSON 字符串数组，如 '["view","edit","comment","download","share","upload"]'
+CREATE TABLE IF NOT EXISTS permission_rules (
+  id TEXT PRIMARY KEY,
+  org_id TEXT NOT NULL,
+  role_group_id TEXT NOT NULL,
+  scope_type TEXT NOT NULL,
+  scope_id TEXT NOT NULL,
+  allow_actions TEXT NOT NULL DEFAULT '[]',
+  deny_actions TEXT NOT NULL DEFAULT '[]',
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE,
+  FOREIGN KEY (role_group_id) REFERENCES role_groups(id) ON DELETE CASCADE
+);
+
+-- 15. 性能索引
 CREATE INDEX IF NOT EXISTS idx_documents_category ON documents(category_id);
 CREATE INDEX IF NOT EXISTS idx_documents_type ON documents(type);
 CREATE INDEX IF NOT EXISTS idx_documents_pinned ON documents(pinned, pinned_at DESC, "order" ASC, updated_at DESC);
@@ -168,4 +210,11 @@ CREATE INDEX IF NOT EXISTS idx_comments_doc ON document_comments(document_id, re
 CREATE INDEX IF NOT EXISTS idx_versions_doc ON document_versions(document_id, version_number DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_org ON audit_logs(org_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_invitations_code ON invitation_codes(code);
+
+CREATE INDEX IF NOT EXISTS idx_role_groups_org ON role_groups(org_id);
+CREATE INDEX IF NOT EXISTS idx_user_role_groups_user ON user_role_groups(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_role_groups_group ON user_role_groups(role_group_id);
+CREATE INDEX IF NOT EXISTS idx_perm_rules_group ON permission_rules(role_group_id);
+CREATE INDEX IF NOT EXISTS idx_perm_rules_scope ON permission_rules(scope_type, scope_id);
+
 

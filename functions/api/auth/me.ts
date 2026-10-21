@@ -16,15 +16,14 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
       message: "D1 Database is not bound",
     });
   }
-
   try {
     const session = await getEnterpriseSession(request, env);
-    if (!session) {
-      // 检查系统是否有任何用户（用于前端决定展示“初始化企业管理员”还是“常规企业登录”）
-      const db = getDb(env);
-      const anyUser = await db.queryOne<{ id: string }>("SELECT id FROM users LIMIT 1");
-      const isInitialized = Boolean(anyUser);
+    // 无论当前会话是否存在，始终查库判断系统是否已初始化管理员
+    const db = getDb(env);
+    const anyUser = await db.queryOne<{ id: string }>("SELECT id FROM users LIMIT 1");
+    const isInitialized = Boolean(anyUser);
 
+    if (!session) {
       return jsonResponse({
         authenticated: false,
         enterpriseConfigured: true,
@@ -35,7 +34,7 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
     return jsonResponse({
       authenticated: true,
       enterpriseConfigured: true,
-      isInitialized: true,
+      isInitialized,
       user: session.user,
       org: session.org,
     });

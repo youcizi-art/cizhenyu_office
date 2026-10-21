@@ -36,6 +36,37 @@ export async function onRequestPut(context: PagesContext<"id">): Promise<Respons
     }
 
     const doc = metadata.documents[docIndex];
+
+    // 企业级四维 RBAC 校验与操作审计
+    const { getEnterpriseSession, recordAuditLog } = await import("../../lib/rbac");
+    const { resolveUserEffectivePermissions } = await import("../../lib/permission-engine");
+    const { getDb } = await import("../../lib/db");
+
+    const session = await getEnterpriseSession(request, env);
+    if (session && env.DB) {
+      const db = getDb(env);
+      const resolved = await resolveUserEffectivePermissions(db, session.user, {
+        id: doc.id,
+        type: doc.type,
+        categoryId: doc.categoryId,
+        tags: doc.tags || [],
+      });
+
+      if (!resolved.actions.includes("edit")) {
+        return errorResponse("Forbidden: You do not have 'edit' permission for this document", 403);
+      }
+
+      await recordAuditLog(db, {
+        orgId: session.org.id,
+        userId: session.user.id,
+        userName: session.user.name,
+        action: "doc_edit",
+        targetId: doc.id,
+        details: { docName: doc.name, docType: doc.type },
+        ipAddress: request.headers.get("CF-Connecting-IP") || undefined,
+      });
+    }
+
     const arrayBuffer = await request.arrayBuffer();
     if (!arrayBuffer || arrayBuffer.byteLength === 0) {
       return errorResponse("Uploaded content is empty", 400);

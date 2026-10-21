@@ -82,6 +82,37 @@
   "DiscardAndExit": "Discard and Leave",
   "SaveAndExit": "Save and Leave",
   "Enterprise": {
+    "Inspector": {
+      "DocIdRequired": "Document ID is required",
+      "Title": "Permission Inheritance Inspector",
+      "Desc": "Simulate and audit real-time 4-dimensional permission inheritance for any user and document.",
+      "DocIdLabel": "Target Document ID",
+      "UserIdLabel": "User ID (Optional, defaults to self)",
+      "RunAnalysis": "Run Analysis"
+    },
+    "RBAC": {
+      "ScopeIdRequired": "Target Scope ID / Value is required",
+      "RuleCreated": "Permission rule added",
+      "RuleDeleted": "Permission rule removed",
+      "RulesCount": "active rules",
+      "RuleBuilderTip": "Rules apply dynamically to all current and future documents under this scope.",
+      "AddRule": "Add Rule",
+      "DimensionScope": "Dimension Scope",
+      "ScopeCategory": "Category (Inherited by new docs)",
+      "ScopeTag": "Tag (Inherited by tagged docs)",
+      "ScopeFileType": "File Type (e.g. docx, pdf, md)",
+      "ScopeDocument": "Specific Document (Highest Priority)",
+      "ScopeIdentifier": "Scope Identifier / Value",
+      "ActionsMatrix": "Action Permissions (Allow vs Deny)",
+      "NoRulesConfigured": "No custom rules defined for this role group. Fallback defaults apply.",
+      "GroupCreated": "Role group created",
+      "DialogTitle": "Enterprise RBAC & Permission Matrix",
+      "DialogDesc": "Configure 4-dimensional security scopes and preview inheritance trees.",
+      "TabGroups": "Role Groups",
+      "TabInspector": "Inheritance Preview",
+      "RoleGroupsList": "Groups",
+      "SelectGroupTip": "Select a role group to manage permissions"
+    },
     "Auth": {
       "InitTitle": "Initialize Enterprise",
       "LoginTitle": "Enterprise Sign In",
@@ -134,6 +165,7 @@
       "QuickActions": "Quick Actions",
       "ManageStaff": "Manage Staff",
       "InviteCodes": "Invite Codes",
+      "PermissionMatrix": "Permissions",
       "WelcomeBack": "Welcome back",
       "SecurityProtected": "Protected by enterprise RBAC and Cloudflare isolated cloud storage.",
       "GoDocuments": "Open Documents",
@@ -238,6 +270,8 @@
       "Dashboard": "Dashboard"
     }
   },
+  "Delete": "Delete",
+  "Create": "Create",
   "EnterpriseEdition": "Enterprise Edition",
   "NewWordDoc": "New Word Document",
   "NewExcelSheet": "Spreadsheet",
@@ -287,7 +321,6 @@
   "OrderSaved": "Document order saved",
   "SaveOrderFailed": "Failed to save document order",
   "DeleteDocumentTitle": "Delete Document",
-  "Delete": "Delete",
   "DeleteSuccess": "Document deleted",
   "LoadingR2Docs": "Loading documents from R2 cloud storage...",
   "NoMatchingDocs": "No matching documents found",

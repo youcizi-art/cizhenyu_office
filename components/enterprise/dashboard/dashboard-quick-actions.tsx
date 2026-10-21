@@ -18,9 +18,14 @@ import {
 interface QuickActionsProps {
   onOpenMembers: () => void;
   onOpenInvitations: () => void;
+  onOpenPermissions?: () => void;
 }
 
-export function DashboardQuickActions({ onOpenMembers, onOpenInvitations }: QuickActionsProps) {
+export function DashboardQuickActions({
+  onOpenMembers,
+  onOpenInvitations,
+  onOpenPermissions,
+}: QuickActionsProps) {
   const t = useExtracted();
   const router = useRouter();
   const { isAdmin } = useEnterprise();
@@ -130,6 +135,23 @@ export function DashboardQuickActions({ onOpenMembers, onOpenInvitations }: Quic
               {t({ id: "Enterprise.Dashboard.InviteCodes", message: "Invite Codes" })}
             </span>
             <span className="text-[10px] text-muted-foreground mt-0.5">Security</span>
+          </button>
+        )}
+
+        {/* 管理员专属: 权限矩阵管理 */}
+        {isAdmin && onOpenPermissions && (
+          <button
+            type="button"
+            onClick={onOpenPermissions}
+            className="flex flex-col items-center justify-center p-3 rounded-xl border border-slate-200/60 bg-slate-50/50 hover:bg-rose-50/50 hover:border-rose-300 dark:border-white/5 dark:bg-white/5 dark:hover:bg-rose-500/10 dark:hover:border-rose-500/30 transition-all cursor-pointer group text-center"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 group-hover:scale-105 transition-transform mb-2">
+              <Plus className="h-5 w-5" />
+            </div>
+            <span className="text-xs font-medium text-foreground">
+              {t({ id: "Enterprise.Dashboard.PermissionMatrix", message: "Permissions" })}
+            </span>
+            <span className="text-[10px] text-muted-foreground mt-0.5">RBAC</span>
           </button>
         )}
       </div>

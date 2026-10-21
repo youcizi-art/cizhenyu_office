@@ -7,6 +7,7 @@ import { Env } from "../types";
 export interface DatabaseClient {
   queryOne: <T>(sql: string, ...params: unknown[]) => Promise<T | null>;
   queryAll: <T>(sql: string, ...params: unknown[]) => Promise<T[]>;
+  query: <T>(sql: string, ...params: unknown[]) => Promise<T[]>;
   execute: (sql: string, ...params: unknown[]) => Promise<{ success: boolean }>;
 }
 
@@ -43,6 +44,10 @@ export function getDb(env: Env): DatabaseClient {
         console.error("D1 queryAll error:", err, { sql, params });
         throw err;
       }
+    },
+
+    async query<T>(sql: string, ...params: unknown[]): Promise<T[]> {
+      return this.queryAll<T>(sql, ...params);
     },
 
     async execute(sql: string, ...params: unknown[]): Promise<{ success: boolean }> {
