@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Plus,
-  FolderOpen,
+  LayoutDashboard,
   Info,
   Settings,
   Cloud,
@@ -71,7 +71,12 @@ export function Sidebar({ pathname }: SidebarProps) {
   ];
 
   const sidebarItems = [
-    { id: "open", label: t("Open"), icon: FolderOpen, href: "/" },
+    {
+      id: "dashboard",
+      label: t({ id: "Enterprise.Sidebar.Dashboard", message: "Dashboard" }),
+      icon: LayoutDashboard,
+      href: "/",
+    },
     {
       id: "documents",
       label: t({ id: "OnlineDocuments", message: "Online Documents" }),

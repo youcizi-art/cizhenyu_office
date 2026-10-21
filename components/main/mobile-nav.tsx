@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useExtracted } from "next-intl";
-import { FolderOpen, Cloud, Settings, Info } from "lucide-react";
+import { LayoutDashboard, Cloud, Settings, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface MobileNavProps {
@@ -14,7 +14,12 @@ export function MobileNav({ pathname, className }: MobileNavProps) {
   const t = useExtracted();
 
   const navItems = [
-    { id: "open", label: t("Open"), icon: FolderOpen, href: "/" },
+    {
+      id: "dashboard",
+      label: t({ id: "Enterprise.Sidebar.Dashboard", message: "Dashboard" }),
+      icon: LayoutDashboard,
+      href: "/",
+    },
     {
       id: "documents",
       label: t({ id: "OnlineDocuments", message: "Online Documents" }),

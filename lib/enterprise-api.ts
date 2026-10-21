@@ -196,3 +196,108 @@ export async function revokeDocumentPermission(
   );
   return res.json();
 }
+
+export interface EnterpriseInvitation {
+  id: string;
+  code: string;
+  role: "admin" | "member" | "viewer";
+  maxUses: number;
+  usedCount: number;
+  expiresAt: number;
+  createdAt: number;
+}
+
+/**
+ * 凭邀请码激活入职
+ */
+export async function acceptEnterpriseInvitation(params: {
+  code: string;
+  email: string;
+  name?: string;
+  password: string;
+}): Promise<{ success: boolean; user?: EnterpriseUser; organization?: EnterpriseOrg; error?: string }> {
+  const res = await fetch(`${API_BASE}/api/auth/invite-accept`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(params),
+  });
+  return res.json();
+}
+
+/**
+ * 获取组织所有有效邀请码
+ */
+export async function fetchEnterpriseInvitations(): Promise<{
+  invitations: EnterpriseInvitation[];
+  error?: string;
+}> {
+  const res = await fetch(`${API_BASE}/api/enterprise/invitations`, {
+    method: "GET",
+    credentials: "include",
+  });
+  return res.json();
+}
+
+/**
+ * 创建新邀请码
+ */
+export async function createEnterpriseInvitation(params: {
+  role: "admin" | "member" | "viewer";
+  maxUses: number;
+  validDays: number;
+}): Promise<{ success: boolean; invitation?: EnterpriseInvitation; error?: string }> {
+  const res = await fetch(`${API_BASE}/api/enterprise/invitations`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(params),
+  });
+  return res.json();
+}
+
+/**
+ * 作废邀请码
+ */
+export async function deleteEnterpriseInvitation(id: string): Promise<{ success: boolean; error?: string }> {
+  const res = await fetch(`${API_BASE}/api/enterprise/invitations?id=${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  return res.json();
+}
+
+export interface EnterpriseDashboardData {
+  organization: {
+    id: string;
+    name: string;
+    maxSeats: number;
+    currentMembers: number;
+    activeMembers: number;
+  };
+  stats: {
+    documentsCount: number;
+    sharedCount: number;
+    activeLocksCount: number;
+  };
+  recentActivities: Array<{
+    id: string;
+    userName: string;
+    action: string;
+    targetId: string | null;
+    details: Record<string, unknown> | null;
+    createdAt: number;
+  }>;
+}
+
+/**
+ * 获取企业工作台仪表盘聚合指标
+ */
+export async function fetchEnterpriseDashboard(): Promise<EnterpriseDashboardData | null> {
+  const res = await fetch(`${API_BASE}/api/enterprise/dashboard`, {
+    method: "GET",
+    credentials: "include",
+  });
+  if (!res.ok) return null;
+  return res.json();
+}

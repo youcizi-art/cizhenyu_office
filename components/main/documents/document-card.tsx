@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { getDocConfig } from "@/lib/document-types";
 import { formatRelativeTime } from "@/utils/recent-files";
 import { DocumentMeta } from "@/lib/api";
+import { useEnterprise } from "@/components/enterprise/context/enterprise-auth-context";
 import {
   Popover,
   PopoverContent,
@@ -66,6 +67,7 @@ export function DocumentCard({
   onManagePermissions,
 }: DocumentCardProps) {
   const t = useExtracted();
+  const { canDownloadDocument, canShareDocument } = useEnterprise();
   const docCfg = getDocConfig(doc.type);
 
   return (
@@ -215,13 +217,15 @@ export function DocumentCard({
                 <span>{t({ id: "EditTags", message: "Edit Tags" })}</span>
               </button>
 
-              <button
-                onClick={() => onShare(doc)}
-                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-muted text-foreground transition-colors cursor-pointer"
-              >
-                <Share2 className="w-3.5 h-3.5 text-emerald-500" />
-                <span>{t({ id: "ShareLink", message: "Share Link" })}</span>
-              </button>
+              {canShareDocument() && (
+                <button
+                  onClick={() => onShare(doc)}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-muted text-foreground transition-colors cursor-pointer"
+                >
+                  <Share2 className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>{t({ id: "ShareLink", message: "Share Link" })}</span>
+                </button>
+              )}
 
               {onManagePermissions && (
                 <button
@@ -233,13 +237,15 @@ export function DocumentCard({
                 </button>
               )}
 
-              <button
-                onClick={() => onDownload(doc)}
-                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-muted text-foreground transition-colors cursor-pointer"
-              >
-                <Download className="w-3.5 h-3.5 text-muted-foreground" />
-                <span>{t({ id: "DownloadFile", message: "Download" })}</span>
-              </button>
+              {canDownloadDocument() && (
+                <button
+                  onClick={() => onDownload(doc)}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-muted text-foreground transition-colors cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span>{t({ id: "DownloadFile", message: "Download" })}</span>
+                </button>
+              )}
 
               <div className="h-px bg-border my-1" />
 

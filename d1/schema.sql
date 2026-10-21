@@ -136,7 +136,21 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
 );
 
--- 11. 性能索引
+-- 11. 邀请码管理表 (邀请入职与受限激活)
+CREATE TABLE IF NOT EXISTS invitation_codes (
+  id TEXT PRIMARY KEY,
+  org_id TEXT NOT NULL,
+  code TEXT NOT NULL UNIQUE,
+  role TEXT NOT NULL DEFAULT 'member', -- admin | member | viewer
+  max_uses INTEGER NOT NULL DEFAULT 1,
+  used_count INTEGER NOT NULL DEFAULT 0,
+  created_by_user_id TEXT,
+  expires_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+);
+
+-- 12. 性能索引
 CREATE INDEX IF NOT EXISTS idx_documents_category ON documents(category_id);
 CREATE INDEX IF NOT EXISTS idx_documents_type ON documents(type);
 CREATE INDEX IF NOT EXISTS idx_documents_pinned ON documents(pinned, pinned_at DESC, "order" ASC, updated_at DESC);
@@ -153,4 +167,5 @@ CREATE INDEX IF NOT EXISTS idx_doc_locks_expires ON document_locks(expires_at);
 CREATE INDEX IF NOT EXISTS idx_comments_doc ON document_comments(document_id, resolved, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_versions_doc ON document_versions(document_id, version_number DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_org ON audit_logs(org_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_invitations_code ON invitation_codes(code);
 

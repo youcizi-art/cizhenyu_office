@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import { OpenView } from "@/components/main/open-view";
+import { EnterpriseDashboardView } from "@/components/enterprise/dashboard/enterprise-dashboard-view";
 
 export const metadata: Metadata = {
-  title: "私有在线 Office 编辑器 — Word, Excel, PowerPoint | CIZHENYU",
+  title: "Enterprise Dashboard — CIZHENYU Office",
   description:
-    "直接在浏览器中安全高效地打开、查看与编辑 DOCX、XLSX、PPTX 文件，连接 Cloudflare R2 云端存储，支持在线文档管理与分享。",
+    "CIZHENYU Office Enterprise Workspace: Role-based access control, document governance, and cloud collaboration.",
 };
 
 export default function HomePage() {
-  return <OpenView />;
+  return <EnterpriseDashboardView />;
 }

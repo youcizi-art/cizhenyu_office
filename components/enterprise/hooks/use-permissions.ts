@@ -4,7 +4,17 @@ import { useMemo } from "react";
 import { defineAbility, MongoAbility } from "@casl/ability";
 import { EnterpriseUser } from "@/lib/enterprise-api";
 
-export type AppActions = "manage" | "create" | "read" | "update" | "delete" | "comment" | "lock";
+export type AppActions =
+  | "manage"
+  | "create"
+  | "read"
+  | "update"
+  | "delete"
+  | "comment"
+  | "lock"
+  | "download"
+  | "share";
+
 export type AppSubjects = "Document" | "Member" | "Organization" | "AuditLog" | "all";
 export type AppAbility = MongoAbility<[AppActions, AppSubjects]>;
 
@@ -35,6 +45,8 @@ export function buildAbilityForUser(user: EnterpriseUser | null): AppAbility {
       can("update", "Document");
       can("comment", "Document");
       can("lock", "Document");
+      can("download", "Document");
+      can("share", "Document");
       can("read", "Member");
       cannot("manage", "Organization");
       cannot("delete", "Member");
@@ -48,6 +60,8 @@ export function buildAbilityForUser(user: EnterpriseUser | null): AppAbility {
       cannot("delete", "Document");
       cannot("create", "Document");
       cannot("lock", "Document");
+      cannot("download", "Document"); // 防泄密核心：访客禁止下载原文件
+      cannot("share", "Document"); // 访客禁止对外分享
       can("read", "Member");
       return;
     }
@@ -74,6 +88,14 @@ export function usePermissions(user: EnterpriseUser | null) {
     return docPermission === "owner" || docPermission === "editor" || docPermission === "commenter";
   };
 
+  const canDownloadDocument = () => {
+    return ability.can("download", "Document");
+  };
+
+  const canShareDocument = () => {
+    return ability.can("share", "Document");
+  };
+
   return {
     ability,
     can: ability.can.bind(ability),
@@ -83,5 +105,7 @@ export function usePermissions(user: EnterpriseUser | null) {
     canManageMembers,
     canEditDocument,
     canCommentDocument,
+    canDownloadDocument,
+    canShareDocument,
   };
 }

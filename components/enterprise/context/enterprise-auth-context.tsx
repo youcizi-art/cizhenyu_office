@@ -25,11 +25,19 @@ interface EnterpriseContextType {
   canManageMembers: boolean;
   canEditDocument: (docPerm?: string | null) => boolean;
   canCommentDocument: (docPerm?: string | null) => boolean;
+  canDownloadDocument: () => boolean;
+  canShareDocument: () => boolean;
   handleLogin: (params: {
     email: string;
     password: string;
     name?: string;
     orgName?: string;
+  }) => Promise<boolean>;
+  handleAcceptInvitation: (params: {
+    code: string;
+    email: string;
+    name?: string;
+    password: string;
   }) => Promise<boolean>;
   handleLogout: () => Promise<void>;
   refreshAuth: () => Promise<void>;
@@ -113,14 +121,40 @@ export function EnterpriseProvider({ children }: { children: React.ReactNode }) 
         );
         return false;
       }
-    } catch (e: any) {
-      toast.error(
-        e.message ||
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to connect";
+      toast.error(msg);
+      return false;
+    }
+  };
+
+  const handleAcceptInvitation = async (params: {
+    code: string;
+    email: string;
+    name?: string;
+    password: string;
+  }): Promise<boolean> => {
+    try {
+      const { acceptEnterpriseInvitation } = await import("@/lib/enterprise-api");
+      const res = await acceptEnterpriseInvitation(params);
+      if (res.success && res.user && res.organization) {
+        setUser(res.user);
+        setOrg(res.organization);
+        setIsAuthenticated(true);
+        toast.success(
           t({
-            id: "Enterprise.Auth.LoginNetworkError",
-            message: "Failed to connect to authentication service",
+            id: "Enterprise.Auth.InvitationAccepted",
+            message: "Successfully joined organization",
           })
-      );
+        );
+        return true;
+      } else {
+        toast.error(res.error || "Failed to accept invitation");
+        return false;
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to connect";
+      toast.error(msg);
       return false;
     }
   };
@@ -155,6 +189,7 @@ export function EnterpriseProvider({ children }: { children: React.ReactNode }) 
         isInitialized,
         ...permissions,
         handleLogin,
+        handleAcceptInvitation,
         handleLogout,
         refreshAuth,
       }}
