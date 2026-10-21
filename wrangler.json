@@ -6,7 +6,7 @@
   "r2_buckets": [
     {
       "binding": "DOCUMENTS_BUCKET",
-      "bucket_name": "office-ycz-me"
+      "bucket_name": "office-ltd-ycz-me"
     }
   ],
   "d1_databases": [
