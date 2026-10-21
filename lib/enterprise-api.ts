@@ -110,6 +110,7 @@ export async function createEnterpriseMember(params: {
   password: string;
   name?: string;
   role: "admin" | "member" | "viewer";
+  roleGroupIds?: string[];
 }): Promise<{ success: boolean; member?: EnterpriseUser; error?: string }> {
   const res = await fetch(`${API_BASE}/api/enterprise/members`, {
     method: "POST",

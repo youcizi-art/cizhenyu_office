@@ -82,17 +82,18 @@
   "DiscardAndExit": "Discard and Leave",
   "SaveAndExit": "Save and Leave",
   "Enterprise": {
-    "Inspector": {
-      "DocIdRequired": "Document ID is required",
-      "Title": "Permission Inheritance Inspector",
-      "Desc": "Simulate and audit real-time 4-dimensional permission inheritance for any user and document.",
-      "DocIdLabel": "Target Document ID",
-      "UserIdLabel": "User ID (Optional, defaults to self)",
-      "RunAnalysis": "Run Analysis"
-    },
     "RBAC": {
-      "ScopeIdRequired": "Target Scope ID / Value is required",
-      "RuleCreated": "Permission rule added",
+      "GroupCreated": "Role group created",
+      "GroupUpdated": "Role group updated successfully",
+      "GroupDeleted": "Role group deleted",
+      "PageTitle": "Enterprise Permissions & RBAC",
+      "DialogDesc": "Configure 4-dimensional security scopes and preview inheritance trees.",
+      "TabGroups": "Role Groups & Rules",
+      "TabInspector": "Inheritance Preview",
+      "RoleGroupsList": "Role Groups",
+      "SelectGroupTip": "Select a role group to manage permissions",
+      "ScopeIdRequired": "Target Scope value must be selected",
+      "RuleCreated": "Permission rule updated",
       "RuleDeleted": "Permission rule removed",
       "RulesCount": "active rules",
       "RuleBuilderTip": "Rules apply dynamically to all current and future documents under this scope.",
@@ -102,16 +103,34 @@
       "ScopeTag": "Tag (Inherited by tagged docs)",
       "ScopeFileType": "File Type (e.g. docx, pdf, md)",
       "ScopeDocument": "Specific Document (Highest Priority)",
-      "ScopeIdentifier": "Scope Identifier / Value",
+      "ScopeIdentifier": "Target Item (Linked System Data)",
+      "NoCategories": "No categories found in system.",
+      "NoTags": "No tags currently assigned to documents.",
       "ActionsMatrix": "Action Permissions (Allow vs Deny)",
       "NoRulesConfigured": "No custom rules defined for this role group. Fallback defaults apply.",
-      "GroupCreated": "Role group created",
-      "DialogTitle": "Enterprise RBAC & Permission Matrix",
-      "DialogDesc": "Configure 4-dimensional security scopes and preview inheritance trees.",
-      "TabGroups": "Role Groups",
-      "TabInspector": "Inheritance Preview",
-      "RoleGroupsList": "Groups",
-      "SelectGroupTip": "Select a role group to manage permissions"
+      "ManageUserGroups": "Assign Role Groups",
+      "RoleGroupRemoved": "Role group unassigned",
+      "RoleGroupAssigned": "Role group assigned",
+      "AssignGroupsTitle": "Assign Role Groups",
+      "NoGroupsCreated": "No custom role groups available. Please create groups first.",
+      "ScopeRuleDesc": "Set permissions for this dimension. Rules automatically inherit to current & future documents.",
+      "SelectRoleGroup": "Select Role Group to Configure",
+      "ConflictDenyNote": "Deny overrides Allow across multiple groups",
+      "SaveScopeRule": "Apply Rule to Scope",
+      "ExistingScopeRules": "Existing Active Rules for this Group:",
+      "CategoryPermissions": "Category Permissions",
+      "TagPermissions": "Tag Permissions"
+    },
+    "Plan": {
+      "LtdBadge": "Enterprise LTD"
+    },
+    "Inspector": {
+      "DocIdRequired": "Document ID is required",
+      "Title": "Permission Inheritance Inspector",
+      "Desc": "Simulate and audit real-time 4-dimensional permission inheritance for any user and document.",
+      "DocIdLabel": "Target Document ID",
+      "UserIdLabel": "User ID (Optional, defaults to self)",
+      "RunAnalysis": "Run Analysis"
     },
     "Auth": {
       "InitTitle": "Initialize Enterprise",
@@ -204,6 +223,7 @@
       "Owner": "Owner"
     },
     "Members": {
+      "RoleGroupRequired": "Please select at least one Role Group for this member to grant permissions.",
       "AddSuccess": "Member added successfully",
       "AddFailed": "Failed to add member",
       "AddError": "Network error occurred",
@@ -212,7 +232,10 @@
       "EmailLabel": "Member Email",
       "NameLabel": "Display Name (Optional)",
       "InitialPasswordLabel": "Initial Password",
-      "RoleLabel": "Assigned Role",
+      "RoleLabel": "System Administrative Role",
+      "AssignRoleGroups": "Assign Role Groups (Permissions)",
+      "NoGroupsAvailable": "No role groups found. Please create one in Permissions page first.",
+      "RoleGroupTip": "Role groups determine document, category, tag and action permissions.",
       "ConfirmAdd": "Add Member",
       "WorkspaceTitle": "Workspace Members",
       "Subtitle": "Manage team accounts, assign roles, and allocate seats",
@@ -241,9 +264,6 @@
       "You": "You",
       "Close": "Close"
     },
-    "Plan": {
-      "LtdBadge": "Enterprise LTD"
-    },
     "Permissions": {
       "GrantSuccess": "Document access granted",
       "ConfirmRevoke": "Are you sure you want to revoke access for this user?",
@@ -267,11 +287,12 @@
       "EnterpriseEdition": "Enterprise"
     },
     "Sidebar": {
-      "Dashboard": "Dashboard"
+      "Dashboard": "Dashboard",
+      "Permissions": "Role Groups & RBAC"
     }
   },
+  "Create": "New Group",
   "Delete": "Delete",
-  "Create": "Create",
   "EnterpriseEdition": "Enterprise Edition",
   "NewWordDoc": "New Word Document",
   "NewExcelSheet": "Spreadsheet",
@@ -281,6 +302,8 @@
   "Used": "used",
   "Expired": "Expired",
   "Expires": "Expires in",
+  "Selected": "selected",
+  "Close": "Close",
   "1zZ5Ve": "Make your browser an Office app",
   "D8d2oG": "Documents you download or drag in will open for editing automatically — no extra steps.",
   "7mKmJ6": "Get the Extension",
@@ -369,7 +392,6 @@
   "AllDocuments": "All Documents",
   "SearchDocumentsPlaceholder": "Search documents...",
   "UploadFile": "Upload File",
-  "Close": "Close",
   "FilterByTag": "Tags:",
   "AllTags": "All",
   "FileDetails": "File Details",

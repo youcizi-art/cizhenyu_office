@@ -65,7 +65,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     return errorResponse("Forbidden: Administrator privileges required", 403);
   }
 
-  let body: { email?: string; name?: string; role?: OrgRole; password?: string };
+  let body: { email?: string; name?: string; role?: OrgRole; password?: string; roleGroupIds?: string[] };
   try {
     body = await request.json();
   } catch {
@@ -76,6 +76,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
   const name = (body.name || "").trim();
   const role = body.role || "member";
   const initialPassword = (body.password || "").trim();
+  const roleGroupIds = Array.isArray(body.roleGroupIds) ? body.roleGroupIds : [];
 
   if (!email || !initialPassword) {
     return errorResponse("Email and password are required", 400);
@@ -134,14 +135,30 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
       now
     );
 
-    // 4. 记录审计日志
+    // 4. 若传入了角色组绑定，写入 user_role_groups
+    for (const gid of roleGroupIds) {
+      if (typeof gid === "string" && gid.trim()) {
+        const ugId = crypto.randomUUID();
+        await db.execute(
+          `INSERT OR IGNORE INTO user_role_groups (id, org_id, user_id, role_group_id, created_at)
+           VALUES (?, ?, ?, ?, ?)`,
+          ugId,
+          session.org.id,
+          newUserId,
+          gid.trim(),
+          now
+        );
+      }
+    }
+
+    // 5. 记录审计日志
     await recordAuditLog(db, {
       orgId: session.org.id,
       userId: session.user.id,
       userName: session.user.name,
       action: "member_add",
       targetId: newUserId,
-      details: { email, role },
+      details: { email, role, roleGroupIds },
       ipAddress: request.headers.get("CF-Connecting-IP") || undefined,
     });
 

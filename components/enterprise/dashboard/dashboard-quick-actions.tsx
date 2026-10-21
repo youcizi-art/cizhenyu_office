@@ -138,11 +138,11 @@ export function DashboardQuickActions({
           </button>
         )}
 
-        {/* 管理员专属: 权限矩阵管理 */}
-        {isAdmin && onOpenPermissions && (
+        {/* 管理员专属: 权限矩阵管理 (跳转独立页面) */}
+        {isAdmin && (
           <button
             type="button"
-            onClick={onOpenPermissions}
+            onClick={() => router.push("/permissions")}
             className="flex flex-col items-center justify-center p-3 rounded-xl border border-slate-200/60 bg-slate-50/50 hover:bg-rose-50/50 hover:border-rose-300 dark:border-white/5 dark:bg-white/5 dark:hover:bg-rose-500/10 dark:hover:border-rose-500/30 transition-all cursor-pointer group text-center"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 group-hover:scale-105 transition-transform mb-2">

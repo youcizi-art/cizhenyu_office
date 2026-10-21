@@ -4,7 +4,8 @@ import React, { useState } from "react";
 import { useExtracted } from "next-intl";
 import { EnterpriseUser, updateEnterpriseMember, deleteEnterpriseMember } from "@/lib/enterprise-api";
 import { RoleBadge } from "../permissions/permission-badge";
-import { Trash2, ShieldAlert, CheckCircle2, Ban, Loader2 } from "lucide-react";
+import { Trash2, ShieldAlert, CheckCircle2, Ban, Loader2, Shield } from "lucide-react";
+import { UserRoleGroupAssignmentModal } from "./user-role-group-assignment-modal";
 import { toast } from "sonner";
 
 interface MemberTableProps {
@@ -24,6 +25,7 @@ export function MemberTable({
 }: MemberTableProps) {
   const t = useExtracted();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [managingUser, setManagingUser] = useState<EnterpriseUser | null>(null);
 
   const handleRoleChange = async (
     targetUser: EnterpriseUser,
@@ -189,6 +191,13 @@ export function MemberTable({
                     {canModify && (
                       <>
                         <button
+                          onClick={() => setManagingUser(m)}
+                          title={t({ id: "Enterprise.RBAC.ManageUserGroups", message: "Assign Role Groups" })}
+                          className="p-1.5 text-zinc-400 hover:text-primary rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                        >
+                          <Shield className="w-4 h-4" />
+                        </button>
+                        <button
                           onClick={() => handleToggleStatus(m)}
                           disabled={updatingId === m.id}
                           title={
@@ -218,6 +227,17 @@ export function MemberTable({
           })}
         </tbody>
       </table>
+
+      {managingUser && (
+        <UserRoleGroupAssignmentModal
+          isOpen={Boolean(managingUser)}
+          onClose={() => setManagingUser(null)}
+          userId={managingUser.id}
+          userName={managingUser.name}
+          userEmail={managingUser.email}
+          onChanged={onRefresh}
+        />
+      )}
     </div>
   );
 }

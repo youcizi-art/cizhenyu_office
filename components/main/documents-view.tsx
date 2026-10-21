@@ -44,6 +44,8 @@ import { useDocumentDrag } from "./documents/use-document-drag";
 import { useDocumentsData } from "./documents/use-documents-data";
 import { useEnterprise } from "@/components/enterprise/context/enterprise-auth-context";
 import { DocPermissionDialog } from "@/components/enterprise/permissions/doc-permission-dialog";
+import { ScopePermissionModal } from "@/components/enterprise/permissions/scope-permission-modal";
+import { Category } from "@/lib/api";
 
 export function DocumentsView() {
   const router = useRouter();
@@ -54,6 +56,12 @@ export function DocumentsView() {
   const [previewMediaDoc, setPreviewMediaDoc] = useState<DocumentMeta | null>(null);
   const [fileDetailsDoc, setFileDetailsDoc] = useState<DocumentMeta | null>(null);
   const [permissionDoc, setPermissionDoc] = useState<DocumentMeta | null>(null);
+  const [scopePermModal, setScopePermModal] = useState<{
+    open: boolean;
+    type: "category" | "tag" | "document";
+    id: string;
+    title: string;
+  } | null>(null);
 
   const { isAuthenticated: isEnterpriseAuth, user: enterpriseUser } = useEnterprise();
 
@@ -272,6 +280,17 @@ export function DocumentsView() {
             if (activeCategoryId === id) setActiveCategoryId(null);
           })
         }
+        onConfigureCategoryPermissions={
+          isEnterpriseAuth
+            ? (cat) =>
+                setScopePermModal({
+                  open: true,
+                  type: "category",
+                  id: cat.id,
+                  title: cat.name,
+                })
+            : undefined
+        }
       />
 
       {/* 主工作区 */}
@@ -297,6 +316,17 @@ export function DocumentsView() {
           }}
           onOpenUpload={() => setUploadModalOpen(true)}
           totalCount={pagination.total || documents.length}
+          onConfigureTagPermissions={
+            isEnterpriseAuth
+              ? (tag) =>
+                  setScopePermModal({
+                    open: true,
+                    type: "tag",
+                    id: tag,
+                    title: `#${tag}`,
+                  })
+              : undefined
+          }
         />
 
         {/* 文档卡片网格列表 */}
@@ -342,7 +372,15 @@ export function DocumentsView() {
                   onMove={(targetDoc) => setMoveDocModal({ open: true, doc: targetDoc })}
                   onDelete={handleDeleteDoc}
                   onManagePermissions={
-                    isEnterpriseAuth ? (targetDoc) => setPermissionDoc(targetDoc) : undefined
+                    isEnterpriseAuth
+                      ? (targetDoc) =>
+                          setScopePermModal({
+                            open: true,
+                            type: "document",
+                            id: targetDoc.id,
+                            title: targetDoc.name,
+                          })
+                      : undefined
                   }
                 />
               ))}
@@ -487,6 +525,16 @@ export function DocumentsView() {
           documentId={permissionDoc.id}
           documentName={permissionDoc.name}
           currentUserId={enterpriseUser?.id || ""}
+        />
+      )}
+
+      {scopePermModal && (
+        <ScopePermissionModal
+          isOpen={scopePermModal.open}
+          onClose={() => setScopePermModal(null)}
+          scopeType={scopePermModal.type}
+          scopeId={scopePermModal.id}
+          scopeTitle={scopePermModal.title}
         />
       )}
     </div>

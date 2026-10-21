@@ -117,3 +117,129 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     return errorResponse(error.message || "Failed to create role group", 500);
   }
 }
+
+/**
+ * PUT: 编辑角色组 (支持编辑所有角色组，包含默认组的名字与描述)
+ */
+export async function onRequestPut(context: PagesContext): Promise<Response> {
+  const { request, env } = context;
+  if (!env.DB) return errorResponse("Database is not configured", 500);
+
+  const session = await getEnterpriseSession(request, env);
+  if (!session) return errorResponse("Unauthorized", 401);
+
+  if (!assertOrgRole(session.user.role, "admin")) {
+    return errorResponse("Forbidden: requires admin privileges", 403);
+  }
+
+  let body: { id?: string; name?: string; description?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return errorResponse("Invalid JSON payload", 400);
+  }
+
+  const id = (body.id || "").trim();
+  const name = (body.name || "").trim();
+  if (!id || !name) {
+    return errorResponse("Role group ID and Name are required", 400);
+  }
+
+  try {
+    const db = getDb(env);
+    const existing = await db.queryOne<{ id: string; org_id: string; is_system: number }>(
+      "SELECT id, org_id, is_system FROM role_groups WHERE id = ? AND org_id = ?",
+      id,
+      session.org.id
+    );
+
+    if (!existing) {
+      return errorResponse("Role group not found", 404);
+    }
+
+    const now = Date.now();
+    await db.execute(
+      `UPDATE role_groups SET name = ?, description = ?, updated_at = ? WHERE id = ? AND org_id = ?`,
+      name,
+      body.description ? body.description.trim() : null,
+      now,
+      id,
+      session.org.id
+    );
+
+    await recordAuditLog(db, {
+      orgId: session.org.id,
+      userId: session.user.id,
+      userName: session.user.name,
+      action: "role_group_updated",
+      targetId: id,
+      details: { name, description: body.description },
+    });
+
+    return jsonResponse({
+      success: true,
+      data: {
+        id,
+        orgId: session.org.id,
+        name,
+        description: body.description || null,
+        updatedAt: now,
+      },
+    });
+  } catch (error: any) {
+    return errorResponse(error.message || "Failed to update role group", 500);
+  }
+}
+
+/**
+ * DELETE: 删除角色组 (级联清理 user_role_groups 与 permission_rules)
+ */
+export async function onRequestDelete(context: PagesContext): Promise<Response> {
+  const { request, env } = context;
+  if (!env.DB) return errorResponse("Database is not configured", 500);
+
+  const session = await getEnterpriseSession(request, env);
+  if (!session) return errorResponse("Unauthorized", 401);
+
+  if (!assertOrgRole(session.user.role, "admin")) {
+    return errorResponse("Forbidden: requires admin privileges", 403);
+  }
+
+  const url = new URL(request.url);
+  const id = url.searchParams.get("id");
+  if (!id) {
+    return errorResponse("Role group ID is required", 400);
+  }
+
+  try {
+    const db = getDb(env);
+    const existing = await db.queryOne<{ id: string; name: string }>(
+      "SELECT id, name FROM role_groups WHERE id = ? AND org_id = ?",
+      id,
+      session.org.id
+    );
+
+    if (!existing) {
+      return errorResponse("Role group not found", 404);
+    }
+
+    // 级联清理分配关系与规则
+    await db.execute("DELETE FROM user_role_groups WHERE role_group_id = ? AND org_id = ?", id, session.org.id);
+    await db.execute("DELETE FROM permission_rules WHERE role_group_id = ? AND org_id = ?", id, session.org.id);
+    await db.execute("DELETE FROM role_groups WHERE id = ? AND org_id = ?", id, session.org.id);
+
+    await recordAuditLog(db, {
+      orgId: session.org.id,
+      userId: session.user.id,
+      userName: session.user.name,
+      action: "role_group_deleted",
+      targetId: id,
+      details: { name: existing.name },
+    });
+
+    return jsonResponse({ success: true, deletedId: id });
+  } catch (error: any) {
+    return errorResponse(error.message || "Failed to delete role group", 500);
+  }
+}
+

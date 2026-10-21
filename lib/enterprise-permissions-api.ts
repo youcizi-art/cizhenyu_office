@@ -78,6 +78,32 @@ export async function createRoleGroup(payload: { name: string; description?: str
   return data.data;
 }
 
+export async function updateRoleGroup(payload: { id: string; name: string; description?: string }): Promise<RoleGroup> {
+  const res = await fetch("/api/permissions/role-groups", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || "Failed to update role group");
+  }
+  const data = await res.json();
+  return data.data;
+}
+
+export async function deleteRoleGroup(roleGroupId: string): Promise<void> {
+  const res = await fetch(`/api/permissions/role-groups?id=${encodeURIComponent(roleGroupId)}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || "Failed to delete role group");
+  }
+}
+
 export async function fetchRoleGroupRules(roleGroupId: string): Promise<PermissionRule[]> {
   const res = await fetch(`/api/permissions/rules?roleGroupId=${encodeURIComponent(roleGroupId)}`, {
     credentials: "include",

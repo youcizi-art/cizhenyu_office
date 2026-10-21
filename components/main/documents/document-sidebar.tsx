@@ -12,6 +12,7 @@ import {
   ChevronDown,
   Plus,
   X,
+  Shield,
 } from "lucide-react";
 import { useExtracted } from "next-intl";
 import { cn } from "@/lib/utils";
@@ -34,6 +35,7 @@ interface DocumentSidebarProps {
   onToggleCatExpand: (catId: string, e: React.MouseEvent) => void;
   onOpenCreateCategory: (parentId: string | null) => void;
   onDeleteCategory: (category: Category) => void;
+  onConfigureCategoryPermissions?: (category: Category) => void;
 }
 
 export function DocumentSidebar({
@@ -48,6 +50,7 @@ export function DocumentSidebar({
   onToggleCatExpand,
   onOpenCreateCategory,
   onDeleteCategory,
+  onConfigureCategoryPermissions,
 }: DocumentSidebarProps) {
   const t = useExtracted();
 
@@ -94,6 +97,16 @@ export function DocumentSidebar({
             className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
             onClick={(e) => e.stopPropagation()}
           >
+            {onConfigureCategoryPermissions && (
+              <button
+                type="button"
+                onClick={() => onConfigureCategoryPermissions(category)}
+                className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary"
+                title={t({ id: "Enterprise.RBAC.CategoryPermissions", message: "Category Permissions" })}
+              >
+                <Shield className="w-3 h-3" />
+              </button>
+            )}
             <button
               type="button"
               onClick={() => onOpenCreateCategory(category.id)}

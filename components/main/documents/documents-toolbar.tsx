@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Search, Upload, X, Tag } from "lucide-react";
+import { Search, Upload, X, Tag, Shield } from "lucide-react";
 import { useExtracted } from "next-intl";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +22,7 @@ interface DocumentsToolbarProps {
   onTagChange: (tag: string | null) => void;
   onOpenUpload: () => void;
   totalCount: number;
+  onConfigureTagPermissions?: (tag: string) => void;
 }
 
 export function DocumentsToolbar({
@@ -35,6 +36,7 @@ export function DocumentsToolbar({
   onTagChange,
   onOpenUpload,
   totalCount,
+  onConfigureTagPermissions,
 }: DocumentsToolbarProps) {
   const t = useExtracted();
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
@@ -183,19 +185,30 @@ export function DocumentsToolbar({
             {t({ id: "AllTags", message: "All" })}
           </button>
           {displayTags.map((tag) => (
-            <button
-              key={tag}
-              type="button"
-              onClick={() => onTagChange(selectedTag === tag ? null : tag)}
-              className={cn(
-                "px-2 py-0.5 rounded-md text-[10px] font-medium transition-colors cursor-pointer shrink-0",
-                selectedTag === tag
-                  ? "bg-sky-500/10 text-sky-600 dark:text-sky-400 font-semibold border border-sky-500/20"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+            <div key={tag} className="flex items-center rounded-md border border-sky-500/20 bg-muted/30 overflow-hidden shrink-0">
+              <button
+                type="button"
+                onClick={() => onTagChange(selectedTag === tag ? null : tag)}
+                className={cn(
+                  "px-2 py-0.5 text-[10px] font-medium transition-colors cursor-pointer",
+                  selectedTag === tag
+                    ? "bg-sky-500/20 text-sky-600 dark:text-sky-400 font-semibold"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                #{tag}
+              </button>
+              {onConfigureTagPermissions && (
+                <button
+                  type="button"
+                  onClick={() => onConfigureTagPermissions(tag)}
+                  className="px-1 py-0.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors border-l border-sky-500/20 cursor-pointer"
+                  title={t({ id: "Enterprise.RBAC.TagPermissions", message: "Tag Permissions" })}
+                >
+                  <Shield className="w-2.5 h-2.5" />
+                </button>
               )}
-            >
-              #{tag}
-            </button>
+            </div>
           ))}
         </div>
       )}

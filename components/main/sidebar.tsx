@@ -10,7 +10,9 @@ import {
   Cloud,
   PanelLeftClose,
   PanelLeftOpen,
+  Shield,
 } from "lucide-react";
+import { useEnterprise } from "@/components/enterprise/context/enterprise-auth-context";
 import { useExtracted } from "next-intl";
 import { cn } from "@/lib/utils";
 import { getNewUrl } from "@/utils/editor/utils";
@@ -32,6 +34,7 @@ interface SidebarProps {
 
 export function Sidebar({ pathname }: SidebarProps) {
   const t = useExtracted();
+  const { isAdmin } = useEnterprise();
   const [collapsed, setCollapsed] = useState<boolean>(false);
   const [mounted, setMounted] = useState<boolean>(false);
 
@@ -216,6 +219,43 @@ export function Sidebar({ pathname }: SidebarProps) {
             </Link>
           );
         })}
+
+        {/* 权限管理 (RBAC) 独立页面入口 */}
+        {isAdmin && (
+          isCollapsed ? (
+            <Tooltip delayDuration={200}>
+              <TooltipTrigger asChild>
+                <Link
+                  href="/permissions"
+                  className={cn(
+                    "w-10 h-10 mx-auto flex items-center justify-center rounded-xl transition-all cursor-pointer",
+                    pathname === "/permissions"
+                      ? "bg-purple-500/10 text-purple-600 dark:text-purple-400"
+                      : "text-muted-foreground hover:bg-sidebar-hover hover:text-foreground"
+                  )}
+                >
+                  <Shield className="w-5 h-5 text-purple-500" />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                {t({ id: "Enterprise.Sidebar.Permissions", message: "Role Groups & RBAC" })}
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <Link
+              href="/permissions"
+              className={cn(
+                "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium cursor-pointer",
+                pathname === "/permissions"
+                  ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 font-semibold"
+                  : "text-foreground hover:bg-sidebar-hover"
+              )}
+            >
+              <Shield className="w-5 h-5 shrink-0 text-purple-500" />
+              <span className="truncate">{t({ id: "Enterprise.Sidebar.Permissions", message: "Role Groups & RBAC" })}</span>
+            </Link>
+          )
+        )}
       </nav>
 
       {/* Bottom Actions: Settings, About & Collapse Toggle */}
