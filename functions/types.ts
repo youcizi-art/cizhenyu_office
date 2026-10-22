@@ -54,6 +54,7 @@ export interface Category {
   name: string;
   parentId: string | null;
   createdAt: number;
+  order?: number;
 }
 
 export type DocumentType =

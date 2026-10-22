@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   Files,
   FolderPlus,
@@ -10,12 +10,20 @@ import {
   FolderOpen,
   ChevronRight,
   ChevronDown,
-  Plus,
-  X,
+  MoreHorizontal,
+  ArrowUp,
+  ArrowDown,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { useExtracted } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Category } from "@/lib/api";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 export interface TreeNode {
   category: Category;
@@ -33,7 +41,9 @@ interface DocumentSidebarProps {
   expandedCats: Record<string, boolean>;
   onToggleCatExpand: (catId: string, e: React.MouseEvent) => void;
   onOpenCreateCategory: (parentId: string | null) => void;
+  onEditCategory?: (category: Category) => void;
   onDeleteCategory: (category: Category) => void;
+  onReorderCategories?: (parentId: string | null, orderedCategoryIds: string[]) => void | Promise<void>;
 }
 
 export function DocumentSidebar({
@@ -47,9 +57,44 @@ export function DocumentSidebar({
   expandedCats,
   onToggleCatExpand,
   onOpenCreateCategory,
+  onEditCategory,
   onDeleteCategory,
+  onReorderCategories,
 }: DocumentSidebarProps) {
   const t = useExtracted();
+  // 递归查找指定节点的父级下的所有兄弟节点
+  const findSiblings = (tree: TreeNode[], targetId: string, parentId: string | null = null): { parentId: string | null; siblings: TreeNode[] } | null => {
+    for (const node of tree) {
+      if (node.category.id === targetId) {
+        return { parentId, siblings: tree };
+      }
+      if (node.children && node.children.length > 0) {
+        const found = findSiblings(node.children, targetId, node.category.id);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
+  // 上下移动排序单步操作
+  const handleMoveStep = (catId: string, direction: "up" | "down", e: React.MouseEvent) => {
+    e.stopPropagation();
+    const group = findSiblings(categoryTree, catId);
+    if (!group) return;
+
+    const siblingIds = group.siblings.map((s) => s.category.id);
+    const currentIndex = siblingIds.indexOf(catId);
+    if (currentIndex === -1) return;
+
+    const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= siblingIds.length) return;
+
+    const newOrderedIds = [...siblingIds];
+    const [movedId] = newOrderedIds.splice(currentIndex, 1);
+    newOrderedIds.splice(targetIndex, 0, movedId);
+
+    onReorderCategories?.(group.parentId, newOrderedIds);
+  };
 
   // 递归渲染树节点
   const renderCategoryNode = (node: TreeNode, depth = 0) => {
@@ -58,29 +103,36 @@ export function DocumentSidebar({
     const isSelected = activeCategoryId === category.id;
     const hasChildren = children.length > 0;
 
+    // 获取同级兄弟信息以判断是否能上移或下移
+    const group = findSiblings(categoryTree, category.id);
+    const siblings = group ? group.siblings : [];
+    const currentIndex = siblings.findIndex((s) => s.category.id === category.id);
+    const canMoveUp = currentIndex > 0;
+    const canMoveDown = currentIndex >= 0 && currentIndex < siblings.length - 1;
+
     return (
-      <div key={category.id} className="select-none">
+      <div key={category.id} className="select-none relative">
         <div
           onClick={() => onSelectCategory(category.id)}
           className={cn(
-            "group flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs cursor-pointer transition-colors",
+            "group flex items-center justify-between px-2 py-1.5 rounded-xl text-xs cursor-pointer transition-colors relative",
             isSelected
               ? "bg-primary/10 text-primary font-semibold"
               : "text-foreground hover:bg-muted/60"
           )}
-          style={{ paddingLeft: `${depth * 12 + 10}px` }}
+          style={{ paddingLeft: `${depth * 12 + 6}px` }}
         >
           <div className="flex items-center gap-1.5 min-w-0 flex-1">
             {hasChildren ? (
               <button
                 type="button"
                 onClick={(e) => onToggleCatExpand(category.id, e)}
-                className="p-0.5 rounded hover:bg-muted text-muted-foreground"
+                className="p-0.5 rounded hover:bg-muted text-muted-foreground shrink-0 cursor-pointer"
               >
                 {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
               </button>
             ) : (
-              <span className="w-3.5" />
+              <span className="w-3.5 shrink-0" />
             )}
             {isExpanded ? (
               <FolderOpen className="w-3.5 h-3.5 text-primary shrink-0" />
@@ -94,22 +146,90 @@ export function DocumentSidebar({
             className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
             onClick={(e) => e.stopPropagation()}
           >
-            <button
-              type="button"
-              onClick={() => onOpenCreateCategory(category.id)}
-              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-              title={t({ id: "AddSubCategory", message: "Add Sub-Category" })}
-            >
-              <Plus className="w-3 h-3" />
-            </button>
-            <button
-              type="button"
-              onClick={() => onDeleteCategory(category)}
-              className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-              title={t({ id: "DeleteCategory", message: "Delete Category" })}
-            >
-              <X className="w-3 h-3" />
-            </button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                  title={t({ id: "ManageCategory", message: "Manage Category" })}
+                >
+                  <MoreHorizontal className="w-3.5 h-3.5" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="w-44 p-1.5 bg-popover/95 backdrop-blur-md border-border/80 shadow-xl rounded-xl z-50 text-xs"
+                align="end"
+                sideOffset={4}
+              >
+                <div className="space-y-0.5">
+                  {/* 上移 */}
+                  <button
+                    type="button"
+                    disabled={!canMoveUp}
+                    onClick={(e) => handleMoveStep(category.id, "up", e)}
+                    className={cn(
+                      "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-foreground transition-colors text-left",
+                      canMoveUp
+                        ? "hover:bg-muted cursor-pointer"
+                        : "opacity-40 cursor-not-allowed"
+                    )}
+                  >
+                    <ArrowUp className="w-3.5 h-3.5 text-primary" />
+                    <span>{t({ id: "MoveUp", message: "Move Up" })}</span>
+                  </button>
+
+                  {/* 下移 */}
+                  <button
+                    type="button"
+                    disabled={!canMoveDown}
+                    onClick={(e) => handleMoveStep(category.id, "down", e)}
+                    className={cn(
+                      "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-foreground transition-colors text-left",
+                      canMoveDown
+                        ? "hover:bg-muted cursor-pointer"
+                        : "opacity-40 cursor-not-allowed"
+                    )}
+                  >
+                    <ArrowDown className="w-3.5 h-3.5 text-primary" />
+                    <span>{t({ id: "MoveDown", message: "Move Down" })}</span>
+                  </button>
+
+                  <div className="h-px bg-border my-1" />
+
+                  {/* 添加子分类 */}
+                  <button
+                    type="button"
+                    onClick={() => onOpenCreateCategory(category.id)}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-muted text-foreground transition-colors cursor-pointer text-left"
+                  >
+                    <FolderPlus className="w-3.5 h-3.5 text-sky-500" />
+                    <span>{t({ id: "AddSubCategory", message: "Add Sub-Category" })}</span>
+                  </button>
+
+                  {/* 编辑分类名称 */}
+                  <button
+                    type="button"
+                    onClick={() => onEditCategory?.(category)}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-muted text-foreground transition-colors cursor-pointer text-left"
+                  >
+                    <Pencil className="w-3.5 h-3.5 text-amber-500" />
+                    <span>{t({ id: "EditCategory", message: "Edit Category" })}</span>
+                  </button>
+
+                  <div className="h-px bg-border my-1" />
+
+                  {/* 删除分类 */}
+                  <button
+                    type="button"
+                    onClick={() => onDeleteCategory(category)}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-destructive/10 text-destructive transition-colors cursor-pointer text-left"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                    <span>{t({ id: "DeleteCategory", message: "Delete Category" })}</span>
+                  </button>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
 

@@ -22,6 +22,7 @@ import {
   deleteDocument,
   updateDocumentMeta,
   reorderDocuments,
+  reorderCategories,
   DocumentMeta,
 } from "@/lib/api";
 import { usePageTitle } from "@/hooks/use-page-title";
@@ -144,11 +145,19 @@ export function DocumentsView() {
     return Array.from(tagSet);
   }, [serverTags, documents]);
 
-  // 构建分类树
+  // 构建分类树（支持拖拽自定义排序）
   const categoryTree = useMemo(() => {
     const buildNodes = (parentId: string | null): TreeNode[] => {
       return categories
         .filter((c) => c.parentId === parentId)
+        .sort((a, b) => {
+          if (typeof a.order === "number" && typeof b.order === "number") {
+            return a.order - b.order;
+          }
+          if (typeof a.order === "number") return -1;
+          if (typeof b.order === "number") return 1;
+          return a.createdAt - b.createdAt;
+        })
         .map((cat) => ({
           category: cat,
           children: buildNodes(cat.id),
@@ -156,6 +165,34 @@ export function DocumentsView() {
     };
     return buildNodes(null);
   }, [categories]);
+
+  // 分类同层级拖动排序
+  const handleReorderCategories = async (
+    _parentId: string | null,
+    newOrderedIds: string[]
+  ) => {
+    try {
+      const orderMap = new Map<string, number>();
+      newOrderedIds.forEach((id, idx) => {
+        orderMap.set(id, idx);
+      });
+
+      // 不可变更新 categories 对象引用，确保 useMemo(categoryTree) 必然重新计算
+      const updatedCategories = categories.map((cat) => {
+        if (orderMap.has(cat.id)) {
+          return { ...cat, order: orderMap.get(cat.id)! };
+        }
+        return cat;
+      });
+
+      setCategories(updatedCategories);
+
+      await reorderCategories(newOrderedIds);
+      toast.success(t({ id: "CategoryOrderSaved", message: "Category order saved" }));
+    } catch {
+      toast.error(t({ id: "SaveCategoryOrderFailed", message: "Failed to save category order" }));
+    }
+  };
 
   // 容器滚动引用
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -262,11 +299,16 @@ export function DocumentsView() {
           setCategoryModal({ open: true, mode: "create", parentId });
           setCatNameInput("");
         }}
+        onEditCategory={(cat) => {
+          setCategoryModal({ open: true, mode: "rename", parentId: cat.parentId, targetCat: cat });
+          setCatNameInput(cat.name);
+        }}
         onDeleteCategory={(cat) =>
           handleDeleteCategory(cat, (id) => {
             if (activeCategoryId === id) setActiveCategoryId(null);
           })
         }
+        onReorderCategories={handleReorderCategories}
       />
 
       {/* 主工作区 */}
@@ -413,6 +455,7 @@ export function DocumentsView() {
       <EditTagsModal
         open={!!editingTagsDoc}
         doc={editingTagsDoc}
+        availableTags={displayTags}
         onClose={() => setEditingTagsDoc(null)}
         onSaveTags={handleSaveTags}
       />

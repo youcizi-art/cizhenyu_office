@@ -3,36 +3,56 @@
 import React, { useState, useEffect } from "react";
 import { Tag, X } from "lucide-react";
 import { useExtracted } from "next-intl";
+import { cn } from "@/lib/utils";
 import { DocumentMeta } from "@/lib/api";
 
 interface TagsModalProps {
   open: boolean;
   doc: DocumentMeta | null;
+  availableTags?: string[];
   onClose: () => void;
   onSaveTags: (tags: string[]) => void | Promise<void>;
 }
 
 /**
- * 文档标签管理与编辑弹窗
+ * 文档标签管理与编辑弹窗 (支持系统已有标签快捷下拉提示与自主添加新标签)
  */
 export function EditTagsModal({
   open,
   doc,
+  availableTags = [],
   onClose,
   onSaveTags,
 }: TagsModalProps) {
   const t = useExtracted();
   const [tags, setTags] = useState<string[]>([]);
   const [inputVal, setInputVal] = useState<string>("");
+  const [isInputFocused, setIsInputFocused] = useState<boolean>(false);
+  const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
 
   useEffect(() => {
     if (doc) {
       setTags(doc.tags || []);
       setInputVal("");
+      setHighlightedIndex(-1);
     }
   }, [doc]);
 
   if (!open || !doc) return null;
+
+  // 过滤尚未添加的系统已有候选标签
+  const trimmedInput = inputVal.trim().replace(/^#/, "").toLowerCase();
+  const suggestions = availableTags
+    .filter((candidate) => !tags.includes(candidate))
+    .filter((candidate) => !trimmedInput || candidate.toLowerCase().includes(trimmedInput));
+
+  const handleSelectSuggestion = (tagToAdd: string) => {
+    if (!tags.includes(tagToAdd)) {
+      setTags([...tags, tagToAdd]);
+    }
+    setInputVal("");
+    setHighlightedIndex(-1);
+  };
 
   const handleAddTag = () => {
     const trimmed = inputVal.trim().replace(/^#/, "");
@@ -41,9 +61,28 @@ export function EditTagsModal({
       setTags([...tags, trimmed]);
     }
     setInputVal("");
+    setHighlightedIndex(-1);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (suggestions.length > 0 && isInputFocused) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setHighlightedIndex((prev) => (prev < suggestions.length - 1 ? prev + 1 : 0));
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : suggestions.length - 1));
+        return;
+      }
+      if (e.key === "Enter" && highlightedIndex >= 0 && highlightedIndex < suggestions.length) {
+        e.preventDefault();
+        handleSelectSuggestion(suggestions[highlightedIndex]);
+        return;
+      }
+    }
+
     if (e.key === "Enter" || e.key === ",") {
       e.preventDefault();
       handleAddTag();
@@ -95,23 +134,61 @@ export function EditTagsModal({
           )}
         </div>
 
-        {/* 添加新标签输入框 */}
-        <div className="flex gap-2 mb-4">
-          <input
-            type="text"
-            value={inputVal}
-            onChange={(e) => setInputVal(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={t({ id: "TagPlaceholder", message: "Enter tag and press Enter..." })}
-            className="flex-1 px-3 py-1.5 rounded-xl border border-border bg-background text-xs focus:outline-hidden focus:border-primary focus:ring-2 focus:ring-primary/20"
-          />
-          <button
-            type="button"
-            onClick={handleAddTag}
-            className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer"
-          >
-            {t({ id: "AddTag", message: "Add" })}
-          </button>
+        {/* 添加新标签输入框与下拉建议 */}
+        <div className="relative mb-4">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={inputVal}
+              onChange={(e) => {
+                setInputVal(e.target.value);
+                setHighlightedIndex(-1);
+              }}
+              onFocus={() => setIsInputFocused(true)}
+              onBlur={() => {
+                // 延迟关闭以便点击建议项生效
+                setTimeout(() => setIsInputFocused(false), 200);
+              }}
+              onKeyDown={handleKeyDown}
+              placeholder={t({ id: "TagPlaceholder", message: "Enter tag and press Enter..." })}
+              className="flex-1 px-3 py-1.5 rounded-xl border border-border bg-background text-xs focus:outline-hidden focus:border-primary focus:ring-2 focus:ring-primary/20"
+            />
+            <button
+              type="button"
+              onClick={handleAddTag}
+              className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer"
+            >
+              {t({ id: "AddTag", message: "Add" })}
+            </button>
+          </div>
+
+          {/* 下拉建议列表 */}
+          {isInputFocused && suggestions.length > 0 && (
+            <div className="absolute left-0 right-14 top-full mt-1 max-h-36 overflow-y-auto bg-card border border-border rounded-xl shadow-lg z-20 p-1 space-y-0.5 animate-in fade-in zoom-in-95">
+              <div className="px-2 py-1 text-[10px] font-medium text-muted-foreground">
+                {t({ id: "ExistingTagsSuggestion", message: "Existing tags:" })}
+              </div>
+              {suggestions.map((suggestion, idx) => (
+                <div
+                  key={suggestion}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    handleSelectSuggestion(suggestion);
+                  }}
+                  onMouseEnter={() => setHighlightedIndex(idx)}
+                  className={cn(
+                    "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs cursor-pointer transition-colors",
+                    highlightedIndex === idx
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "hover:bg-muted text-foreground"
+                  )}
+                >
+                  <Tag className="w-3 h-3 text-sky-500 shrink-0" />
+                  <span className="truncate">#{suggestion}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end gap-2">
