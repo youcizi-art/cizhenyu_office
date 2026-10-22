@@ -7,6 +7,7 @@ export interface Category {
   name: string;
   parentId: string | null;
   createdAt: number;
+  order?: number;
 }
 
 export type DocumentType =
@@ -349,6 +350,22 @@ export async function deleteCategory(id: string): Promise<string[]> {
 
   const data = await res.json();
   return data.deletedCategoryIds;
+}
+
+/**
+ * 批量更新分类排序 (同层级拖动排序)
+ */
+export async function reorderCategories(orderedCategoryIds: string[]): Promise<void> {
+  const res = await fetchWithAuth("/api/categories/reorder", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ orderedCategoryIds }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to reorder categories");
+  }
 }
 
 /**

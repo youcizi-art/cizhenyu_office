@@ -15,6 +15,9 @@ import {
   RefreshCw,
   AlertTriangle,
   Folder,
+  FolderOpen,
+  ChevronRight,
+  ChevronDown,
 } from "lucide-react";
 import { useExtracted } from "next-intl";
 import { toast } from "sonner";
@@ -153,7 +156,15 @@ export function RenameDocModal({
 }
 
 /**
- * 移动文档分类弹窗
+ * 移动文档分类树形节点结构
+ */
+interface MoveCategoryTreeNode {
+  category: Category;
+  children: MoveCategoryTreeNode[];
+}
+
+/**
+ * 移动文档分类弹窗 (树形层级展示 + 选中状态 + 明确确认按钮)
  */
 export function MoveDocModal({
   open,
@@ -169,52 +180,165 @@ export function MoveDocModal({
   onSelectCategory: (catId: string | null) => void;
 }) {
   const t = useExtracted();
+  const [selectedCatId, setSelectedCatId] = useState<string | null>(null);
+  const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (open) {
+      setSelectedCatId(currentCatId);
+      // 默认展开所有含有选中分类的路径或根级节点
+      const initialExpanded: Record<string, boolean> = {};
+      categories.forEach((c) => {
+        initialExpanded[c.id] = true;
+      });
+      setExpandedCats(initialExpanded);
+    }
+  }, [open, currentCatId, categories]);
+
   if (!open) return null;
+
+  // 构建分类树并排序
+  const categoryTree: MoveCategoryTreeNode[] = (() => {
+    const buildNodes = (parentId: string | null): MoveCategoryTreeNode[] => {
+      return categories
+        .filter((c) => c.parentId === parentId)
+        .sort((a, b) => {
+          if (typeof a.order === "number" && typeof b.order === "number") {
+            return a.order - b.order;
+          }
+          if (typeof a.order === "number") return -1;
+          if (typeof b.order === "number") return 1;
+          return a.createdAt - b.createdAt;
+        })
+        .map((cat) => ({
+          category: cat,
+          children: buildNodes(cat.id),
+        }));
+    };
+    return buildNodes(null);
+  })();
+
+  const handleToggleExpand = (catId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedCats((prev) => ({ ...prev, [catId]: !prev[catId] }));
+  };
+
+  const renderTreeItem = (node: MoveCategoryTreeNode, depth = 0) => {
+    const { category, children } = node;
+    const isExpanded = !!expandedCats[category.id];
+    const isSelected = selectedCatId === category.id;
+    const isCurrent = currentCatId === category.id;
+    const hasChildren = children.length > 0;
+
+    return (
+      <div key={category.id} className="select-none">
+        <div
+          onClick={() => setSelectedCatId(category.id)}
+          className={cn(
+            "group flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs cursor-pointer transition-colors",
+            isSelected
+              ? "bg-primary/10 text-primary font-semibold ring-1 ring-primary/30"
+              : "hover:bg-muted/70 text-foreground"
+          )}
+          style={{ paddingLeft: `${depth * 14 + 10}px` }}
+        >
+          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+            {hasChildren ? (
+              <button
+                type="button"
+                onClick={(e) => handleToggleExpand(category.id, e)}
+                className="p-0.5 rounded hover:bg-muted text-muted-foreground shrink-0 cursor-pointer"
+              >
+                {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+              </button>
+            ) : (
+              <span className="w-3.5 shrink-0" />
+            )}
+            {isExpanded ? (
+              <FolderOpen className="w-3.5 h-3.5 text-primary shrink-0" />
+            ) : (
+              <Folder className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+            )}
+            <span className="truncate">{category.name}</span>
+          </div>
+
+          <div className="flex items-center gap-1 shrink-0">
+            {isCurrent && (
+              <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md">
+                {t({ id: "CurrentLocation", message: "Current" })}
+              </span>
+            )}
+            {isSelected && <Check className="w-3.5 h-3.5 text-primary" />}
+          </div>
+        </div>
+
+        {hasChildren && isExpanded && (
+          <div className="space-y-0.5">
+            {children.map((child) => renderTreeItem(child, depth + 1))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const handleConfirm = () => {
+    onSelectCategory(selectedCatId);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
       <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-2xl animate-in fade-in zoom-in-95">
-        <h2 className="text-base font-semibold text-foreground mb-3">
+        <h2 className="text-base font-semibold text-foreground mb-1">
           {t({ id: "MoveDocTitle", message: "Move Document to Category" })}
         </h2>
-        <div className="max-h-60 overflow-y-auto space-y-1 my-3 pr-1">
-          <button
-            type="button"
-            onClick={() => onSelectCategory(null)}
+        <p className="text-xs text-muted-foreground mb-3">
+          {t({ id: "SelectTargetCategoryHint", message: "Select target category and click Confirm to move." })}
+        </p>
+
+        <div className="max-h-64 overflow-y-auto space-y-0.5 my-3 pr-1 border border-border/60 rounded-xl p-1 bg-background/50">
+          {/* 未分类 (根目录) */}
+          <div
+            onClick={() => setSelectedCatId(null)}
             className={cn(
-              "w-full text-left px-3 py-2 rounded-xl text-xs flex items-center gap-2 transition-colors cursor-pointer",
-              currentCatId === null
-                ? "bg-primary/10 text-primary font-semibold"
-                : "hover:bg-muted text-foreground"
+              "group flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs cursor-pointer transition-colors",
+              selectedCatId === null
+                ? "bg-primary/10 text-primary font-semibold ring-1 ring-primary/30"
+                : "hover:bg-muted/70 text-foreground"
             )}
           >
-            <Folder className="w-3.5 h-3.5" />
-            <span>{t({ id: "UnclassifiedCategory", message: "Unclassified (Root)" })}</span>
-          </button>
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              type="button"
-              onClick={() => onSelectCategory(cat.id)}
-              className={cn(
-                "w-full text-left px-3 py-2 rounded-xl text-xs flex items-center gap-2 transition-colors cursor-pointer",
-                currentCatId === cat.id
-                  ? "bg-primary/10 text-primary font-semibold"
-                  : "hover:bg-muted text-foreground"
+            <div className="flex items-center gap-2 min-w-0">
+              <Folder className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+              <span className="truncate">{t({ id: "UnclassifiedCategory", message: "Unclassified (Root)" })}</span>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              {currentCatId === null && (
+                <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md">
+                  {t({ id: "CurrentLocation", message: "Current" })}
+                </span>
               )}
-            >
-              <Folder className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="truncate">{cat.name}</span>
-            </button>
-          ))}
+              {selectedCatId === null && <Check className="w-3.5 h-3.5 text-primary" />}
+            </div>
+          </div>
+
+          <div className="h-px bg-border my-1" />
+
+          {categoryTree.map((node) => renderTreeItem(node))}
         </div>
-        <div className="flex justify-end">
+
+        <div className="flex justify-end gap-2 pt-1">
           <button
             type="button"
             onClick={onClose}
             className="px-3.5 py-1.5 text-xs font-medium rounded-xl border border-border hover:bg-muted transition-colors cursor-pointer"
           >
             {t({ id: "Cancel", message: "Cancel" })}
+          </button>
+          <button
+            type="button"
+            onClick={handleConfirm}
+            className="px-4 py-1.5 text-xs font-semibold rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer shadow-xs"
+          >
+            {t({ id: "ConfirmMove", message: "Confirm Move" })}
           </button>
         </div>
       </div>
