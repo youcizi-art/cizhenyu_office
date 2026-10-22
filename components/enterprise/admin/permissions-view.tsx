@@ -13,6 +13,7 @@ import {
 } from "@/lib/enterprise-permissions-api";
 import { PermissionRuleBuilder } from "./role-groups/permission-rule-builder";
 import { PermissionInspector } from "./role-groups/permission-inspector";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Shield,
   Plus,
@@ -24,7 +25,6 @@ import {
   Edit2,
   Trash2,
   Check,
-  X,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -33,6 +33,7 @@ export function PermissionsView() {
   const [activeTab, setActiveTab] = useState<"groups" | "inspector">("groups");
   const [loading, setLoading] = useState(false);
   const [groups, setGroups] = useState<RoleGroup[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [rules, setRules] = useState<PermissionRule[]>([]);
   const [rulesLoading, setRulesLoading] = useState(false);
@@ -48,6 +49,9 @@ export function PermissionsView() {
   const [editGroupName, setEditGroupName] = useState("");
   const [editGroupDesc, setEditGroupDesc] = useState("");
   const [updating, setUpdating] = useState(false);
+
+  // 删除确认状态
+  const [deletingGroup, setDeletingGroup] = useState<RoleGroup | null>(null);
 
   const loadGroups = useCallback(async () => {
     setLoading(true);
@@ -137,15 +141,10 @@ export function PermissionsView() {
     }
   };
 
-  const handleDeleteGroup = async (g: RoleGroup, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (
-      !confirm(
-        `Are you sure you want to delete role group "${g.name}"? All assigned permissions and member bindings will be permanently removed.`
-      )
-    ) {
-      return;
-    }
+  const confirmDeleteGroup = async () => {
+    if (!deletingGroup) return;
+    const g = deletingGroup;
+    setDeletingGroup(null);
 
     try {
       await deleteRoleGroup(g.id);
@@ -158,6 +157,11 @@ export function PermissionsView() {
       toast.error(err.message || "Failed to delete role group");
     }
   };
+
+  const filteredGroups = groups.filter((g) =>
+    g.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (g.description && g.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
   const selectedGroup = groups.find((g) => g.id === selectedGroupId);
 
@@ -226,7 +230,7 @@ export function PermissionsView() {
             <div className="md:col-span-4 bg-background rounded-2xl border border-border p-4 shadow-sm space-y-3">
               <div className="flex items-center justify-between pb-2 border-b border-border/60">
                 <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                  {t({ id: "Enterprise.RBAC.RoleGroupsList", message: "Role Groups" })} ({groups.length})
+                  {t({ id: "Enterprise.RBAC.RoleGroupsList", message: "Role Groups" })} ({filteredGroups.length})
                 </span>
                 {!isCreating && (
                   <button
@@ -238,6 +242,18 @@ export function PermissionsView() {
                     <span>{t({ id: "Create", message: "New Group" })}</span>
                   </button>
                 )}
+              </div>
+
+              {/* 实时搜索过滤框（应对100+角色组） */}
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder={t({ id: "Enterprise.RBAC.SearchGroupsPlaceholder", message: "Filter role groups..." })}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-border bg-background focus:ring-1 focus:ring-primary"
+                />
               </div>
 
               {/* 创建角色组表单 */}
@@ -280,7 +296,7 @@ export function PermissionsView() {
                 </form>
               )}
 
-              {/* 编辑角色组弹层/表单 */}
+              {/* 编辑角色组表单 */}
               {editingGroupId && (
                 <form
                   onSubmit={handleUpdateGroup}
@@ -322,17 +338,19 @@ export function PermissionsView() {
               )}
 
               {/* 角色组卡片列表 */}
-              <div className="space-y-2 max-h-[calc(100vh-280px)] overflow-y-auto pr-1">
+              <div className="space-y-2 max-h-[calc(100vh-320px)] overflow-y-auto pr-1">
                 {loading ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                   </div>
-                ) : groups.length === 0 ? (
+                ) : filteredGroups.length === 0 ? (
                   <div className="py-6 text-center text-xs text-muted-foreground">
-                    No role groups found. Create one to begin.
+                    {searchQuery
+                      ? t({ id: "Enterprise.RBAC.NoMatchingGroups", message: "No matching role groups found." })
+                      : t({ id: "Enterprise.RBAC.NoRoleGroups", message: "No role groups found. Create one to begin." })}
                   </div>
                 ) : (
-                  groups.map((g) => {
+                  filteredGroups.map((g) => {
                     const isSelected = selectedGroupId === g.id;
                     return (
                       <div
@@ -357,10 +375,13 @@ export function PermissionsView() {
                               <Edit2 className="h-3.5 w-3.5" />
                             </button>
 
-                            {/* 删除按钮 (允许用户删除默认组及所有组) */}
+                            {/* 删除按钮 */}
                             <button
                               type="button"
-                              onClick={(e) => handleDeleteGroup(g, e)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeletingGroup(g);
+                              }}
                               className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-80 group-hover:opacity-100 transition-opacity cursor-pointer"
                               title="Delete Group"
                             >
@@ -411,6 +432,24 @@ export function PermissionsView() {
           </div>
         )}
       </div>
+
+      {/* 删除角色组标准确认弹窗 */}
+      <ConfirmDialog
+        isOpen={Boolean(deletingGroup)}
+        onClose={() => setDeletingGroup(null)}
+        onConfirm={confirmDeleteGroup}
+        title={t({ id: "Enterprise.RBAC.DeleteGroupTitle", message: "Delete Role Group" })}
+        description={
+          deletingGroup
+            ? `${t({
+                id: "Enterprise.RBAC.ConfirmDeleteGroup",
+                message: "Are you sure you want to delete this role group? All assigned permissions and member bindings will be permanently removed.",
+              })} (${deletingGroup.name})`
+            : ""
+        }
+        confirmText={t({ id: "Delete", message: "Delete Group" })}
+        destructive
+      />
     </div>
   );
 }

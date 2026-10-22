@@ -9,6 +9,7 @@ import {
   Files,
 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import React, { useState, PropsWithChildren } from "react";
 import { useRouter } from "next/navigation";
 import { useExtracted } from "next-intl";
@@ -17,7 +18,6 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth-guard";
 import { useEnterprise } from "@/components/enterprise/context/enterprise-auth-context";
 import { EnterpriseLoginDialog } from "@/components/enterprise/auth/enterprise-login-dialog";
-import { MemberManagementDialog } from "@/components/enterprise/members/member-management-dialog";
 import { RoleBadge } from "@/components/enterprise/permissions/permission-badge";
 import { LogOut, Building2, Users } from "lucide-react";
 
@@ -35,7 +35,6 @@ export function Header({ children }: PropsWithChildren<{ className?: string }>) 
 
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showEnterpriseLogin, setShowEnterpriseLogin] = useState(false);
-  const [showMemberManagement, setShowMemberManagement] = useState(false);
 
   const quickActions = [
     {
@@ -101,26 +100,30 @@ export function Header({ children }: PropsWithChildren<{ className?: string }>) 
         {/* 企业版工作区状态 / 登录入口 */}
         {isEnterpriseAuth && enterpriseUser ? (
           <div className="flex items-center gap-1.5 ml-2 pl-2 border-l border-border/50">
-            <button
-              onClick={() => isEnterpriseAdmin && setShowMemberManagement(true)}
-              className={cn(
-                "flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs transition-all border",
-                isEnterpriseAdmin
-                  ? "bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 cursor-pointer"
-                  : "bg-muted/40 border-border/40 text-foreground cursor-default"
-              )}
-              title={
-                isEnterpriseAdmin
-                  ? t({ id: "Enterprise.Header.ManageTeam", message: "Manage Workspace Members" })
-                  : enterpriseOrg?.name || "Enterprise"
-              }
-            >
-              <Building2 className="w-3.5 h-3.5" />
-              <span className="font-medium max-w-[100px] truncate">
-                {enterpriseOrg?.name || "Enterprise"}
-              </span>
-              <RoleBadge role={enterpriseUser.role} size="sm" />
-            </button>
+            {isEnterpriseAdmin ? (
+              <Link
+                href="/members"
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs transition-all border bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 cursor-pointer"
+                title={t({ id: "Enterprise.Header.ManageTeam", message: "Manage Workspace Members" })}
+              >
+                <Building2 className="w-3.5 h-3.5" />
+                <span className="font-medium max-w-[100px] truncate">
+                  {enterpriseOrg?.name || "Enterprise"}
+                </span>
+                <RoleBadge role={enterpriseUser.role} size="sm" />
+              </Link>
+            ) : (
+              <div
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs border bg-muted/40 border-border/40 text-foreground cursor-default"
+                title={enterpriseOrg?.name || "Enterprise"}
+              >
+                <Building2 className="w-3.5 h-3.5" />
+                <span className="font-medium max-w-[100px] truncate">
+                  {enterpriseOrg?.name || "Enterprise"}
+                </span>
+                <RoleBadge role={enterpriseUser.role} size="sm" />
+              </div>
+            )}
             <button
               onClick={handleEnterpriseLogout}
               className="p-1.5 text-muted-foreground hover:text-destructive rounded-lg hover:bg-destructive/10 transition-colors cursor-pointer"
@@ -154,12 +157,6 @@ export function Header({ children }: PropsWithChildren<{ className?: string }>) 
       <EnterpriseLoginDialog
         isOpen={showEnterpriseLogin}
         onClose={() => setShowEnterpriseLogin(false)}
-      />
-
-      {/* 企业成员管理弹窗 */}
-      <MemberManagementDialog
-        isOpen={showMemberManagement}
-        onClose={() => setShowMemberManagement(false)}
       />
 
       {/* 退出登录确认弹窗 */}

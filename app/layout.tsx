@@ -5,6 +5,7 @@ import { I18nProvider } from "@/components/i18n-provider";
 import { ProgressProvider } from "@/components/progress-provider";
 import { PwaRegistrar } from "@/components/pwa-registrar";
 import { EnterpriseProvider } from "@/components/enterprise/context/enterprise-auth-context";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://office.example.com";
@@ -111,7 +112,10 @@ export default async function RootLayout({
         <PwaRegistrar />
         <ProgressProvider>
           <I18nProvider initialMessages={messages}>
-            <EnterpriseProvider>{children}</EnterpriseProvider>
+            <EnterpriseProvider>
+              {children}
+              <Toaster position="top-center" richColors />
+            </EnterpriseProvider>
           </I18nProvider>
         </ProgressProvider>
       </body>

@@ -8,7 +8,6 @@ import { fetchEnterpriseDashboard, EnterpriseDashboardData } from "@/lib/enterpr
 import { DashboardStatCard } from "./dashboard-stat-card";
 import { DashboardQuickActions } from "./dashboard-quick-actions";
 import { DashboardActivityFeed } from "./dashboard-activity-feed";
-import { MemberManagementDialog } from "../members/member-management-dialog";
 import { InvitationManagementDialog } from "../members/invitation-management-dialog";
 import { RoleBadge } from "../permissions/permission-badge";
 import {
@@ -28,7 +27,6 @@ export function EnterpriseDashboardView() {
 
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<EnterpriseDashboardData | null>(null);
-  const [membersOpen, setMembersOpen] = useState(false);
   const [invitationsOpen, setInvitationsOpen] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -122,21 +120,12 @@ export function EnterpriseDashboardView() {
 
       {/* 快捷操作区 */}
       <DashboardQuickActions
-        onOpenMembers={() => setMembersOpen(true)}
+        onOpenMembers={() => router.push("/members")}
         onOpenInvitations={() => setInvitationsOpen(true)}
       />
 
       {/* 团队动态与安全审计流 */}
       <DashboardActivityFeed activities={data?.recentActivities || []} />
-
-      {/* 弹窗：成员管理 */}
-      <MemberManagementDialog
-        isOpen={membersOpen}
-        onClose={() => {
-          setMembersOpen(false);
-          loadData();
-        }}
-      />
 
       {/* 弹窗：邀请凭证管理 */}
       {isAdmin && (

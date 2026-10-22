@@ -73,6 +73,56 @@ export async function resolveUserEffectivePermissions(
     return { actions, details, isOwnerOrAdmin: true };
   }
 
+  // 1.5 核心最高优先级：单一用户对单一文档的专属权限覆盖 (User-Specific Document Override)
+  // 这是最高层级的子类继承重写，覆盖所有角色组、分类与标签设置
+  const directDocPerm = await db.queryOne<{ permission: string }>(
+    "SELECT permission FROM document_permissions WHERE document_id = ? AND user_id = ? LIMIT 1",
+    doc.id,
+    user.id
+  );
+
+  if (directDocPerm) {
+    const permLevel = directDocPerm.permission;
+    let allowedByDirect: DocumentAction[] = [];
+    if (permLevel === "owner" || permLevel === "editor") {
+      allowedByDirect = ALL_ACTIONS;
+    } else if (permLevel === "commenter") {
+      allowedByDirect = ["view", "comment", "download"];
+    } else if (permLevel === "viewer") {
+      allowedByDirect = ["view", "comment"];
+    }
+
+    const actions = allowedByDirect.filter((act) => supportedCaps.has(act));
+    const details = {} as Record<DocumentAction, ResolvedPermissionDetail>;
+    for (const act of ALL_ACTIONS) {
+      if (!supportedCaps.has(act)) {
+        details[act] = {
+          action: act,
+          granted: false,
+          sourceScope: "unsupported",
+          reason: "unsupported_by_type",
+        };
+      } else if (allowedByDirect.includes(act)) {
+        details[act] = {
+          action: act,
+          granted: true,
+          sourceScope: "document",
+          sourceScopeId: doc.id,
+          reason: "allowed",
+        };
+      } else {
+        details[act] = {
+          action: act,
+          granted: false,
+          sourceScope: "document",
+          sourceScopeId: doc.id,
+          reason: "denied",
+        };
+      }
+    }
+    return { actions, details, isOwnerOrAdmin: false };
+  }
+
   // 2. 查询该用户所属的所有角色组 ID
   const userGroups = await db.query<{ role_group_id: string }>(
     "SELECT role_group_id FROM user_role_groups WHERE user_id = ?",

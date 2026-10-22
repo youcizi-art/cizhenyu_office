@@ -13,6 +13,7 @@ import {
 import { DocPermissionBadge } from "./permission-badge";
 import { Users, UserPlus, X, Trash2, Shield, Loader2, Check } from "lucide-react";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface DocPermissionDialogProps {
   isOpen: boolean;
@@ -98,12 +99,12 @@ export function DocPermissionDialog({
     }
   };
 
-  const handleRevoke = async (userId: string) => {
-    const confirmMsg = t({
-      id: "Enterprise.Permissions.ConfirmRevoke",
-      message: "Are you sure you want to revoke access for this user?",
-    });
-    if (!window.confirm(confirmMsg)) return;
+  const [revokingUserId, setRevokingUserId] = useState<string | null>(null);
+
+  const confirmRevoke = async () => {
+    if (!revokingUserId) return;
+    const userId = revokingUserId;
+    setRevokingUserId(null);
 
     try {
       const res = await revokeDocumentPermission(documentId, userId);
@@ -242,7 +243,7 @@ export function DocPermissionDialog({
                     <DocPermissionBadge permission={p.permission} size="sm" />
                     {!isSelf && (
                       <button
-                        onClick={() => handleRevoke(p.userId)}
+                        onClick={() => setRevokingUserId(p.userId)}
                         title={t({ id: "Enterprise.Permissions.RevokeAction", message: "Revoke Access" })}
                         className="p-1 text-zinc-400 hover:text-red-600 rounded-lg transition-colors cursor-pointer"
                       >
@@ -265,6 +266,19 @@ export function DocPermissionDialog({
             {t({ id: "Enterprise.Common.Close", message: "Close" })}
           </button>
         </div>
+
+        <ConfirmDialog
+          isOpen={Boolean(revokingUserId)}
+          onClose={() => setRevokingUserId(null)}
+          onConfirm={confirmRevoke}
+          title={t({ id: "Enterprise.Permissions.RevokeTitle", message: "Revoke Document Access" })}
+          description={t({
+            id: "Enterprise.Permissions.ConfirmRevoke",
+            message: "Are you sure you want to revoke access for this user?",
+          })}
+          confirmText={t({ id: "Delete", message: "Revoke Access" })}
+          destructive
+        />
       </div>
     </div>
   );

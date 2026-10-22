@@ -25,11 +25,12 @@ import {
   Check,
   X,
   Loader2,
-  Search,
-  ChevronLeft,
-  ChevronRight,
+  FolderOpen,
 } from "lucide-react";
 import { toast } from "sonner";
+import { CategoryHierarchySelector } from "@/components/enterprise/permissions/category-hierarchy-selector";
+import { DocumentSelectorModal } from "@/components/enterprise/permissions/document-selector-modal";
+import { DocumentMeta } from "@/lib/api";
 
 interface Props {
   roleGroupId: string;
@@ -64,40 +65,29 @@ export function PermissionRuleBuilder({
 
   const [scopeType, setScopeType] = useState<PermissionScopeType>("category");
   const [scopeId, setScopeId] = useState("");
+  const [scopeDisplayName, setScopeDisplayName] = useState("");
   const [allowActions, setAllowActions] = useState<DocumentAction[]>(["view", "download"]);
   const [denyActions, setDenyActions] = useState<DocumentAction[]>([]);
 
-  // 动态系统数据状态
-  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  // 标签数据状态与文档弹窗状态
   const [tags, setTags] = useState<string[]>([]);
-  const [documents, setDocuments] = useState<{ id: string; name: string; type: string }[]>([]);
-  const [docSearch, setDocSearch] = useState("");
-  const [docPage, setDocPage] = useState(1);
-  const [docTotalPages, setDocTotalPages] = useState(1);
-  const [dataLoading, setDataLoading] = useState(false);
+  const [isDocModalOpen, setIsDocModalOpen] = useState(false);
 
-  // 加载分类、标签与文档列表
+  // 加载可用标签
   useEffect(() => {
     if (isAdding) {
-      setDataLoading(true);
-      fetch(`/api/documents?page=${docPage}&pageSize=10&search=${encodeURIComponent(docSearch)}`, {
+      fetch(`/api/documents?page=1&pageSize=1`, {
         credentials: "include",
       })
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
-          if (data) {
-            if (data.categories) setCategories(data.categories);
-            if (data.allTags) setTags(data.allTags);
-            if (data.documents) setDocuments(data.documents);
-            if (data.pagination) {
-              setDocTotalPages(data.pagination.totalPages || 1);
-            }
+          if (data && data.allTags) {
+            setTags(data.allTags);
           }
         })
-        .catch(() => {})
-        .finally(() => setDataLoading(false));
+        .catch(() => {});
     }
-  }, [isAdding, docPage, docSearch]);
+  }, [isAdding]);
 
   // 切换维度时重置选中的 scopeId
   const handleScopeTypeChange = (newType: PermissionScopeType) => {
@@ -253,24 +243,14 @@ export function PermissionRuleBuilder({
               </label>
 
               {scopeType === "category" && (
-                categories.length === 0 ? (
-                  <p className="text-xs text-amber-500 py-2">
-                    {t({ id: "Enterprise.RBAC.NoCategories", message: "No categories found in system." })}
-                  </p>
-                ) : (
-                  <Select value={scopeId} onValueChange={setScopeId}>
-                    <SelectTrigger className="w-full h-9 bg-background">
-                      <SelectValue placeholder="Select a Category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )
+                <CategoryHierarchySelector
+                  value={scopeId}
+                  onChange={(val, cat) => {
+                    setScopeId(val);
+                    setScopeDisplayName(cat ? cat.name : val);
+                  }}
+                  placeholder={t({ id: "Enterprise.RBAC.SelectCategoryHierarchy", message: "Select category (with nested structure)" })}
+                />
               )}
 
               {scopeType === "tag" && (
@@ -279,7 +259,13 @@ export function PermissionRuleBuilder({
                     {t({ id: "Enterprise.RBAC.NoTags", message: "No tags currently assigned to documents." })}
                   </p>
                 ) : (
-                  <Select value={scopeId} onValueChange={setScopeId}>
+                  <Select
+                    value={scopeId}
+                    onValueChange={(val) => {
+                      setScopeId(val);
+                      setScopeDisplayName(`#${val}`);
+                    }}
+                  >
                     <SelectTrigger className="w-full h-9 bg-background">
                       <SelectValue placeholder="Select a Tag" />
                     </SelectTrigger>
@@ -295,7 +281,14 @@ export function PermissionRuleBuilder({
               )}
 
               {scopeType === "file_type" && (
-                <Select value={scopeId} onValueChange={setScopeId}>
+                <Select
+                  value={scopeId}
+                  onValueChange={(val) => {
+                    setScopeId(val);
+                    const opt = FILE_TYPE_OPTIONS.find((o) => o.value === val);
+                    setScopeDisplayName(opt ? opt.label : val);
+                  }}
+                >
                   <SelectTrigger className="w-full h-9 bg-background">
                     <SelectValue placeholder="Select File Type" />
                   </SelectTrigger>
@@ -310,78 +303,31 @@ export function PermissionRuleBuilder({
               )}
 
               {scopeType === "document" && (
-                <div className="space-y-2">
-                  <div className="relative">
-                    <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
-                    <input
-                      type="text"
-                      placeholder="Search document name..."
-                      value={docSearch}
-                      onChange={(e) => {
-                        setDocSearch(e.target.value);
-                        setDocPage(1);
-                      }}
-                      className="w-full pl-8 pr-2 py-1.5 text-xs rounded-lg border border-border bg-background focus:ring-1 focus:ring-primary"
-                    />
-                  </div>
-
-                  <div className="max-h-36 overflow-y-auto space-y-1 rounded-lg border border-border/80 bg-background/80 p-1">
-                    {dataLoading ? (
-                      <div className="py-4 flex justify-center">
-                        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                      </div>
-                    ) : documents.length === 0 ? (
-                      <div className="text-center py-3 text-[11px] text-muted-foreground">
-                        No documents found
-                      </div>
-                    ) : (
-                      documents.map((doc) => {
-                        const isSelected = scopeId === doc.id;
-                        return (
-                          <button
-                            key={doc.id}
-                            type="button"
-                            onClick={() => setScopeId(doc.id)}
-                            className={`w-full flex items-center justify-between p-1.5 rounded-md text-left text-xs transition-colors cursor-pointer ${
-                              isSelected
-                                ? "bg-primary text-primary-foreground font-semibold"
-                                : "hover:bg-muted text-foreground"
-                            }`}
-                          >
-                            <span className="truncate pr-2">{doc.name}</span>
-                            <span className="text-[10px] font-mono opacity-70 shrink-0 uppercase">
-                              {doc.type}
-                            </span>
-                          </button>
-                        );
-                      })
-                    )}
-                  </div>
-
-                  {/* 文档翻页控制 */}
-                  <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-0.5">
-                    <span>
-                      Page {docPage} of {docTotalPages}
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setIsDocModalOpen(true)}
+                    className="w-full h-9 px-3 rounded-lg border border-border bg-background hover:bg-muted/50 flex items-center justify-between text-xs transition-colors cursor-pointer"
+                  >
+                    <span className="truncate">
+                      {scopeDisplayName || scopeId || t({ id: "Enterprise.RBAC.ClickToPickDoc", message: "Browse & Select Document (with search & filters)..." })}
                     </span>
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        disabled={docPage <= 1}
-                        onClick={() => setDocPage((p) => Math.max(1, p - 1))}
-                        className="p-1 rounded hover:bg-muted disabled:opacity-40 cursor-pointer"
-                      >
-                        <ChevronLeft className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        disabled={docPage >= docTotalPages}
-                        onClick={() => setDocPage((p) => Math.min(docTotalPages, p + 1))}
-                        className="p-1 rounded hover:bg-muted disabled:opacity-40 cursor-pointer"
-                      >
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
+                    <FolderOpen className="w-3.5 h-3.5 text-muted-foreground shrink-0 ml-2" />
+                  </button>
+
+                  <DocumentSelectorModal
+                    isOpen={isDocModalOpen}
+                    onClose={() => setIsDocModalOpen(false)}
+                    multiSelect={false}
+                    initialSelectedIds={scopeId ? [scopeId] : []}
+                    title={t({ id: "Enterprise.RBAC.SelectDocumentTitle", message: "Select Target Document for Rule" })}
+                    onSelect={(docs) => {
+                      if (docs.length > 0) {
+                        setScopeId(docs[0].id);
+                        setScopeDisplayName(docs[0].name);
+                      }
+                    }}
+                  />
                 </div>
               )}
             </div>

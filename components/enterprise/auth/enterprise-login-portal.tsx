@@ -22,6 +22,7 @@ export function EnterpriseLoginPortal() {
 
   const [activeTab, setActiveTab] = useState<"login" | "invite">("login");
   const [submitting, setSubmitting] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   // 登录/初始化字段
   const [email, setEmail] = useState("");
@@ -37,14 +38,20 @@ export function EnterpriseLoginPortal() {
 
   const onLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoginError(null);
     setSubmitting(true);
     try {
-      await handleLogin({
+      const success = await handleLogin({
         email: email.trim(),
         password,
         name: isInitialized ? undefined : name.trim(),
         orgName: isInitialized ? undefined : orgName.trim(),
       });
+      if (!success) {
+        setLoginError(t({ id: "Enterprise.Auth.LoginFailed", message: "Invalid email or password" }));
+      }
+    } catch (err: any) {
+      setLoginError(err.message || "Failed to sign in");
     } finally {
       setSubmitting(false);
     }
@@ -153,6 +160,11 @@ export function EnterpriseLoginPortal() {
           {/* 表单区域 */}
           {activeTab === "login" || !isInitialized ? (
             <form onSubmit={onLoginSubmit} className="space-y-4">
+              {loginError && (
+                <div className="p-3 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2 animate-in fade-in duration-200">
+                  <span className="font-semibold">{loginError}</span>
+                </div>
+              )}
               {!isInitialized && (
                 <>
                   <div>

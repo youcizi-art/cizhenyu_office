@@ -6,6 +6,7 @@ import { EnterpriseUser, updateEnterpriseMember, deleteEnterpriseMember } from "
 import { RoleBadge } from "../permissions/permission-badge";
 import { Trash2, ShieldAlert, CheckCircle2, Ban, Loader2, Shield } from "lucide-react";
 import { UserRoleGroupAssignmentModal } from "./user-role-group-assignment-modal";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
 
 interface MemberTableProps {
@@ -26,21 +27,19 @@ export function MemberTable({
   const t = useExtracted();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [managingUser, setManagingUser] = useState<EnterpriseUser | null>(null);
+  const [deletingUser, setDeletingUser] = useState<EnterpriseUser | null>(null);
 
-  const handleRoleChange = async (
-    targetUser: EnterpriseUser,
-    newRole: "admin" | "member" | "viewer"
-  ) => {
+  const handleToggleAdmin = async (targetUser: EnterpriseUser) => {
     if (targetUser.id === currentUserId) return;
+    const nextRole = targetUser.role === "admin" ? "member" : "admin";
     setUpdatingId(targetUser.id);
     try {
-      const res = await updateEnterpriseMember(targetUser.id, { role: newRole });
+      const res = await updateEnterpriseMember(targetUser.id, { role: nextRole });
       if (res.success) {
         toast.success(
-          t({
-            id: "Enterprise.Members.RoleUpdated",
-            message: "Member role updated successfully",
-          })
+          nextRole === "admin"
+            ? t({ id: "Enterprise.Members.PromotedToAdmin", message: "Promoted to Organization Administrator" })
+            : t({ id: "Enterprise.Members.DemotedToMember", message: "Changed to Standard Member" })
         );
         onRefresh();
       } else {
@@ -76,17 +75,13 @@ export function MemberTable({
     }
   };
 
-  const handleDelete = async (targetUser: EnterpriseUser) => {
-    if (targetUser.id === currentUserId) return;
-    const confirmMsg = t({
-      id: "Enterprise.Members.ConfirmDelete",
-      message: "Are you sure you want to remove this member? Their access will be revoked immediately.",
-    });
-    if (!window.confirm(confirmMsg)) return;
-
-    setUpdatingId(targetUser.id);
+  const confirmDeleteMember = async () => {
+    if (!deletingUser) return;
+    const targetUserId = deletingUser.id;
+    setDeletingUser(null);
+    setUpdatingId(targetUserId);
     try {
-      const res = await deleteEnterpriseMember(targetUser.id);
+      const res = await deleteEnterpriseMember(targetUserId);
       if (res.success) {
         toast.success(t({ id: "Enterprise.Members.Deleted", message: "Member removed from organization" }));
         onRefresh();
@@ -106,7 +101,7 @@ export function MemberTable({
         <thead>
           <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
             <th className="py-3 px-4">{t({ id: "Enterprise.Members.ColUser", message: "User" })}</th>
-            <th className="py-3 px-4">{t({ id: "Enterprise.Members.ColRole", message: "Role" })}</th>
+            <th className="py-3 px-4">{t({ id: "Enterprise.Members.ColRole", message: "Role / Permission Groups" })}</th>
             <th className="py-3 px-4">{t({ id: "Enterprise.Members.ColStatus", message: "Status" })}</th>
             <th className="py-3 px-4 text-right">{t({ id: "Enterprise.Members.ColActions", message: "Actions" })}</th>
           </tr>
@@ -142,32 +137,22 @@ export function MemberTable({
                   </div>
                 </td>
 
-                {/* 角色 */}
+                {/* 角色与权限组 */}
                 <td className="py-3 px-4">
-                  {canModify && !isTargetOwner ? (
-                    <select
-                      value={m.role}
-                      disabled={updatingId === m.id}
-                      onChange={(e) =>
-                        handleRoleChange(m, e.target.value as "admin" | "member" | "viewer")
-                      }
-                      className="text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 text-zinc-900 dark:text-zinc-100"
-                    >
-                      <option value="member">
-                        {t({ id: "Enterprise.Role.Member", message: "Member" })}
-                      </option>
-                      <option value="viewer">
-                        {t({ id: "Enterprise.Role.Viewer", message: "Viewer" })}
-                      </option>
-                      {isOwner && (
-                        <option value="admin">
-                          {t({ id: "Enterprise.Role.Admin", message: "Admin" })}
-                        </option>
-                      )}
-                    </select>
-                  ) : (
+                  <div className="flex items-center gap-2">
                     <RoleBadge role={m.role} size="sm" />
-                  )}
+                    {canModify && !isTargetOwner && isOwner && (
+                      <button
+                        type="button"
+                        onClick={() => handleToggleAdmin(m)}
+                        className="text-[10px] text-muted-foreground hover:text-primary underline cursor-pointer"
+                      >
+                        {m.role === "admin"
+                          ? t({ id: "Enterprise.Members.RevokeAdmin", message: "Set Member" })
+                          : t({ id: "Enterprise.Members.MakeAdmin", message: "Set Admin" })}
+                      </button>
+                    )}
+                  </div>
                 </td>
 
                 {/* 状态 */}
@@ -192,7 +177,7 @@ export function MemberTable({
                       <>
                         <button
                           onClick={() => setManagingUser(m)}
-                          title={t({ id: "Enterprise.RBAC.ManageUserGroups", message: "Assign Role Groups" })}
+                          title={t({ id: "Enterprise.RBAC.ManageUserGroups", message: "Assign Role Groups & Overrides" })}
                           className="p-1.5 text-zinc-400 hover:text-primary rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                         >
                           <Shield className="w-4 h-4" />
@@ -210,7 +195,7 @@ export function MemberTable({
                           <ShieldAlert className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDelete(m)}
+                          onClick={() => setDeletingUser(m)}
                           disabled={updatingId === m.id}
                           title={t({ id: "Enterprise.Members.DeleteAction", message: "Remove User" })}
                           className="p-1.5 text-zinc-400 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
@@ -238,6 +223,20 @@ export function MemberTable({
           onChanged={onRefresh}
         />
       )}
+
+      {/* 确认删除成员标准弹窗 */}
+      <ConfirmDialog
+        isOpen={Boolean(deletingUser)}
+        onClose={() => setDeletingUser(null)}
+        onConfirm={confirmDeleteMember}
+        title={t({ id: "Enterprise.Members.DeleteModalTitle", message: "Remove Team Member" })}
+        description={t({
+          id: "Enterprise.Members.ConfirmDelete",
+          message: "Are you sure you want to remove this member? Their access will be revoked immediately.",
+        })}
+        confirmText={t({ id: "Delete", message: "Remove Member" })}
+        destructive
+      />
     </div>
   );
 }

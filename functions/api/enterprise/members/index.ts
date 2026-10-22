@@ -65,7 +65,14 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     return errorResponse("Forbidden: Administrator privileges required", 403);
   }
 
-  let body: { email?: string; name?: string; role?: OrgRole; password?: string; roleGroupIds?: string[] };
+  let body: {
+    email?: string;
+    name?: string;
+    role?: OrgRole;
+    password?: string;
+    roleGroupIds?: string[];
+    docPermissions?: { documentId: string; permission: "owner" | "editor" | "commenter" | "viewer" }[];
+  };
   try {
     body = await request.json();
   } catch {
@@ -77,6 +84,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
   const role = body.role || "member";
   const initialPassword = (body.password || "").trim();
   const roleGroupIds = Array.isArray(body.roleGroupIds) ? body.roleGroupIds : [];
+  const docPermissions = Array.isArray(body.docPermissions) ? body.docPermissions : [];
 
   if (!email || !initialPassword) {
     return errorResponse("Email and password are required", 400);
@@ -151,6 +159,23 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
       }
     }
 
+    // 4.5 若传入了单一文档的专属权限设置，写入 document_permissions 表
+    for (const dp of docPermissions) {
+      if (dp && dp.documentId && dp.permission) {
+        const permId = crypto.randomUUID();
+        await db.execute(
+          `INSERT OR REPLACE INTO document_permissions (id, document_id, user_id, permission, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          permId,
+          dp.documentId.trim(),
+          newUserId,
+          dp.permission,
+          now,
+          now
+        );
+      }
+    }
+
     // 5. 记录审计日志
     await recordAuditLog(db, {
       orgId: session.org.id,
@@ -158,7 +183,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
       userName: session.user.name,
       action: "member_add",
       targetId: newUserId,
-      details: { email, role, roleGroupIds },
+      details: { email, role, roleGroupIds, docPermissionsCount: docPermissions.length },
       ipAddress: request.headers.get("CF-Connecting-IP") || undefined,
     });
 
