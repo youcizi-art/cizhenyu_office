@@ -134,6 +134,7 @@ export function DocumentsView() {
     handleDisableShare,
     handleCopyShare,
     handleUploadSubmit,
+    handleUploadFolder,
   } = useDocumentsData(queryParams);
 
   // 文档类型配置
@@ -530,6 +531,7 @@ export function DocumentsView() {
           setUploadFile(null);
         }}
         onSubmit={handleUploadSubmit}
+        onUploadFolder={handleUploadFolder}
       />
 
       <ConfirmModal

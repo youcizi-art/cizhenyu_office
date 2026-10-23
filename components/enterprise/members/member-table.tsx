@@ -2,11 +2,11 @@
 
 import React, { useState } from "react";
 import { useExtracted } from "next-intl";
-import { EnterpriseUser, updateEnterpriseMember, deleteEnterpriseMember } from "@/lib/enterprise-api";
+import { EnterpriseUser, updateEnterpriseMember, deleteEnterpriseMember, fetchDepartments, DepartmentItem } from "@/lib/enterprise-api";
 import { RoleBadge } from "../permissions/permission-badge";
-import { Trash2, ShieldAlert, CheckCircle2, Ban, Loader2, Shield, Edit2 } from "lucide-react";
+import { Trash2, ShieldAlert, CheckCircle2, Ban, Loader2, Shield, Edit2, FolderTree } from "lucide-react";
 import { UserRoleGroupAssignmentModal } from "./user-role-group-assignment-modal";
-import { EditMemberDialog } from "./edit-member-dialog";
+import { InviteMemberDialog } from "./invite-member-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
 
@@ -26,10 +26,23 @@ export function MemberTable({
   onRefresh,
 }: MemberTableProps) {
   const t = useExtracted();
+  const [departments, setDepartments] = useState<Record<string, string>>({});
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [managingUser, setManagingUser] = useState<EnterpriseUser | null>(null);
   const [editingUser, setEditingUser] = useState<EnterpriseUser | null>(null);
   const [deletingUser, setDeletingUser] = useState<EnterpriseUser | null>(null);
+
+  React.useEffect(() => {
+    fetchDepartments().then((res) => {
+      if (res.success && res.departments) {
+        const map: Record<string, string> = {};
+        for (const d of res.departments) {
+          map[d.id] = d.name;
+        }
+        setDepartments(map);
+      }
+    }).catch(() => {});
+  }, []);
 
   const handleToggleAdmin = async (targetUser: EnterpriseUser) => {
     if (targetUser.id === currentUserId) return;
@@ -141,8 +154,14 @@ export function MemberTable({
 
                 {/* 角色与权限组 */}
                 <td className="py-3 px-4">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <RoleBadge role={m.role} size="sm" />
+                    {m.departmentId && departments[m.departmentId] && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                        <FolderTree className="w-3 h-3" />
+                        <span>{departments[m.departmentId]}</span>
+                      </span>
+                    )}
                     {canModify && !isTargetOwner && isOwner && (
                       <button
                         type="button"
@@ -234,11 +253,12 @@ export function MemberTable({
       )}
 
       {editingUser && (
-        <EditMemberDialog
+        <InviteMemberDialog
           isOpen={Boolean(editingUser)}
-          user={editingUser}
+          editUser={editingUser}
           onClose={() => setEditingUser(null)}
           onSuccess={onRefresh}
+          canGrantAdmin={isOwner}
         />
       )}
 

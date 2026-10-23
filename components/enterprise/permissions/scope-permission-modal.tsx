@@ -143,21 +143,21 @@ export function ScopePermissionModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="relative w-full max-w-2xl bg-background border border-border rounded-2xl shadow-2xl p-6 overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-border">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
+        <div className="flex items-start justify-between gap-3 pb-4 border-b border-border">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="p-2.5 rounded-xl bg-primary/10 text-primary shrink-0">
               {getScopeIcon()}
             </div>
-            <div>
+            <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-muted text-muted-foreground text-[10px]">
+                <span className="hidden sm:inline-block text-xs font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-muted text-muted-foreground text-[10px]">
                   {scopeType}
                 </span>
-                <h3 className="text-base font-bold text-foreground truncate max-w-[320px]">
+                <h3 className="text-base font-bold text-foreground break-all leading-tight">
                   {scopeTitle}
                 </h3>
               </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <p className="hidden sm:block text-xs text-muted-foreground mt-0.5">
                 {t({
                   id: "Enterprise.RBAC.ScopeRuleDesc",
                   message: "Set permissions for this dimension. Rules automatically inherit to current & future documents.",
@@ -168,7 +168,7 @@ export function ScopePermissionModal({
 
           <button
             onClick={onClose}
-            className="p-1.5 text-muted-foreground hover:text-foreground rounded-lg transition-colors cursor-pointer"
+            className="p-1.5 text-muted-foreground hover:text-foreground rounded-lg transition-colors cursor-pointer shrink-0 ml-1"
           >
             <X className="w-5 h-5" />
           </button>

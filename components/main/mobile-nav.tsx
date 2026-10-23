@@ -59,30 +59,31 @@ export function MobileNav({ pathname, className }: MobileNavProps) {
           <Link
             key={item.id}
             href={item.href}
+            title={item.label}
+            aria-label={item.label}
             className={cn(
-              "flex flex-col items-center justify-center gap-1.5 px-4 py-2 rounded-lg transition-colors min-w-[64px]",
+              "flex items-center justify-center p-2 rounded-xl transition-colors min-w-[48px]",
               isActive
                 ? "text-primary bg-primary/10"
-                : "text-text-secondary hover:text-foreground active:bg-muted",
+                : "text-text-secondary hover:text-foreground active:bg-muted"
             )}
           >
             <item.icon
               className={cn(
-                "w-6 h-6",
-                isActive ? "text-primary" : "text-text-secondary",
+                "w-5 h-5",
+                isActive ? "text-primary" : "text-text-secondary"
               )}
               strokeWidth={2}
             />
-            <span className="text-[10px] font-medium leading-none">
-              {item.label}
-            </span>
           </Link>
         );
       })}
       <Link
         href="/about"
+        title={t("About")}
+        aria-label={t("About")}
         className={cn(
-          "flex flex-col items-center justify-center gap-1.5 px-4 py-2 rounded-lg transition-colors min-w-[64px]",
+          "flex items-center justify-center p-2 rounded-xl transition-colors min-w-[48px]",
           pathname === "/about"
             ? "text-primary bg-primary/10"
             : "text-text-secondary hover:text-foreground active:bg-muted",
@@ -90,14 +91,11 @@ export function MobileNav({ pathname, className }: MobileNavProps) {
       >
         <Info
           className={cn(
-            "w-6 h-6",
+            "w-5 h-5",
             pathname === "/about" ? "text-primary" : "text-text-secondary",
           )}
           strokeWidth={2}
         />
-        <span className="text-[10px] font-medium leading-none">
-          {t("About")}
-        </span>
       </Link>
     </div>
   );

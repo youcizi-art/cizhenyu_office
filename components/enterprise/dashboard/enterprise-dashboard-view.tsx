@@ -91,13 +91,12 @@ export function EnterpriseDashboardView() {
           icon={FileText}
         />
 
-        {/* 团队席位配额 */}
+        {/* 团队人员总数 */}
         <DashboardStatCard
-          title={t({ id: "Enterprise.Dashboard.TeamSeats", message: "Staff Capacity" })}
-          value={`${currentMembers} / ${maxSeats}`}
-          subtitle={`${seatPercent}% ${t({ id: "Enterprise.Dashboard.SeatsUsed", message: "seats occupied" })}`}
+          title={t({ id: "Enterprise.Dashboard.TeamSeats", message: "Team Members" })}
+          value={currentMembers}
+          subtitle={t({ id: "Enterprise.Dashboard.SeatsUsed", message: "Active enterprise accounts" })}
           icon={Users}
-          progressPercent={seatPercent}
         />
 
         {/* 实时协同编辑锁 */}

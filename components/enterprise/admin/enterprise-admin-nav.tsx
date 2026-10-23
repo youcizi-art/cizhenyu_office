@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useExtracted } from "next-intl";
-import { Shield, Users } from "lucide-react";
+import { Shield, Users, FolderTree } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function EnterpriseAdminNav() {
@@ -40,6 +40,19 @@ export function EnterpriseAdminNav() {
       >
         <Users className="w-3.5 h-3.5 text-blue-500" />
         <span>{t({ id: "Enterprise.AdminNav.Members", message: "Team Members & Users" })}</span>
+      </Link>
+
+      <Link
+        href="/departments"
+        className={cn(
+          "flex items-center gap-2 px-3.5 py-1.5 rounded-lg font-medium transition-all",
+          pathname.startsWith("/departments")
+            ? "bg-background text-foreground shadow-xs font-semibold"
+            : "text-muted-foreground hover:text-foreground hover:bg-background/40"
+        )}
+      >
+        <FolderTree className="w-3.5 h-3.5 text-emerald-500" />
+        <span>{t({ id: "Enterprise.AdminNav.Departments", message: "Department Management" })}</span>
       </Link>
     </div>
   );

@@ -69,6 +69,7 @@ export function DocumentCard({
   const t = useExtracted();
   const { canDownloadDocument, canShareDocument } = useEnterprise();
   const docCfg = getDocConfig(doc.type);
+  const [menuOpen, setMenuOpen] = React.useState(false);
 
   return (
     <div
@@ -162,7 +163,7 @@ export function DocumentCard({
 
         {/* 独立操作 Popover 菜单 */}
         <div data-interactive="true" onClick={(e) => e.stopPropagation()}>
-          <Popover>
+          <Popover open={menuOpen} onOpenChange={setMenuOpen}>
             <PopoverTrigger asChild>
               <button
                 type="button"
@@ -175,7 +176,10 @@ export function DocumentCard({
             <PopoverContent align="end" className="w-44 p-1.5 rounded-xl text-xs space-y-0.5">
               {doc.type !== "other" && (
                 <button
-                  onClick={() => onOpen(doc)}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onOpen(doc);
+                  }}
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-muted text-foreground transition-colors cursor-pointer"
                 >
                   {doc.type === "pdf" || doc.type === "image" || doc.type === "video" || doc.type === "audio" ? (
@@ -193,7 +197,10 @@ export function DocumentCard({
               )}
 
               <button
-                onClick={() => onTogglePin(doc)}
+                onClick={() => {
+                  setMenuOpen(false);
+                  onTogglePin(doc);
+                }}
                 className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-muted text-foreground transition-colors cursor-pointer"
               >
                 {doc.pinned ? (
@@ -210,7 +217,10 @@ export function DocumentCard({
               </button>
 
               <button
-                onClick={() => onEditTags(doc)}
+                onClick={() => {
+                  setMenuOpen(false);
+                  onEditTags(doc);
+                }}
                 className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-muted text-foreground transition-colors cursor-pointer"
               >
                 <Tag className="w-3.5 h-3.5 text-sky-500" />
@@ -219,7 +229,10 @@ export function DocumentCard({
 
               {canShareDocument() && (
                 <button
-                  onClick={() => onShare(doc)}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onShare(doc);
+                  }}
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-muted text-foreground transition-colors cursor-pointer"
                 >
                   <Share2 className="w-3.5 h-3.5 text-emerald-500" />
@@ -229,7 +242,10 @@ export function DocumentCard({
 
               {onManagePermissions && (
                 <button
-                  onClick={() => onManagePermissions(doc)}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onManagePermissions(doc);
+                  }}
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-muted text-foreground transition-colors cursor-pointer"
                 >
                   <Shield className="w-3.5 h-3.5 text-purple-500" />
@@ -239,7 +255,10 @@ export function DocumentCard({
 
               {canDownloadDocument() && (
                 <button
-                  onClick={() => onDownload(doc)}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onDownload(doc);
+                  }}
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-muted text-foreground transition-colors cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5 text-muted-foreground" />
@@ -250,7 +269,10 @@ export function DocumentCard({
               <div className="h-px bg-border my-1" />
 
               <button
-                onClick={() => onRename(doc)}
+                onClick={() => {
+                  setMenuOpen(false);
+                  onRename(doc);
+                }}
                 className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-muted text-foreground transition-colors cursor-pointer"
               >
                 <Edit3 className="w-3.5 h-3.5 text-muted-foreground" />
@@ -258,7 +280,10 @@ export function DocumentCard({
               </button>
 
               <button
-                onClick={() => onMove(doc)}
+                onClick={() => {
+                  setMenuOpen(false);
+                  onMove(doc);
+                }}
                 className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-muted text-foreground transition-colors cursor-pointer"
               >
                 <FolderInput className="w-3.5 h-3.5 text-muted-foreground" />
@@ -266,7 +291,10 @@ export function DocumentCard({
               </button>
 
               <button
-                onClick={() => onDelete(doc)}
+                onClick={() => {
+                  setMenuOpen(false);
+                  onDelete(doc);
+                }}
                 className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-destructive/10 text-destructive transition-colors cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />

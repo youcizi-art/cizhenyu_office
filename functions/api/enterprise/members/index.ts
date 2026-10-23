@@ -11,6 +11,7 @@ interface MemberRow {
   avatar: string | null;
   role: string;
   status: string;
+  department_id: string | null;
   created_at: number;
   updated_at: number;
 }
@@ -28,7 +29,7 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
   try {
     const db = getDb(env);
     const rows = await db.queryAll<MemberRow>(
-      "SELECT id, email, name, avatar, role, status, created_at, updated_at FROM users WHERE org_id = ?",
+      "SELECT id, email, name, avatar, role, status, department_id, created_at, updated_at FROM users WHERE org_id = ?",
       session.org.id
     );
 
@@ -39,6 +40,7 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
       avatar: r.avatar,
       role: r.role as OrgRole,
       status: r.status as "active" | "disabled" | "invited",
+      departmentId: r.department_id || null,
       createdAt: r.created_at,
       updatedAt: r.updated_at,
     }));
@@ -70,6 +72,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     name?: string;
     role?: OrgRole;
     password?: string;
+    departmentId?: string | null;
     roleGroupIds?: string[];
     docPermissions?: { documentId: string; permission: "owner" | "editor" | "commenter" | "viewer" }[];
   };
@@ -82,6 +85,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
   const email = (body.email || "").trim().toLowerCase();
   const name = (body.name || "").trim();
   const role = body.role || "member";
+  const departmentId = body.departmentId || null;
   const initialPassword = (body.password || "").trim();
   const roleGroupIds = Array.isArray(body.roleGroupIds) ? body.roleGroupIds : [];
   const docPermissions = Array.isArray(body.docPermissions) ? body.docPermissions : [];
@@ -98,21 +102,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
   try {
     const db = getDb(env);
 
-    // 1. 席位上限校验
-    const countRow = await db.queryOne<{ count: number }>(
-      "SELECT COUNT(*) AS count FROM users WHERE org_id = ?",
-      session.org.id
-    );
-    const currentCount = countRow ? countRow.count : 0;
-
-    if (currentCount >= session.org.maxSeats) {
-      return errorResponse(
-        `Seat limit exceeded: Organization maximum seats is ${session.org.maxSeats}`,
-        400
-      );
-    }
-
-    // 2. 邮箱重复校验
+    // 1. 邮箱重复校验
     const existing = await db.queryOne<{ id: string }>(
       "SELECT id FROM users WHERE email = ? LIMIT 1",
       email
@@ -122,14 +112,14 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
       return errorResponse("User with this email already exists", 409);
     }
 
-    // 3. 密码加盐哈希并落库
+    // 2. 密码加盐哈希并落库
     const { hash, salt } = await hashPassword(initialPassword);
     const newUserId = crypto.randomUUID();
     const now = Date.now();
 
     await db.execute(
-      `INSERT INTO users (id, org_id, email, password_hash, salt, name, avatar, role, status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO users (id, org_id, email, password_hash, salt, name, avatar, role, status, department_id, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       newUserId,
       session.org.id,
       email,
@@ -139,6 +129,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
       null,
       role,
       "active",
+      departmentId,
       now,
       now
     );

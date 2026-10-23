@@ -351,7 +351,7 @@ export { ShareModal } from "./share-modal";
 
 
 /**
- * 本地文档上传弹窗
+ * 本地文档与文件夹上传弹窗
  */
 export function UploadModal({
   open,
@@ -363,6 +363,7 @@ export function UploadModal({
   onChangeTargetCat,
   onClose,
   onSubmit,
+  onUploadFolder,
 }: {
   open: boolean;
   categories: Category[];
@@ -373,24 +374,92 @@ export function UploadModal({
   onChangeTargetCat: (catId: string | null) => void;
   onClose: () => void;
   onSubmit: (e: React.FormEvent) => void;
+  onUploadFolder?: (files: File[], parentCatId: string | null) => void | Promise<void>;
 }) {
   const t = useExtracted();
+  const [uploadMode, setUploadMode] = useState<"file" | "folder">("file");
+  const [folderFiles, setFolderFiles] = useState<File[]>([]);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const folderInputRef = React.useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (open) {
+      setUploadMode("file");
+      setFolderFiles([]);
+    }
+  }, [open]);
+
   if (!open) return null;
+
+  const handleFolderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files ? Array.from(e.target.files) : [];
+    setFolderFiles(files);
+  };
+
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (uploadMode === "folder") {
+      if (folderFiles.length === 0) return;
+      if (onUploadFolder) {
+        await onUploadFolder(folderFiles, targetCatId);
+      }
+    } else {
+      onSubmit(e);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
       <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl animate-in fade-in zoom-in-95">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="p-2 rounded-xl bg-primary/10 text-primary">
-            <Upload className="w-5 h-5" />
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-xl bg-primary/10 text-primary">
+              <Upload className="w-5 h-5" />
+            </div>
+            <h2 className="text-base font-semibold text-foreground">
+              {uploadMode === "folder"
+                ? t({ id: "UploadFolderModalTitle", message: "Upload Folder & Auto-Categorize" })
+                : t({ id: "UploadModalTitle", message: "Upload File to Cloud" })}
+            </h2>
           </div>
-          <h2 className="text-base font-semibold text-foreground">
-            {t({ id: "UploadModalTitle", message: "Upload File to Cloud" })}
-          </h2>
+
+          {/* 上传模式切换 Tabs */}
+          <div className="flex items-center p-0.5 rounded-lg bg-muted text-xs">
+            <button
+              type="button"
+              onClick={() => {
+                setUploadMode("file");
+                setFolderFiles([]);
+              }}
+              className={cn(
+                "px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer",
+                uploadMode === "file"
+                  ? "bg-background text-foreground shadow-xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {t({ id: "UploadFileMode", message: "File" })}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setUploadMode("folder");
+                onSelectFile(null);
+              }}
+              className={cn(
+                "px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer",
+                uploadMode === "folder"
+                  ? "bg-background text-foreground shadow-xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {t({ id: "UploadFolderMode", message: "Folder" })}
+            </button>
+          </div>
         </div>
 
-        <form onSubmit={onSubmit} className="space-y-4">
+        <form onSubmit={handleFormSubmit} className="space-y-4">
+          {/* 单文件模式 Input */}
           <input
             ref={fileInputRef}
             type="file"
@@ -398,39 +467,89 @@ export function UploadModal({
             className="hidden"
           />
 
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            className={cn(
-              "border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all",
-              uploadFile
-                ? "border-primary/50 bg-primary/5"
-                : "border-border hover:border-primary/40 hover:bg-muted/30"
-            )}
-          >
-            <div className="mx-auto w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-3">
-              <FileUp className="w-6 h-6" />
+          {/* 文件夹模式 Input */}
+          <input
+            ref={folderInputRef}
+            type="file"
+            /* @ts-ignore */
+            webkitdirectory=""
+            directory=""
+            multiple
+            onChange={handleFolderChange}
+            className="hidden"
+          />
+
+          {uploadMode === "file" ? (
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className={cn(
+                "border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all",
+                uploadFile
+                  ? "border-primary/50 bg-primary/5"
+                  : "border-border hover:border-primary/40 hover:bg-muted/30"
+              )}
+            >
+              <div className="mx-auto w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-3">
+                <FileUp className="w-6 h-6" />
+              </div>
+              {uploadFile ? (
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-foreground truncate">{uploadFile.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {(uploadFile.size / 1024).toFixed(1)} KB · {t({ id: "ClickToReselect", message: "Click to reselect" })}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-foreground">
+                    {t({ id: "ClickToSelectFile", message: "Click to select a file" })}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {t({
+                      id: "AllFormatsSupportedHint",
+                      message: "All file types supported (Office, PDF, Markdown, Images, Videos, Audio, etc.)",
+                    })}
+                  </p>
+                </div>
+              )}
             </div>
-            {uploadFile ? (
-              <div className="space-y-1">
-                <p className="text-sm font-semibold text-foreground truncate">{uploadFile.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {(uploadFile.size / 1024).toFixed(1)} KB · {t({ id: "ClickToReselect", message: "Click to reselect" })}
-                </p>
+          ) : (
+            <div
+              onClick={() => folderInputRef.current?.click()}
+              className={cn(
+                "border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all",
+                folderFiles.length > 0
+                  ? "border-emerald-500/50 bg-emerald-500/5"
+                  : "border-border hover:border-emerald-500/40 hover:bg-muted/30"
+              )}
+            >
+              <div className="mx-auto w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center mb-3">
+                <FolderPlus className="w-6 h-6" />
               </div>
-            ) : (
-              <div className="space-y-1">
-                <p className="text-xs font-semibold text-foreground">
-                  {t({ id: "ClickToSelectFile", message: "Click to select a file" })}
-                </p>
-                <p className="text-[11px] text-muted-foreground">
-                  {t({
-                    id: "AllFormatsSupportedHint",
-                    message: "All file types supported (Office, PDF, Markdown, Images, Videos, Audio, etc.)",
-                  })}
-                </p>
-              </div>
-            )}
-          </div>
+              {folderFiles.length > 0 ? (
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-foreground truncate">
+                    {folderFiles[0].webkitRelativePath ? folderFiles[0].webkitRelativePath.split("/")[0] : "Folder"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {folderFiles.length} {t({ id: "FilesInFolder", message: "files detected across folders" })} · {t({ id: "ClickToReselect", message: "Click to reselect" })}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-foreground">
+                    {t({ id: "ClickToSelectFolder", message: "Click to select a directory/folder" })}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {t({
+                      id: "FolderUploadHint",
+                      message: "Sub-folders will automatically map to nested categories seamlessly.",
+                    })}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="space-y-1">
             <label className="text-xs font-medium text-foreground">
@@ -461,7 +580,7 @@ export function UploadModal({
             </button>
             <button
               type="submit"
-              disabled={!uploadFile || isUploading}
+              disabled={(uploadMode === "file" && !uploadFile) || (uploadMode === "folder" && folderFiles.length === 0) || isUploading}
               className="px-4 py-1.5 text-xs font-semibold rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
             >
               {isUploading ? t({ id: "Uploading", message: "Uploading..." }) : t({ id: "ConfirmUpload", message: "Confirm Upload" })}

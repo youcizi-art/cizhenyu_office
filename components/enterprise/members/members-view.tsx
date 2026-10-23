@@ -85,27 +85,20 @@ export function MembersView() {
           </div>
         </div>
 
-        {/* 席位配额卡片 */}
+        {/* 团队人员规模卡片 */}
         <div className="p-4 bg-background border border-border rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
           <div className="flex items-center gap-3">
             <Sparkles className="w-5 h-5 text-amber-500 shrink-0" />
             <div className="text-xs text-muted-foreground">
               <span className="text-sm font-bold text-foreground">
-                {currentCount} / {maxSeats}
+                {currentCount}
               </span>{" "}
-              {t({ id: "Enterprise.Members.SeatsUsed", message: "seats currently allocated" })}
+              {t({ id: "Enterprise.Members.TotalActiveMembers", message: "total active team accounts" })}
             </div>
           </div>
-          <div className="w-full sm:w-64 flex items-center gap-3">
-            <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
-              <div
-                className={`h-full transition-all duration-500 rounded-full ${
-                  usagePercent >= 90 ? "bg-red-500" : "bg-blue-600"
-                }`}
-                style={{ width: `${usagePercent}%` }}
-              />
-            </div>
-            <span className="text-xs font-mono font-medium text-muted-foreground">{usagePercent}%</span>
+          <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+            <span className="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span>{t({ id: "Enterprise.Members.CloudUnlimited", message: "Cloud Scalable Capacity" })}</span>
           </div>
         </div>
 

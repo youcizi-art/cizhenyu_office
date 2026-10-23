@@ -10,6 +10,7 @@ export interface EnterpriseUser {
   avatar: string | null;
   role: "owner" | "admin" | "member" | "viewer";
   status: "active" | "disabled" | "invited";
+  departmentId?: string | null;
   createdAt: number;
 }
 
@@ -107,9 +108,10 @@ export async function fetchEnterpriseMembers(): Promise<{
  */
 export async function createEnterpriseMember(params: {
   email: string;
-  password: string;
   name?: string;
-  role: "admin" | "member" | "viewer";
+  password?: string;
+  role?: "owner" | "admin" | "member" | "viewer";
+  departmentId?: string | null;
   roleGroupIds?: string[];
   docPermissions?: { documentId: string; permission: "owner" | "editor" | "commenter" | "viewer" }[];
 }): Promise<{ success: boolean; member?: EnterpriseUser; error?: string }> {
@@ -123,11 +125,18 @@ export async function createEnterpriseMember(params: {
 }
 
 /**
- * 更新成员角色或状态
+ * 更新成员角色、状态、部门或权限
  */
 export async function updateEnterpriseMember(
   userId: string,
-  data: { role?: "owner" | "admin" | "member" | "viewer"; status?: "active" | "disabled"; name?: string }
+  data: {
+    role?: "owner" | "admin" | "member" | "viewer";
+    status?: "active" | "disabled";
+    name?: string;
+    departmentId?: string | null;
+    roleGroupIds?: string[];
+    docPermissions?: { documentId: string; permission: "owner" | "editor" | "commenter" | "viewer" }[];
+  }
 ): Promise<{ success: boolean; error?: string }> {
   const res = await fetch(`${API_BASE}/api/enterprise/members/${userId}`, {
     method: "PUT",
@@ -429,6 +438,84 @@ export async function fetchAuditLogs(params: {
 
   const res = await fetch(`${API_BASE}/api/enterprise/audit-logs?${query.toString()}`, {
     method: "GET",
+    credentials: "include",
+  });
+  return res.json();
+}
+
+/**
+ * 删除单条审计日志
+ */
+export async function deleteAuditLog(id: string): Promise<{ success: boolean; error?: string }> {
+  const res = await fetch(`${API_BASE}/api/enterprise/audit-logs?id=${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  return res.json();
+}
+
+/**
+ * 清理历史审计日志
+ */
+export async function pruneAuditLogs(days: number): Promise<{ success: boolean; error?: string }> {
+  const res = await fetch(`${API_BASE}/api/enterprise/audit-logs?days=${encodeURIComponent(String(days))}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  return res.json();
+}
+
+/**
+ * 部门管理数据模型与接口
+ */
+export interface DepartmentItem {
+  id: string;
+  orgId: string;
+  name: string;
+  parentId: string | null;
+  order: number;
+  memberCount: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export async function fetchDepartments(): Promise<{ success: boolean; departments: DepartmentItem[]; error?: string }> {
+  const res = await fetch(`${API_BASE}/api/enterprise/departments`, {
+    method: "GET",
+    credentials: "include",
+  });
+  return res.json();
+}
+
+export async function createDepartment(params: {
+  name: string;
+  parentId?: string | null;
+}): Promise<{ success: boolean; department?: DepartmentItem; error?: string }> {
+  const res = await fetch(`${API_BASE}/api/enterprise/departments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(params),
+  });
+  return res.json();
+}
+
+export async function updateDepartment(
+  id: string,
+  params: { name?: string; parentId?: string | null; order?: number }
+): Promise<{ success: boolean; error?: string }> {
+  const res = await fetch(`${API_BASE}/api/enterprise/departments/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(params),
+  });
+  return res.json();
+}
+
+export async function deleteDepartment(id: string): Promise<{ success: boolean; deletedIds?: string[]; error?: string }> {
+  const res = await fetch(`${API_BASE}/api/enterprise/departments/${encodeURIComponent(id)}`, {
+    method: "DELETE",
     credentials: "include",
   });
   return res.json();

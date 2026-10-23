@@ -41,6 +41,21 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
   try {
     const db = getDb(env);
 
+    // 自动清理机制：静默清理当前组织超过 90 天（3个月）且非安全告警类操作的常规日志
+    const ninetyDaysAgo = Date.now() - 90 * 24 * 60 * 60 * 1000;
+    try {
+      await db.execute(
+        `DELETE FROM audit_logs 
+         WHERE org_id = ? 
+           AND created_at < ? 
+           AND action NOT IN ('lock_force_takeover', 'auth_login_failed', 'security_violation')`,
+        session.org.id,
+        ninetyDaysAgo
+      );
+    } catch {
+      // 容错静默
+    }
+
     const conditions: string[] = ["org_id = ?"];
     const params: unknown[] = [session.org.id];
 
@@ -107,5 +122,63 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
     });
   } catch (error: any) {
     return errorResponse(error.message || "Failed to query audit logs", 500);
+  }
+}
+
+/**
+ * DELETE /api/enterprise/audit-logs
+ * 支持按指定 ID 单条/批量删除，或管理员按时间范围一键清理历史日志
+ */
+export async function onRequestDelete(context: PagesContext): Promise<Response> {
+  const { request, env } = context;
+  if (!env.DB) return errorResponse("Database is not configured", 500);
+
+  const session = await getEnterpriseSession(request, env);
+  if (!session) return errorResponse("Unauthorized", 401);
+
+  if (!assertOrgRole(session.user.role, "admin")) {
+    return errorResponse("Forbidden: Administrator privileges required", 403);
+  }
+
+  const url = new URL(request.url);
+  const logId = url.searchParams.get("id");
+  const olderThanDays = url.searchParams.get("days");
+
+  try {
+    const db = getDb(env);
+
+    if (logId) {
+      await db.execute("DELETE FROM audit_logs WHERE id = ? AND org_id = ?", logId, session.org.id);
+      return jsonResponse({ success: true, message: "Log record deleted" });
+    }
+
+    if (olderThanDays) {
+      const days = parseInt(olderThanDays, 10);
+      if (isNaN(days) || days < 0) {
+        return errorResponse("Invalid days parameter", 400);
+      }
+      const cutoffTime = Date.now() - days * 24 * 60 * 60 * 1000;
+      await db.execute("DELETE FROM audit_logs WHERE org_id = ? AND created_at < ?", session.org.id, cutoffTime);
+      return jsonResponse({ success: true, message: `Audit logs older than ${days} days pruned` });
+    }
+
+    // 支持通过请求体批量删除 ID
+    let body: { ids?: string[] } = {};
+    try {
+      body = await request.json();
+    } catch {
+      // ignore
+    }
+
+    if (Array.isArray(body.ids) && body.ids.length > 0) {
+      for (const id of body.ids) {
+        await db.execute("DELETE FROM audit_logs WHERE id = ? AND org_id = ?", id, session.org.id);
+      }
+      return jsonResponse({ success: true, deletedCount: body.ids.length });
+    }
+
+    return errorResponse("Log ID or pruning parameters required", 400);
+  } catch (error: any) {
+    return errorResponse(error.message || "Failed to delete audit logs", 500);
   }
 }

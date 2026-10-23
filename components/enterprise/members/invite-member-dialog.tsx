@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useExtracted } from "next-intl";
-import { createEnterpriseMember, EnterpriseUser } from "@/lib/enterprise-api";
+import { createEnterpriseMember, updateEnterpriseMember, EnterpriseUser, fetchDepartments, DepartmentItem } from "@/lib/enterprise-api";
 import { RoleGroup, fetchRoleGroups } from "@/lib/enterprise-permissions-api";
 import {
   UserPlus,
@@ -18,6 +18,8 @@ import {
   FileText,
   Plus,
   Trash2,
+  FolderTree,
+  Edit2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { DocumentSelectorModal } from "@/components/enterprise/permissions/document-selector-modal";
@@ -26,8 +28,9 @@ import { DocumentMeta } from "@/lib/api";
 interface InviteMemberDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (newMember: EnterpriseUser) => void;
+  onSuccess: (member: EnterpriseUser) => void;
   canGrantAdmin: boolean;
+  editUser?: EnterpriseUser | null;
 }
 
 interface CustomDocPerm {
@@ -41,19 +44,26 @@ export function InviteMemberDialog({
   onClose,
   onSuccess,
   canGrantAdmin,
+  editUser,
 }: InviteMemberDialogProps) {
   const t = useExtracted();
+  const isEditMode = Boolean(editUser);
+
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [isAdminGrant, setIsAdminGrant] = useState(false);
-  
+  const [departmentId, setDepartmentId] = useState<string | null>(null);
+
+  // 部门数据
+  const [departments, setDepartments] = useState<DepartmentItem[]>([]);
+
   // 角色组数据与搜索
   const [availableGroups, setAvailableGroups] = useState<RoleGroup[]>([]);
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
   const [groupSearch, setGroupSearch] = useState("");
   const [groupsLoading, setGroupsLoading] = useState(false);
-  
+
   // 单文档独立权限分配（最高优先级）
   const [customDocPerms, setCustomDocPerms] = useState<CustomDocPerm[]>([]);
   const [isDocModalOpen, setIsDocModalOpen] = useState(false);
@@ -62,21 +72,71 @@ export function InviteMemberDialog({
 
   useEffect(() => {
     if (isOpen) {
+      // 加载部门列表
+      fetchDepartments().then((res) => {
+        if (res.success) {
+          setDepartments(res.departments || []);
+        }
+      }).catch(() => {});
+
+      // 加载角色组列表
       setGroupsLoading(true);
       fetchRoleGroups()
         .then((groups) => {
           setAvailableGroups(groups);
-          const defaultGroup =
-            groups.find((g) => g.id.includes("editor") || g.name.toLowerCase().includes("editor")) ||
-            groups[0];
-          if (defaultGroup) {
-            setSelectedGroupIds([defaultGroup.id]);
+          if (!isEditMode) {
+            const defaultGroup =
+              groups.find((g) => g.id.includes("editor") || g.name.toLowerCase().includes("editor")) ||
+              groups[0];
+            if (defaultGroup) {
+              setSelectedGroupIds([defaultGroup.id]);
+            }
           }
         })
         .catch(() => {})
         .finally(() => setGroupsLoading(false));
+
+      // 若为编辑模式，回填用户已有数据
+      if (editUser) {
+        setEmail(editUser.email);
+        setName(editUser.name);
+        setPassword(""); // 编辑时不强制改密
+        setIsAdminGrant(editUser.role === "admin" || editUser.role === "owner");
+        setDepartmentId(editUser.departmentId || null);
+
+        // 获取用户已有的角色组
+        fetch(`/api/permissions/user-groups?userId=${encodeURIComponent(editUser.id)}`, {
+          credentials: "include",
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.success && data.data) {
+              setSelectedGroupIds(data.data.map((g: any) => g.id));
+            }
+          })
+          .catch(() => {});
+
+        // 获取用户已有的文档覆盖权限
+        fetch(`/api/permissions/user-documents?userId=${encodeURIComponent(editUser.id)}`, {
+          credentials: "include",
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.success && data.permissions) {
+              setCustomDocPerms(data.permissions);
+            }
+          })
+          .catch(() => {});
+      } else {
+        setEmail("");
+        setName("");
+        setPassword("");
+        setIsAdminGrant(false);
+        setDepartmentId(null);
+        setCustomDocPerms([]);
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, editUser, isEditMode]);
 
   if (!isOpen) return null;
 
@@ -117,7 +177,8 @@ export function InviteMemberDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) return;
+    if (!isEditMode && (!email || !password)) return;
+    if (isEditMode && !email) return;
 
     if (selectedGroupIds.length === 0 && !isAdminGrant) {
       toast.error(
@@ -131,44 +192,65 @@ export function InviteMemberDialog({
 
     setLoading(true);
     try {
-      const res = await createEnterpriseMember({
-        email,
-        name: name || undefined,
-        password,
-        role: isAdminGrant ? "admin" : "member",
-        roleGroupIds: selectedGroupIds,
-        docPermissions: customDocPerms.map((p) => ({
-          documentId: p.docId,
-          permission: p.permission,
-        })),
-      });
+      if (isEditMode && editUser) {
+        const res = await updateEnterpriseMember(editUser.id, {
+          name: name || undefined,
+          role: isAdminGrant ? "admin" : "member",
+          departmentId: departmentId || null,
+          roleGroupIds: selectedGroupIds,
+          docPermissions: customDocPerms.map((p) => ({
+            documentId: p.docId,
+            permission: p.permission,
+          })),
+        });
 
-      if (res.success && res.member) {
-        toast.success(
-          t({
-            id: "Enterprise.Members.AddSuccess",
-            message: "Member added successfully",
-          })
-        );
-        onSuccess(res.member);
-        onClose();
+        if (res.success) {
+          toast.success(t({ id: "Enterprise.Members.UpdateSuccess", message: "Member updated successfully" }));
+          onSuccess({
+            ...editUser,
+            name: name || editUser.name,
+            role: isAdminGrant ? "admin" : "member",
+            departmentId: departmentId || null,
+          });
+          onClose();
+        } else {
+          toast.error(res.error || t({ id: "Enterprise.Members.UpdateFailed", message: "Failed to update member" }));
+        }
       } else {
-        toast.error(
-          res.error ||
+        const res = await createEnterpriseMember({
+          email,
+          name: name || undefined,
+          password,
+          role: isAdminGrant ? "admin" : "member",
+          departmentId: departmentId || null,
+          roleGroupIds: selectedGroupIds,
+          docPermissions: customDocPerms.map((p) => ({
+            documentId: p.docId,
+            permission: p.permission,
+          })),
+        });
+
+        if (res.success && res.member) {
+          toast.success(
             t({
-              id: "Enterprise.Members.AddFailed",
-              message: "Failed to add member",
+              id: "Enterprise.Members.AddSuccess",
+              message: "Member added successfully",
             })
-        );
+          );
+          onSuccess(res.member);
+          onClose();
+        } else {
+          toast.error(
+            res.error ||
+              t({
+                id: "Enterprise.Members.AddFailed",
+                message: "Failed to add member",
+              })
+          );
+        }
       }
     } catch (e: any) {
-      toast.error(
-        e.message ||
-          t({
-            id: "Enterprise.Members.AddError",
-            message: "Network error occurred",
-          })
-      );
+      toast.error(e.message || "Network error");
     } finally {
       setLoading(false);
     }
@@ -181,11 +263,13 @@ export function InviteMemberDialog({
         <div className="flex items-center justify-between pb-4 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
-              <UserPlus className="w-5 h-5" />
+              {isEditMode ? <Edit2 className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
             </div>
             <div>
               <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
-                {t({ id: "Enterprise.Members.InviteTitle", message: "Add Team Member" })}
+                {isEditMode
+                  ? t({ id: "Enterprise.Members.EditMemberTitle", message: "Edit Team Member" })
+                  : t({ id: "Enterprise.Members.InviteTitle", message: "Add Team Member" })}
               </h2>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 {t({
@@ -217,10 +301,15 @@ export function InviteMemberDialog({
                 <input
                   type="email"
                   required
+                  disabled={isEditMode}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="colleague@company.com"
-                  className="w-full pl-9 pr-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-zinc-900 dark:text-zinc-100"
+                  className={`w-full pl-9 pr-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 ${
+                    isEditMode
+                      ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 cursor-not-allowed border-zinc-200 dark:border-zinc-700"
+                      : "bg-zinc-50 dark:bg-zinc-800/60 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100"
+                  }`}
                 />
               </div>
             </div>
@@ -245,19 +334,43 @@ export function InviteMemberDialog({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
             <div>
               <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
-                {t({ id: "Enterprise.Members.InitialPasswordLabel", message: "Initial Password" })}
-                <span className="text-rose-500 ml-1">*</span>
+                {isEditMode
+                  ? t({ id: "Enterprise.Members.PasswordOptional", message: "Password (Unchanged if empty)" })
+                  : t({ id: "Enterprise.Members.InitialPasswordLabel", message: "Initial Password" })}
+                {!isEditMode && <span className="text-rose-500 ml-1">*</span>}
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-2.5 w-4 h-4 text-zinc-400" />
                 <input
                   type="password"
-                  required
+                  required={!isEditMode}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••••••"
                   className="w-full pl-9 pr-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-zinc-900 dark:text-zinc-100"
                 />
+              </div>
+            </div>
+
+            {/* 所属部门选择（可选） */}
+            <div>
+              <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+                {t({ id: "Enterprise.Members.DepartmentLabel", message: "Department (Optional)" })}
+              </label>
+              <div className="relative">
+                <FolderTree className="absolute left-3 top-2.5 w-4 h-4 text-zinc-400" />
+                <select
+                  value={departmentId || ""}
+                  onChange={(e) => setDepartmentId(e.target.value || null)}
+                  className="w-full pl-9 pr-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-zinc-900 dark:text-zinc-100 cursor-pointer"
+                >
+                  <option value="">{t({ id: "Enterprise.Members.NoDepartment", message: "None (Unassigned)" })}</option>
+                  {departments.map((dept) => (
+                    <option key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -447,10 +560,14 @@ export function InviteMemberDialog({
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>{t({ id: "Enterprise.Common.Saving", message: "Adding..." })}</span>
+                  <span>{isEditMode ? t({ id: "Saving", message: "Saving..." }) : t({ id: "Enterprise.Common.Saving", message: "Adding..." })}</span>
                 </>
               ) : (
-                <span>{t({ id: "Enterprise.Members.ConfirmAdd", message: "Add Member" })}</span>
+                <span>
+                  {isEditMode
+                    ? t({ id: "Enterprise.Members.SaveMember", message: "Save Changes" })
+                    : t({ id: "Enterprise.Members.ConfirmAdd", message: "Add Member" })}
+                </span>
               )}
             </button>
           </div>

@@ -384,6 +384,15 @@ export function PermissionsView() {
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
+                                if (g.memberCount > 0) {
+                                  toast.error(
+                                    t({
+                                      id: "Enterprise.RBAC.CannotDeleteWithMembers",
+                                      message: "Cannot delete role group: members are currently assigned to it. Please reassign them first.",
+                                    })
+                                  );
+                                  return;
+                                }
                                 setDeletingGroup(g);
                               }}
                               className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-80 group-hover:opacity-100 transition-opacity cursor-pointer"

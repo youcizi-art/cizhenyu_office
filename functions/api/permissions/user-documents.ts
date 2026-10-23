@@ -38,9 +38,8 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
         dp.permission
        FROM document_permissions dp
        INNER JOIN documents d ON dp.document_id = d.id
-       WHERE dp.user_id = ? AND d.organization_id = ?`,
-      userId,
-      session.org.id
+       WHERE dp.user_id = ?`,
+      userId
     );
 
     return jsonResponse({

@@ -29,7 +29,14 @@ export async function onRequestPut(context: PagesContext<"id">): Promise<Respons
     return errorResponse("Forbidden: Administrator privileges required", 403);
   }
 
-  let body: { role?: OrgRole; status?: "active" | "disabled"; name?: string };
+  let body: {
+    role?: OrgRole;
+    status?: "active" | "disabled";
+    name?: string;
+    departmentId?: string | null;
+    roleGroupIds?: string[];
+    docPermissions?: { documentId: string; permission: "owner" | "editor" | "commenter" | "viewer" }[];
+  };
   try {
     body = await request.json();
   } catch {
@@ -74,13 +81,58 @@ export async function onRequestPut(context: PagesContext<"id">): Promise<Respons
       updates.push("status = ?");
       values.push(body.status);
     }
-    if (body.name) {
+    if (body.name !== undefined) {
       updates.push("name = ?");
       values.push(body.name.trim());
+    }
+    if (body.departmentId !== undefined) {
+      updates.push("department_id = ?");
+      values.push(body.departmentId || null);
     }
 
     values.push(targetUserId);
     await db.execute(`UPDATE users SET ${updates.join(", ")} WHERE id = ?`, ...values);
+
+    // 如果传入了 roleGroupIds，同步更新 user_role_groups
+    if (Array.isArray(body.roleGroupIds)) {
+      await db.execute("DELETE FROM user_role_groups WHERE user_id = ? AND org_id = ?", targetUserId, session.org.id);
+      const now = Date.now();
+      for (const gid of body.roleGroupIds) {
+        if (typeof gid === "string" && gid.trim()) {
+          const ugId = crypto.randomUUID();
+          await db.execute(
+            `INSERT OR IGNORE INTO user_role_groups (id, org_id, user_id, role_group_id, created_at)
+             VALUES (?, ?, ?, ?, ?)`,
+            ugId,
+            session.org.id,
+            targetUserId,
+            gid.trim(),
+            now
+          );
+        }
+      }
+    }
+
+    // 如果传入了 docPermissions，同步更新 document_permissions
+    if (Array.isArray(body.docPermissions)) {
+      await db.execute("DELETE FROM document_permissions WHERE user_id = ?", targetUserId);
+      const now = Date.now();
+      for (const dp of body.docPermissions) {
+        if (dp && dp.documentId && dp.permission) {
+          const permId = crypto.randomUUID();
+          await db.execute(
+            `INSERT OR REPLACE INTO document_permissions (id, document_id, user_id, permission, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            permId,
+            dp.documentId.trim(),
+            targetUserId,
+            dp.permission,
+            now,
+            now
+          );
+        }
+      }
+    }
 
     // 如果状态变为 disabled，物理清理该成员当前所有有效 Session
     if (body.status === "disabled") {

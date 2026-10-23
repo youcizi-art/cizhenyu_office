@@ -223,8 +223,21 @@ export async function onRequestDelete(context: PagesContext): Promise<Response> 
       return errorResponse("Role group not found", 404);
     }
 
-    // 级联清理分配关系与规则
-    await db.execute("DELETE FROM user_role_groups WHERE role_group_id = ? AND org_id = ?", id, session.org.id);
+    // 校验该角色组下是否有挂载的用户
+    const userCountRow = await db.queryOne<{ count: number }>(
+      "SELECT COUNT(*) AS count FROM user_role_groups WHERE role_group_id = ? AND org_id = ?",
+      id,
+      session.org.id
+    );
+
+    if (userCountRow && userCountRow.count > 0) {
+      return errorResponse(
+        `Cannot delete role group: There are ${userCountRow.count} member(s) currently assigned to this role group. Please reassign or remove them first.`,
+        400
+      );
+    }
+
+    // 清理规则与角色组实体
     await db.execute("DELETE FROM permission_rules WHERE role_group_id = ? AND org_id = ?", id, session.org.id);
     await db.execute("DELETE FROM role_groups WHERE id = ? AND org_id = ?", id, session.org.id);
 

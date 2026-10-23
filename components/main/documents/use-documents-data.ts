@@ -302,6 +302,99 @@ export function useDocumentsData(queryParams?: DocumentQueryParams) {
     }
   };
 
+  // 清理转义特殊符号，确保文件夹名称安全合法
+  const sanitizeCategoryName = (name: string): string => {
+    return name
+      .replace(/[\\/:*?"<>|]/g, "_")
+      .trim() || "Untitled Folder";
+  };
+
+  // 批量上传文件夹并递归建立分类层级
+  const handleUploadFolder = async (files: File[], parentCatId: string | null) => {
+    if (!files || files.length === 0) return;
+
+    try {
+      setIsUploading(true);
+      // 维护路径到分类 ID 的内存缓存（避免重复调用接口建同名分类）
+      // 路径格式：相对层级，例如 "sub1/sub2"
+      const pathToCatIdMap = new Map<string, string>();
+      const currentCategories = [...categories];
+
+      const getOrCreateCategoryPath = async (segments: string[]): Promise<string | null> => {
+        let currentParent = parentCatId;
+        let cumulativePath = "";
+
+        for (const seg of segments) {
+          const sanitizedSeg = sanitizeCategoryName(seg);
+          cumulativePath = cumulativePath ? `${cumulativePath}/${sanitizedSeg}` : sanitizedSeg;
+
+          if (pathToCatIdMap.has(cumulativePath)) {
+            currentParent = pathToCatIdMap.get(cumulativePath)!;
+            continue;
+          }
+
+          // 检查已有分类中是否已存在该同名兄弟节点
+          const existing = currentCategories.find(
+            (c) => c.name.toLowerCase() === sanitizedSeg.toLowerCase() && c.parentId === currentParent
+          );
+
+          if (existing) {
+            currentParent = existing.id;
+            pathToCatIdMap.set(cumulativePath, existing.id);
+          } else {
+            // 新建分类
+            const newCat = await createCategory(sanitizedSeg, currentParent);
+            currentCategories.push(newCat);
+            currentParent = newCat.id;
+            pathToCatIdMap.set(cumulativePath, newCat.id);
+          }
+        }
+
+        return currentParent;
+      };
+
+      const uploadedDocs: DocumentMeta[] = [];
+
+      for (const file of files) {
+        // webkitRelativePath 格式如 "my-folder/sub-folder/file.docx"
+        const relPath = file.webkitRelativePath || file.name;
+        const parts = relPath.split("/").filter(Boolean);
+        const fileName = parts.pop() || file.name;
+        const folderSegments = parts;
+
+        const targetCategoryId = folderSegments.length > 0
+          ? await getOrCreateCategoryPath(folderSegments)
+          : parentCatId;
+
+        const type = detectFileType(fileName);
+        const newDoc = await saveNewDocument({
+          file,
+          name: fileName,
+          type,
+          categoryId: targetCategoryId,
+        });
+
+        uploadedDocs.push(newDoc);
+      }
+
+      setCategories(currentCategories);
+      setDocuments((prev) => [...uploadedDocs, ...prev]);
+      setUploadModalOpen(false);
+      setUploadFile(null);
+      toast.success(
+        t({
+          id: "UploadFolderSuccess",
+          message: "Folder and all contained files uploaded and categorized successfully",
+        })
+      );
+      await loadData();
+    } catch (err) {
+      toast.error(String(err));
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   return {
     documents,
     setDocuments,
@@ -345,5 +438,6 @@ export function useDocumentsData(queryParams?: DocumentQueryParams) {
     handleDisableShare,
     handleCopyShare,
     handleUploadSubmit,
+    handleUploadFolder,
   };
 }
