@@ -81,7 +81,7 @@ export default function MainLayout({
             )}
           >
             {pathname.startsWith("/documents") ? (
-              <div className="flex-1 w-full h-full flex flex-col overflow-hidden pb-[56px] md:pb-0">
+              <div className="flex-1 w-full h-full flex flex-col overflow-hidden pb-[76px] md:pb-0">
                 {children}
               </div>
             ) : (

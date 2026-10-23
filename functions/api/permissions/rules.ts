@@ -136,6 +136,102 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
   }
 }
 
+export async function onRequestPut(context: PagesContext): Promise<Response> {
+  const { request, env } = context;
+  if (!env.DB) return errorResponse("Database is not configured", 500);
+
+  const session = await getEnterpriseSession(request, env);
+  if (!session) return errorResponse("Unauthorized", 401);
+
+  if (!assertOrgRole(session.user.role, "admin")) {
+    return errorResponse("Forbidden: requires admin privileges", 403);
+  }
+
+  let body: {
+    id: string;
+    scopeType?: PermissionScopeType;
+    scopeId?: string;
+    allowActions: DocumentAction[];
+    denyActions: DocumentAction[];
+  };
+  try {
+    body = await request.json();
+  } catch {
+    return errorResponse("Invalid JSON payload", 400);
+  }
+
+  if (!body.id) {
+    return errorResponse("Rule id is required", 400);
+  }
+
+  try {
+    const db = getDb(env);
+    const existing = await db.queryOne<{ id: string; role_group_id: string }>(
+      "SELECT id, role_group_id FROM permission_rules WHERE id = ? AND org_id = ?",
+      body.id,
+      session.org.id
+    );
+
+    if (!existing) {
+      return errorResponse("Permission rule not found", 404);
+    }
+
+    const now = Date.now();
+    const updates: string[] = ["updated_at = ?", "allow_actions = ?", "deny_actions = ?"];
+    const values: unknown[] = [
+      now,
+      JSON.stringify(body.allowActions || []),
+      JSON.stringify(body.denyActions || []),
+    ];
+
+    if (body.scopeType) {
+      updates.push("scope_type = ?");
+      values.push(body.scopeType);
+    }
+    if (body.scopeId) {
+      updates.push("scope_id = ?");
+      values.push(body.scopeId);
+    }
+
+    values.push(body.id, session.org.id);
+
+    await db.execute(
+      `UPDATE permission_rules SET ${updates.join(", ")} WHERE id = ? AND org_id = ?`,
+      ...values
+    );
+
+    await recordAuditLog(db, {
+      orgId: session.org.id,
+      userId: session.user.id,
+      userName: session.user.name,
+      action: "permission_rule_updated",
+      targetId: body.id,
+      details: {
+        roleGroupId: existing.role_group_id,
+        scopeType: body.scopeType,
+        scopeId: body.scopeId,
+        allows: body.allowActions,
+        denies: body.denyActions,
+      },
+    });
+
+    return jsonResponse({
+      success: true,
+      data: {
+        id: body.id,
+        roleGroupId: existing.role_group_id,
+        scopeType: body.scopeType,
+        scopeId: body.scopeId,
+        allowActions: body.allowActions || [],
+        denyActions: body.denyActions || [],
+        updatedAt: now,
+      },
+    });
+  } catch (error: any) {
+    return errorResponse(error.message || "Failed to update rule", 500);
+  }
+}
+
 export async function onRequestDelete(context: PagesContext): Promise<Response> {
   const { request, env } = context;
   if (!env.DB) return errorResponse("Database is not configured", 500);

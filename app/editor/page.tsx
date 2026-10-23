@@ -37,6 +37,9 @@ import {
   FileCode2,
 } from "lucide-react";
 import { useExtracted } from "next-intl";
+import { useEnterprise } from "@/components/enterprise/context/enterprise-auth-context";
+import { useDocumentLock } from "@/hooks/use-document-lock";
+import { DocumentLockBanner } from "@/components/editor/document-lock-banner";
 
 function EditorWorkspace() {
   const t = useExtracted();
@@ -47,6 +50,12 @@ function EditorWorkspace() {
   const hasHydrated = useHasHydrated();
   const isDirty = useRef(false);
 
+  // 企业版用户身份与权限
+  const { user: enterpriseUser, isAuthenticated: isEnterpriseAuth } = useEnterprise();
+  const canTakeover = Boolean(
+    enterpriseUser && (enterpriseUser.role === "owner" || enterpriseUser.role === "admin")
+  );
+
   // 云端文档上下文状态
   const [docId, setDocId] = useState<string | null>(null);
   const activeDocIdRef = useRef<string | null>(null);
@@ -54,6 +63,28 @@ function EditorWorkspace() {
   const [docType, setDocType] = useState<DocumentType>("docx");
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [categories, setCategories] = useState<Category[]>([]);
+
+  // 独占锁控制 Hook
+  const {
+    isLockedByMe,
+    currentLocker,
+    loading: lockLoading,
+    takeover: takeoverLock,
+    refreshStatus: refreshLockStatus,
+  } = useDocumentLock({
+    docId,
+    docName: docTitle,
+    enabled: Boolean(docId && isEnterpriseAuth),
+    onLockLost: () => {
+      // 锁失效时标记为不可写入
+      isDirty.current = false;
+    },
+  });
+
+  // 如果企业模式下有人持锁且持锁人不是我，则强制处于只读模式
+  const isReadOnlyMode = Boolean(
+    isEnterpriseAuth && docId && currentLocker && !isLockedByMe
+  );
 
   // Markdown 专有状态
   const [markdownContent, setMarkdownContent] = useState<string>("");
@@ -85,6 +116,16 @@ function EditorWorkspace() {
 
   // 触发保存 (支持 OnlyOffice 与 Markdown 统一体验)
   const handleTriggerSave = async () => {
+    if (isReadOnlyMode) {
+      toast.warning(
+        t({
+          id: "Enterprise.Lock.SaveBlockedReadOnly",
+          message: "Saving is disabled because this document is currently locked by another user.",
+        })
+      );
+      return;
+    }
+
     if (docType === "md") {
       setIsSaving(true);
       try {
@@ -589,11 +630,31 @@ function EditorWorkspace() {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* 文档锁状态指示 */}
+          {isEnterpriseAuth && docId && (
+            <DocumentLockBanner
+              isLockedByMe={isLockedByMe}
+              currentLocker={currentLocker}
+              canTakeover={canTakeover}
+              onTakeover={takeoverLock}
+              onRefresh={refreshLockStatus}
+              loading={lockLoading}
+            />
+          )}
+
           <button
             onClick={handleTriggerSave}
-            disabled={isSaving}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-medium rounded-lg shadow-xs hover:bg-primary/90 transition-all cursor-pointer disabled:opacity-50"
-            title={t({ id: "SaveToCloud", message: "Save to Cloud (Ctrl+S)" })}
+            disabled={isSaving || isReadOnlyMode}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg shadow-xs transition-all cursor-pointer disabled:opacity-50 ${
+              isReadOnlyMode
+                ? "bg-muted text-muted-foreground cursor-not-allowed border border-border"
+                : "bg-primary text-primary-foreground hover:bg-primary/90"
+            }`}
+            title={
+              isReadOnlyMode
+                ? t({ id: "Enterprise.Lock.ReadOnlyTooltip", message: "Locked by another editor (Read-Only)" })
+                : t({ id: "SaveToCloud", message: "Save to Cloud (Ctrl+S)" })
+            }
           >
             {isSaving ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -601,7 +662,9 @@ function EditorWorkspace() {
               <Save className="w-3.5 h-3.5" />
             )}
             <span>
-              {isSaving
+              {isReadOnlyMode
+                ? t({ id: "Enterprise.Lock.ReadOnlyBtn", message: "Read Only" })
+                : isSaving
                 ? t({ id: "Saving", message: "Saving..." })
                 : t({ id: "SaveToCloud", message: "Save to Cloud (Ctrl+S)" })}
             </span>
@@ -618,6 +681,18 @@ function EditorWorkspace() {
         </div>
       </header>
 
+      {/* 当处于他人持锁只读状态时的顶部提示条 */}
+      {isReadOnlyMode && currentLocker && (
+        <DocumentLockBanner
+          isLockedByMe={false}
+          currentLocker={currentLocker}
+          canTakeover={canTakeover}
+          onTakeover={takeoverLock}
+          onRefresh={refreshLockStatus}
+          loading={lockLoading}
+        />
+      )}
+
       {/* 编辑器主体容器：如果为 md 则渲染现代化沉浸式 Markdown 工作台，否则渲染 OnlyOffice */}
       {docType === "md" ? (
         <div className="w-full h-[calc(100vh-48px)] relative overflow-hidden bg-background">
@@ -629,7 +704,9 @@ function EditorWorkspace() {
           ) : (
             <MarkdownEditor
               initialContent={markdownContent}
+              readOnly={isReadOnlyMode}
               onChange={(val) => {
+                if (isReadOnlyMode) return;
                 markdownContentRef.current = val;
                 isDirty.current = true;
               }}

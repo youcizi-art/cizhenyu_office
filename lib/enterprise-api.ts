@@ -303,3 +303,134 @@ export async function fetchEnterpriseDashboard(): Promise<EnterpriseDashboardDat
   if (!res.ok) return null;
   return res.json();
 }
+
+export interface DocumentLockInfo {
+  documentId: string;
+  userId: string;
+  userName: string;
+  lockedAt: number;
+  expiresAt: number;
+  remainingSeconds: number;
+}
+
+export interface LockStatusResult {
+  success: boolean;
+  isLocked: boolean;
+  isLockedByMe?: boolean;
+  acquired?: boolean;
+  released?: boolean;
+  refreshed?: boolean;
+  error?: string;
+  message?: string;
+  lock?: DocumentLockInfo | null;
+}
+
+/**
+ * 查询文档独占写锁状态
+ */
+export async function getDocumentLockStatus(docId: string): Promise<LockStatusResult> {
+  const res = await fetch(`${API_BASE}/api/enterprise/documents/${encodeURIComponent(docId)}/lock`, {
+    method: "GET",
+    credentials: "include",
+  });
+  return res.json();
+}
+
+/**
+ * 申请文档独占锁
+ */
+export async function acquireDocumentLock(docId: string, docName?: string): Promise<LockStatusResult> {
+  const res = await fetch(`${API_BASE}/api/enterprise/documents/${encodeURIComponent(docId)}/lock`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ action: "acquire", docName }),
+  });
+  return res.json();
+}
+
+/**
+ * 续租心跳
+ */
+export async function heartbeatDocumentLock(docId: string): Promise<LockStatusResult> {
+  const res = await fetch(`${API_BASE}/api/enterprise/documents/${encodeURIComponent(docId)}/lock`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ action: "heartbeat" }),
+  });
+  return res.json();
+}
+
+/**
+ * 主动释放文档锁
+ */
+export async function releaseDocumentLock(docId: string, docName?: string): Promise<LockStatusResult> {
+  const res = await fetch(`${API_BASE}/api/enterprise/documents/${encodeURIComponent(docId)}/lock`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ action: "unlock", docName }),
+  });
+  return res.json();
+}
+
+/**
+ * 管理员强制接管锁
+ */
+export async function takeoverDocumentLock(docId: string, docName?: string): Promise<LockStatusResult> {
+  const res = await fetch(`${API_BASE}/api/enterprise/documents/${encodeURIComponent(docId)}/lock`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ action: "takeover", docName }),
+  });
+  return res.json();
+}
+
+export interface AuditLogItem {
+  id: string;
+  orgId: string;
+  userId: string | null;
+  userName: string;
+  action: string;
+  targetId: string | null;
+  details: Record<string, any> | null;
+  ipAddress: string | null;
+  createdAt: number;
+}
+
+export interface AuditLogPagination {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+/**
+ * 分页查询合规审计日志
+ */
+export async function fetchAuditLogs(params: {
+  page?: number;
+  pageSize?: number;
+  action?: string;
+  search?: string;
+}): Promise<{
+  success: boolean;
+  logs: AuditLogItem[];
+  pagination: AuditLogPagination;
+  error?: string;
+}> {
+  const query = new URLSearchParams();
+  if (params.page) query.set("page", String(params.page));
+  if (params.pageSize) query.set("pageSize", String(params.pageSize));
+  if (params.action) query.set("action", params.action);
+  if (params.search) query.set("search", params.search);
+
+  const res = await fetch(`${API_BASE}/api/enterprise/audit-logs?${query.toString()}`, {
+    method: "GET",
+    credentials: "include",
+  });
+  return res.json();
+}
+

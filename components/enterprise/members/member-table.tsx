@@ -4,8 +4,9 @@ import React, { useState } from "react";
 import { useExtracted } from "next-intl";
 import { EnterpriseUser, updateEnterpriseMember, deleteEnterpriseMember } from "@/lib/enterprise-api";
 import { RoleBadge } from "../permissions/permission-badge";
-import { Trash2, ShieldAlert, CheckCircle2, Ban, Loader2, Shield } from "lucide-react";
+import { Trash2, ShieldAlert, CheckCircle2, Ban, Loader2, Shield, Edit2 } from "lucide-react";
 import { UserRoleGroupAssignmentModal } from "./user-role-group-assignment-modal";
+import { EditMemberDialog } from "./edit-member-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
 
@@ -27,6 +28,7 @@ export function MemberTable({
   const t = useExtracted();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [managingUser, setManagingUser] = useState<EnterpriseUser | null>(null);
+  const [editingUser, setEditingUser] = useState<EnterpriseUser | null>(null);
   const [deletingUser, setDeletingUser] = useState<EnterpriseUser | null>(null);
 
   const handleToggleAdmin = async (targetUser: EnterpriseUser) => {
@@ -176,6 +178,13 @@ export function MemberTable({
                     {canModify && (
                       <>
                         <button
+                          onClick={() => setEditingUser(m)}
+                          title={t({ id: "Edit", message: "Edit" })}
+                          className="p-1.5 text-zinc-400 hover:text-primary rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
                           onClick={() => setManagingUser(m)}
                           title={t({ id: "Enterprise.RBAC.ManageUserGroups", message: "Assign Role Groups & Overrides" })}
                           className="p-1.5 text-zinc-400 hover:text-primary rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
@@ -221,6 +230,15 @@ export function MemberTable({
           userName={managingUser.name}
           userEmail={managingUser.email}
           onChanged={onRefresh}
+        />
+      )}
+
+      {editingUser && (
+        <EditMemberDialog
+          isOpen={Boolean(editingUser)}
+          user={editingUser}
+          onClose={() => setEditingUser(null)}
+          onSuccess={onRefresh}
         />
       )}
 

@@ -134,6 +134,27 @@ export async function createPermissionRule(payload: {
   return data.data;
 }
 
+export async function updatePermissionRule(payload: {
+  id: string;
+  scopeType?: PermissionScopeType;
+  scopeId?: string;
+  allowActions: DocumentAction[];
+  denyActions: DocumentAction[];
+}): Promise<PermissionRule> {
+  const res = await fetch("/api/permissions/rules", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || "Failed to update rule");
+  }
+  const data = await res.json();
+  return data.data;
+}
+
 export async function deletePermissionRule(ruleId: string): Promise<void> {
   const res = await fetch(`/api/permissions/rules?id=${encodeURIComponent(ruleId)}`, {
     method: "DELETE",

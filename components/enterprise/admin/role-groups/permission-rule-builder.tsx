@@ -5,6 +5,7 @@ import { useExtracted } from "next-intl";
 import {
   PermissionRule,
   createPermissionRule,
+  updatePermissionRule,
   deletePermissionRule,
 } from "@/lib/enterprise-permissions-api";
 import { DocumentAction, PermissionScopeType } from "@/functions/lib/permission-types";
@@ -18,6 +19,7 @@ import {
 import {
   Plus,
   Trash2,
+  Edit2,
   Shield,
   Layers,
   Tag,
@@ -69,13 +71,15 @@ export function PermissionRuleBuilder({
   const [allowActions, setAllowActions] = useState<DocumentAction[]>(["view", "download"]);
   const [denyActions, setDenyActions] = useState<DocumentAction[]>([]);
 
+  const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
+
   // 标签数据状态与文档弹窗状态
   const [tags, setTags] = useState<string[]>([]);
   const [isDocModalOpen, setIsDocModalOpen] = useState(false);
 
   // 加载可用标签
   useEffect(() => {
-    if (isAdding) {
+    if (isAdding || editingRuleId) {
       fetch(`/api/documents?page=1&pageSize=1`, {
         credentials: "include",
       })
@@ -87,7 +91,7 @@ export function PermissionRuleBuilder({
         })
         .catch(() => {});
     }
-  }, [isAdding]);
+  }, [isAdding, editingRuleId]);
 
   // 切换维度时重置选中的 scopeId
   const handleScopeTypeChange = (newType: PermissionScopeType) => {
@@ -116,7 +120,25 @@ export function PermissionRuleBuilder({
     }
   };
 
-  const handleCreateRule = async (e: React.FormEvent) => {
+  const handleStartEdit = (rule: PermissionRule) => {
+    setEditingRuleId(rule.id);
+    setIsAdding(false);
+    setScopeType(rule.scopeType);
+    setScopeId(rule.scopeId);
+    setScopeDisplayName(rule.scopeId);
+    setAllowActions([...rule.allowActions]);
+    setDenyActions([...rule.denyActions]);
+  };
+
+  const handleCancelForm = () => {
+    setIsAdding(false);
+    setEditingRuleId(null);
+    setScopeId("");
+    setAllowActions(["view", "download"]);
+    setDenyActions([]);
+  };
+
+  const handleSaveRule = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!scopeId.trim()) {
       toast.error(t({ id: "Enterprise.RBAC.ScopeIdRequired", message: "Target Scope value must be selected" }));
@@ -124,19 +146,29 @@ export function PermissionRuleBuilder({
     }
     setSubmitting(true);
     try {
-      await createPermissionRule({
-        roleGroupId,
-        scopeType,
-        scopeId: scopeId.trim(),
-        allowActions,
-        denyActions,
-      });
-      toast.success(t({ id: "Enterprise.RBAC.RuleCreated", message: "Permission rule added" }));
-      setIsAdding(false);
-      setScopeId("");
+      if (editingRuleId) {
+        await updatePermissionRule({
+          id: editingRuleId,
+          scopeType,
+          scopeId: scopeId.trim(),
+          allowActions,
+          denyActions,
+        });
+        toast.success(t({ id: "Enterprise.RBAC.RuleUpdated", message: "Permission rule updated successfully" }));
+      } else {
+        await createPermissionRule({
+          roleGroupId,
+          scopeType,
+          scopeId: scopeId.trim(),
+          allowActions,
+          denyActions,
+        });
+        toast.success(t({ id: "Enterprise.RBAC.RuleCreated", message: "Permission rule added" }));
+      }
+      handleCancelForm();
       onRulesChanged();
     } catch (err: any) {
-      toast.error(err.message || "Failed to add rule");
+      toast.error(err.message || "Failed to save rule");
     } finally {
       setSubmitting(false);
     }
@@ -146,6 +178,9 @@ export function PermissionRuleBuilder({
     try {
       await deletePermissionRule(ruleId);
       toast.success(t({ id: "Enterprise.RBAC.RuleDeleted", message: "Permission rule removed" }));
+      if (editingRuleId === ruleId) {
+        handleCancelForm();
+      }
       onRulesChanged();
     } catch (err: any) {
       toast.error(err.message || "Failed to remove rule");
@@ -183,13 +218,16 @@ export function PermissionRuleBuilder({
           </p>
         </div>
 
-        {!isAdding && (
+        {!isAdding && !editingRuleId && (
           <button
             type="button"
             onClick={() => {
               setIsAdding(true);
+              setEditingRuleId(null);
               setScopeType("category");
               setScopeId("");
+              setAllowActions(["view", "download"]);
+              setDenyActions([]);
             }}
             className="flex items-center gap-1.5 rounded-xl bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20 transition-all cursor-pointer"
           >
@@ -199,12 +237,28 @@ export function PermissionRuleBuilder({
         )}
       </div>
 
-      {/* 新增规则面板 */}
-      {isAdding && (
+      {/* 规则编辑/新增面板 */}
+      {(isAdding || editingRuleId) && (
         <form
-          onSubmit={handleCreateRule}
+          onSubmit={handleSaveRule}
           className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3.5"
         >
+          <div className="flex items-center justify-between pb-2 border-b border-primary/10">
+            <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+              {editingRuleId ? (
+                <>
+                  <Edit2 className="h-3.5 w-3.5 text-primary" />
+                  <span>{t({ id: "Enterprise.RBAC.EditRule", message: "Edit Permission Rule" })}</span>
+                </>
+              ) : (
+                <>
+                  <Plus className="h-3.5 w-3.5 text-primary" />
+                  <span>{t({ id: "Enterprise.RBAC.AddRule", message: "Add Rule" })}</span>
+                </>
+              )}
+            </span>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Dimension Scope 选择 */}
             <div>
@@ -384,7 +438,7 @@ export function PermissionRuleBuilder({
           <div className="flex items-center justify-end gap-2 pt-2">
             <button
               type="button"
-              onClick={() => setIsAdding(false)}
+              onClick={handleCancelForm}
               className="px-3 py-1.5 rounded-lg border border-border text-xs text-muted-foreground hover:bg-muted cursor-pointer"
             >
               {t({ id: "Cancel", message: "Cancel" })}
@@ -452,14 +506,24 @@ export function PermissionRuleBuilder({
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => handleDeleteRule(r.id)}
-                className="self-end sm:self-center p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
-                title={t({ id: "Delete", message: "Delete" })}
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              <div className="flex items-center gap-1 self-end sm:self-center">
+                <button
+                  type="button"
+                  onClick={() => handleStartEdit(r)}
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                  title={t({ id: "Edit", message: "Edit" })}
+                >
+                  <Edit2 className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteRule(r.id)}
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                  title={t({ id: "Delete", message: "Delete" })}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           ))
         )}

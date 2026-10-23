@@ -1,7 +1,7 @@
 import { getDb } from "../../../lib/db";
 import { getEnterpriseSession, assertOrgRole, recordAuditLog } from "../../../lib/rbac";
 import { hashPassword } from "../../../lib/auth-crypto";
-import { jsonResponse, errorResponse } from "../../../utils";
+import { jsonResponse, errorResponse, loadMetadata } from "../../../utils";
 import { PagesContext, OrgRole } from "../../../types";
 
 interface MemberRow {
@@ -160,19 +160,50 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     }
 
     // 4.5 若传入了单一文档的专属权限设置，写入 document_permissions 表
-    for (const dp of docPermissions) {
-      if (dp && dp.documentId && dp.permission) {
-        const permId = crypto.randomUUID();
-        await db.execute(
-          `INSERT OR REPLACE INTO document_permissions (id, document_id, user_id, permission, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?)`,
-          permId,
-          dp.documentId.trim(),
-          newUserId,
-          dp.permission,
-          now,
-          now
-        );
+    if (docPermissions.length > 0) {
+      try {
+        const metadata = await loadMetadata(env);
+        const metaDocs = metadata.documents || [];
+        for (const dp of docPermissions) {
+          if (dp && dp.documentId && dp.permission) {
+            const docId = dp.documentId.trim();
+            const existingD1Doc = await db.queryOne<{ id: string }>(
+              "SELECT id FROM documents WHERE id = ? LIMIT 1",
+              docId
+            );
+            if (!existingD1Doc) {
+              const metaDoc = metaDocs.find((d) => d.id === docId);
+              if (metaDoc) {
+                await db.execute(
+                  `INSERT OR IGNORE INTO documents (id, name, type, category_id, r2_key, size, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                  metaDoc.id,
+                  metaDoc.name,
+                  metaDoc.type || "other",
+                  metaDoc.categoryId || null,
+                  metaDoc.r2Key || `files/${metaDoc.id}`,
+                  metaDoc.size || 0,
+                  metaDoc.createdAt || now,
+                  metaDoc.updatedAt || now
+                );
+              }
+            }
+
+            const permId = crypto.randomUUID();
+            await db.execute(
+              `INSERT OR REPLACE INTO document_permissions (id, document_id, user_id, permission, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?)`,
+              permId,
+              docId,
+              newUserId,
+              dp.permission,
+              now,
+              now
+            );
+          }
+        }
+      } catch (docErr) {
+        console.warn("Failed to sync doc permissions:", docErr);
       }
     }
 

@@ -19,7 +19,7 @@ import { useAuth } from "@/components/auth-guard";
 import { useEnterprise } from "@/components/enterprise/context/enterprise-auth-context";
 import { EnterpriseLoginDialog } from "@/components/enterprise/auth/enterprise-login-dialog";
 import { RoleBadge } from "@/components/enterprise/permissions/permission-badge";
-import { LogOut, Building2, Users } from "lucide-react";
+import { LogOut, Building2, Users, Activity } from "lucide-react";
 
 export function Header({ children }: PropsWithChildren<{ className?: string }>) {
   const router = useRouter();
@@ -101,17 +101,26 @@ export function Header({ children }: PropsWithChildren<{ className?: string }>) 
         {isEnterpriseAuth && enterpriseUser ? (
           <div className="flex items-center gap-1.5 ml-2 pl-2 border-l border-border/50">
             {isEnterpriseAdmin ? (
-              <Link
-                href="/members"
-                className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs transition-all border bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 cursor-pointer"
-                title={t({ id: "Enterprise.Header.ManageTeam", message: "Manage Workspace Members" })}
-              >
-                <Building2 className="w-3.5 h-3.5" />
-                <span className="font-medium max-w-[100px] truncate">
-                  {enterpriseOrg?.name || "Enterprise"}
-                </span>
-                <RoleBadge role={enterpriseUser.role} size="sm" />
-              </Link>
+              <div className="flex items-center gap-1.5">
+                <Link
+                  href="/audit-logs"
+                  className="p-1.5 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted transition-colors cursor-pointer"
+                  title={t({ id: "Enterprise.Header.AuditLogs", message: "Compliance & Audit Trail" })}
+                >
+                  <Activity className="w-4 h-4" />
+                </Link>
+                <Link
+                  href="/members"
+                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs transition-all border bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 cursor-pointer"
+                  title={t({ id: "Enterprise.Header.ManageTeam", message: "Manage Workspace Members" })}
+                >
+                  <Building2 className="w-3.5 h-3.5" />
+                  <span className="font-medium max-w-[100px] truncate">
+                    {enterpriseOrg?.name || "Enterprise"}
+                  </span>
+                  <RoleBadge role={enterpriseUser.role} size="sm" />
+                </Link>
+              </div>
             ) : (
               <div
                 className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs border bg-muted/40 border-border/40 text-foreground cursor-default"

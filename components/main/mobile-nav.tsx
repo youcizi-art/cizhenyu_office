@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useExtracted } from "next-intl";
-import { LayoutDashboard, Cloud, Settings, Info } from "lucide-react";
+import { LayoutDashboard, Cloud, Settings, Info, History } from "lucide-react";
+import { useEnterprise } from "@/components/enterprise/context/enterprise-auth-context";
 import { cn } from "@/lib/utils";
 
 interface MobileNavProps {
@@ -12,6 +13,7 @@ interface MobileNavProps {
 
 export function MobileNav({ pathname, className }: MobileNavProps) {
   const t = useExtracted();
+  const { isAdmin } = useEnterprise();
 
   const navItems = [
     {
@@ -26,6 +28,16 @@ export function MobileNav({ pathname, className }: MobileNavProps) {
       icon: Cloud,
       href: "/documents",
     },
+    ...(isAdmin
+      ? [
+          {
+            id: "audit-logs",
+            label: t({ id: "Enterprise.Header.AuditLogs", message: "Audit Logs" }),
+            icon: History,
+            href: "/audit-logs",
+          },
+        ]
+      : []),
     {
       id: "settings",
       label: t("Settings"),

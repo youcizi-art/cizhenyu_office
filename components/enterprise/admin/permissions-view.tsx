@@ -14,6 +14,7 @@ import {
 import { PermissionRuleBuilder } from "./role-groups/permission-rule-builder";
 import { PermissionInspector } from "./role-groups/permission-inspector";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { EnterpriseAdminNav } from "./enterprise-admin-nav";
 import {
   Shield,
   Plus,
@@ -168,6 +169,9 @@ export function PermissionsView() {
   return (
     <div className="flex-1 overflow-y-auto bg-slate-50/60 dark:bg-zinc-950 p-6 md:p-8">
       <div className="max-w-6xl mx-auto space-y-6">
+        {/* 顶部企业管理页面导航 (权限角色 & 成员管理) */}
+        <EnterpriseAdminNav />
+
         {/* 顶部 Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
           <div className="flex items-center gap-3.5">

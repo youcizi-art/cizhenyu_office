@@ -12,6 +12,7 @@ import { htmlToMarkdown } from "@/utils/editor/markdown-paste";
 
 interface MarkdownEditorProps {
   initialContent: string;
+  readOnly?: boolean;
   onChange?: (content: string) => void;
   onSave?: () => void;
 }
@@ -38,6 +39,7 @@ function resolveVditorLang(locale: string): "en_US" | "zh_CN" | "zh_TW" | "ja_JP
 
 export function MarkdownEditor({
   initialContent,
+  readOnly = false,
   onChange,
   onSave,
 }: MarkdownEditorProps) {
@@ -215,6 +217,11 @@ export function MarkdownEditor({
       after: () => {
         vditorRef.current = vditorInstance;
         isVditorReadyRef.current = true;
+        if (readOnly) {
+          try {
+            vditorInstance.disabled();
+          } catch {}
+        }
         syncActiveModeFromNative();
       },
       input: (value: string) => {

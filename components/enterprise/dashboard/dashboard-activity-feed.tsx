@@ -1,9 +1,10 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { useExtracted } from "next-intl";
 import { formatRelativeTime } from "@/utils/recent-files";
-import { History, Shield, FileEdit, Share2, Key, UserPlus } from "lucide-react";
+import { History, Shield, FileEdit, Share2, Key, UserPlus, ArrowRight } from "lucide-react";
 
 interface ActivityItem {
   id: string;
@@ -65,9 +66,13 @@ export function DashboardActivityFeed({ activities }: DashboardActivityFeedProps
           <History className="h-4 w-4 text-primary" />
           <span>{t({ id: "Enterprise.Dashboard.RecentActivity", message: "Recent Team Activity" })}</span>
         </h3>
-        <span className="text-[11px] font-medium text-muted-foreground">
-          {t({ id: "Enterprise.Dashboard.AuditLogsStream", message: "Audit Trail" })}
-        </span>
+        <Link
+          href="/audit-logs"
+          className="flex items-center gap-1 text-[11px] font-medium text-primary hover:text-primary/80 transition-colors group cursor-pointer"
+        >
+          <span>{t({ id: "Enterprise.Dashboard.AuditLogsStream", message: "Audit Trail" })}</span>
+          <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+        </Link>
       </div>
 
       {activities.length === 0 ? (

@@ -6,6 +6,7 @@ import { useEnterprise } from "@/components/enterprise/context/enterprise-auth-c
 import { EnterpriseUser, fetchEnterpriseMembers } from "@/lib/enterprise-api";
 import { MemberTable } from "@/components/enterprise/members/member-table";
 import { InviteMemberDialog } from "@/components/enterprise/members/invite-member-dialog";
+import { EnterpriseAdminNav } from "@/components/enterprise/admin/enterprise-admin-nav";
 import { Users, UserPlus, Sparkles, Loader2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -45,6 +46,9 @@ export function MembersView() {
   return (
     <div className="flex-1 overflow-y-auto bg-slate-50/60 dark:bg-zinc-950 p-6 md:p-8">
       <div className="max-w-6xl mx-auto space-y-6">
+        {/* 顶部企业管理页面导航 (权限角色 & 成员管理) */}
+        <EnterpriseAdminNav />
+
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
           <div className="flex items-center gap-3.5">
